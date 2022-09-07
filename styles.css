@@ -1,0 +1,6 @@
+.DiceRoller__container {
+  display: flex;
+}
+.DiceRoller__container input {
+  width: 60px;
+}

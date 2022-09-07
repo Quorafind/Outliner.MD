@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.vscode/
+.idea
+
+data.json
+main.js
+
+*.code-workspace
+.DS_Store
+dist-ssr
+*.local
+
+
+
+.yarn/*
+

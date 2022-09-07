@@ -1,0 +1,10 @@
+{
+  "id": "another-react-starter",
+  "name": "Another React Starter",
+  "description": "Obsidian + ReactJS + Less + Vite + Prettier",
+  "version": "0.0.0",
+  "author": "Boninall",
+  "authorUrl": "https://github.com/Quorafind/",
+  "isDesktopOnly": false,
+  "minAppVersion": "0.14.1"
+}
