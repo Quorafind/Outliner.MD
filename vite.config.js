@@ -10,7 +10,7 @@ export default defineConfig(({mode}) => {
       minify: false,
       // Use Vite lib mode https://vitejs.dev/guide/build.html#library-mode
       lib: {
-        entry: path.resolve(__dirname, "./src/index.ts"),
+        entry: path.resolve(__dirname, "./src/outlinerViewIndex.ts"),
         formats: ["cjs"],
       },
       rollupOptions: {

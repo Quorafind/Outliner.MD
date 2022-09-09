@@ -2,7 +2,7 @@ import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
 import React from "react";
 import ReactDOM from "react-dom";
 
-import DiceRoller from "./ui/DicerRoller";
+import DiceRoller from "./component/DicerRoller";
 
 const VIEW_TYPE = "react-view";
 
@@ -14,11 +14,11 @@ class MyReactView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Dice Roller";
+    return "Outliner View";
   }
 
   getIcon(): string {
-    return "calendar-with-checkmark";
+    return "clipboard-list";
   }
 
   async onOpen(): Promise<void> {
