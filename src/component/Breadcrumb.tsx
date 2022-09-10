@@ -1,22 +1,25 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import { TreeNS } from '../utils/tree';
+import { Tree } from "../types/tree";
 
-Breadcrumb.propTypes = {};
+interface Props {
+    node: Tree;
+}
 
-const Breadcrumb = (props) => {
-  function breadcrumbToText(titles: string[]) {
-    if (titles.length > 0) {
-      return titles.join(' > ') + ' >';
+const Breadcrumb: React.FC<Props> = (props: Props) => {
+    function breadcrumbToText(titles: string[]) {
+        if (titles.length > 0) {
+            return titles.join(' > ') + ' >';
+        }
+        return '';
     }
-    return '';
-  }
 
-  return (
-    <div>
-      <span className="breadcrumb">{breadcrumbToText(Tree.getBreadcrumb(props.node))}</span>
-      <hr />
-    </div>
-  );
+    return (
+        <div>
+            <span className="breadcrumb">{ breadcrumbToText(TreeNS.getBreadcrumb(props.node)) }</span>
+            <hr/>
+        </div>
+    );
 };
 
 export default Breadcrumb;
