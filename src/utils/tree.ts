@@ -25,21 +25,23 @@ export namespace TreeNS {
     // 	return ret;
     // }
 
-    export const addDiff = function (node: Tree) {
+    export const addDiff = function (node: Tree): Tree[] {
         // TODO, speed this up too...
         const chain = getParentChain(node);
         const root = getRoot(node);
-        chain.forEach(function (n) {
+        chain.forEach((n) => {
             root.diff[n.uuid] = true;
         });
+        return chain;
     };
 
-    export const addAllDiff = function (node: Tree) {
+    export const addAllDiff = function (node: Tree): Tree {
         const root = getRoot(node);
         root.diff['run_full_diff'] = true;
+        return root;
     };
 
-    export const getParentChain = function (node: Tree) {
+    export const getParentChain = function (node: Tree): Tree[] {
         const ret = [];
         while (node.title !== 'special_root_title') {
             ret.push(node);
@@ -49,7 +51,7 @@ export namespace TreeNS {
         return ret;
     };
 
-    export const selectNextNode = function (tree: Tree) {
+    export const selectNextNode = function (tree: Tree): Tree {
         const selected = findSelected(tree);
         const root = getRoot(tree);
         const next = findNextNode(selected);
@@ -57,9 +59,10 @@ export namespace TreeNS {
             root.selected = next.uuid;
             addDiff(next);
         }
+        return root;
     };
 
-    export const selectPreviousNode = function (tree: Tree) {
+    export const selectPreviousNode = function (tree: Tree): Tree {
         const selected = findSelected(tree);
         const root = getRoot(tree);
         const previous = findPreviousNode(selected);
@@ -67,20 +70,23 @@ export namespace TreeNS {
             root.selected = previous.uuid;
             addDiff(previous);
         }
+        return root;
     };
 
     // TODO shouldn't this be the last node of the current zoom?
-    export const selectLastNode = function (tree: Tree) {
+    export const selectLastNode = function (tree: Tree): Tree {
         const root = getRoot(tree);
         const last = findDeepest(root.zoom.childNodes[root.zoom.childNodes.length - 1]);
         root.selected = last.uuid;
         root.caretLoc = last.title.length;
+        return root;
     };
 
-    export const selectFirstNode = function (tree: Tree) {
+    export const selectFirstNode = function (tree: Tree): Tree {
         const root = getRoot(tree);
         root.selected = root.zoom.uuid;
         root.caretLoc = 0;
+        return root;
     };
 
     export const appendSibling = function (tree, title) {
@@ -97,7 +103,7 @@ export namespace TreeNS {
         return ret;
     };
 
-    export const newChildAtCursor = function (selected: Tree) {
+    export const newChildAtCursor = function (selected: Tree): Tree {
         const ret = makeNode({ title: '', parent: selected });
         addDiff(selected.parent);
         addDiff(selected);
@@ -111,13 +117,14 @@ export namespace TreeNS {
         }
         root.selected = ret.uuid;
         root.caretLoc = 0;
+        return root;
     };
 
-    export const newLineAtCursor = function (tree: Tree) {
+    export const newLineAtCursor = function (tree: Tree): Tree {
         const selected = findSelected(tree);
         const root = getRoot(tree);
-        const textStart = selected.title.substr(0, root.caretLoc);
-        const textRest = selected.title.substr(root.caretLoc);
+        const textStart = selected.title.slice(0, root.caretLoc);
+        const textRest = selected.title.slice(root.caretLoc);
         if (selected === root.zoom || (textRest.length === 0 && selected.childNodes.length > 0 && !selected.collapsed)) {
             newChildAtCursor(selected);
         } else {
@@ -138,18 +145,21 @@ export namespace TreeNS {
             }
             root.caretLoc = 0;
         }
+        return root;
     };
 
-    export const addUUIDPointer = function (tree: Tree) {
+    export const addUUIDPointer = function (tree: Tree): Tree {
         const root = getRoot(tree);
         root.uuidMap[tree.uuid] = tree;
+        return root;
     };
 
-    export const addUUIDPointers = function (tree: Tree) {
-        addUUIDPointer(tree);
-        tree.childNodes.map(function (child) {
+    export const addUUIDPointers = (tree: Tree): Tree => {
+        const root = addUUIDPointer(tree);
+        tree.childNodes.map((child) => {
             addUUIDPointers(child);
         });
+        return root;
     };
 
     export const findFromUUID = function (tree: Tree, uuid: string) {
@@ -169,6 +179,7 @@ export namespace TreeNS {
 
     export const makeNode = function (args, options?: Option): any {
         const ret = {};
+        console.log(options);
         setIfReal(ret, args, 'title');
         setIfReal(ret, args, 'childNodes', []);
         setIfReal(ret, args, 'parent');
@@ -239,8 +250,8 @@ export namespace TreeNS {
         return me;
     };
 
-    export const indent = function (tree: Tree) {
-        const selected = findSelected(tree);
+    export const indent = function (tree: Tree): Tree {
+        const selected: Tree = findSelected(tree);
         const childNum = findChildNum(selected);
         if (childNum == 0) {
             return;
@@ -252,11 +263,12 @@ export namespace TreeNS {
         selected.parent = newParent;
         // TODO diff is oldParent + newParent + selected + children of selected
         addAllDiff(selected);
+        return getRoot(selected);
     };
 
-    export const unindent = function (tree: Tree) {
-        const selected = findSelected(tree);
-        const root = getRoot(tree);
+    export const unindent = function (tree: Tree): Tree {
+        const selected: Tree = findSelected(tree);
+        const root: Tree = getRoot(tree);
         if (!selected.parent.parent) {
             return;
         }
@@ -271,28 +283,30 @@ export namespace TreeNS {
         selected.parent = newParent;
         // TODO diff is oldParent + newParent + selected + children of selected
         addAllDiff(selected);
+        return root;
     };
 
-    export const shiftUp = function (tree: Tree) {
-        const selected = findSelected(tree);
-        const childNum = findChildNum(selected);
-        const parent = selected.parent;
+    export const shiftUp = function (tree: Tree): Tree {
+        const selected: Tree = findSelected(tree);
+        const childNum: number = findChildNum(selected);
+        const parent: Tree = selected.parent;
         if (childNum == 0) {
             return;
         }
         if (parent.childNodes.length <= 1) {
             return;
         }
-        const tmp = parent.childNodes[childNum];
+        const tmp: Tree = parent.childNodes[childNum];
         parent.childNodes[childNum] = parent.childNodes[childNum - 1];
         parent.childNodes[childNum - 1] = tmp;
         addDiff(parent);
+        return getRoot(selected);
     };
 
-    export const shiftDown = function (tree: Tree) {
-        const selected = findSelected(tree);
-        const childNum = findChildNum(selected);
-        const parent = selected.parent;
+    export const shiftDown = function (tree: Tree): Tree {
+        const selected: Tree = findSelected(tree);
+        const childNum: number = findChildNum(selected);
+        const parent: Tree = selected.parent;
         if (childNum == parent.childNodes.length - 1) {
             return;
         }
@@ -303,10 +317,11 @@ export namespace TreeNS {
         parent.childNodes[childNum] = parent.childNodes[childNum + 1];
         parent.childNodes[childNum + 1] = tmp;
         addDiff(parent);
+        return getRoot(selected);
     };
 
-    export const findChildNum = function (tree) {
-        let i;
+    export const findChildNum = function (tree): number {
+        let i: number;
         for (i = 0; i < tree.parent.childNodes.length; i++) {
             if (tree.parent.childNodes[i] == tree) {
                 return i;
@@ -315,14 +330,14 @@ export namespace TreeNS {
         console.assert(false);
     };
 
-    export const getRoot = function (tree: Tree) {
+    export const getRoot = function (tree: Tree): Tree {
         if (tree.title === 'special_root_title') {
             return tree;
         }
         return getRoot(tree.parent);
     };
 
-    export const getBreadcrumb = function (root: Tree) {
+    export const getBreadcrumb = function (root: Tree): string[] {
         if (root.zoom.title === 'special_root_title') {
             return [];
         }
@@ -331,7 +346,7 @@ export namespace TreeNS {
         return ret;
     };
 
-    export const getBreadcrumbInner = function (tree: Tree) {
+    export const getBreadcrumbInner = function (tree: Tree): string[] {
         if (tree.title === 'special_root_title') {
             return [];
         }
@@ -340,7 +355,7 @@ export namespace TreeNS {
         return ret;
     };
 
-    export const zoom = function (tree: Tree) {
+    export const zoom = function (tree: Tree): Tree {
         if (!tree) {
             console.log('cannot zoom that high!');
             return;
@@ -349,9 +364,10 @@ export namespace TreeNS {
         root.zoom = tree;
         root.zoomUUID = tree.uuid;
         addAllDiff(root);
+        return root;
     };
 
-    export const zoomOutOne = function (tree: Tree) {
+    export const zoomOutOne = function (tree: Tree): Tree {
         const root = getRoot(tree);
         if (root.zoom) {
             if (root.zoom.parent) {
@@ -364,9 +380,10 @@ export namespace TreeNS {
             console.assert(false, 'something wrong');
         }
         addAllDiff(root);
+        return root;
     };
 
-    export const deleteSelected = function (tree: Tree) {
+    export const deleteSelected = function (tree: Tree): Tree {
         // TODO think if this is the root..
         const selected = findSelected(tree);
         let nextSelection = findPreviousNode(selected);
@@ -392,9 +409,10 @@ export namespace TreeNS {
         root.caretLoc = nextSelection.title.length;
         addDiff(selected.parent);
         addDiff(nextSelection);
+        return root;
     };
 
-    export const backspaceAtBeginning = function (tree: Tree) {
+    export const backspaceAtBeginning = function (tree: Tree): Tree {
         // TODO think if this is the root
         const selected = findSelected(tree);
         const root = getRoot(tree);
@@ -423,9 +441,10 @@ export namespace TreeNS {
         }
         addDiff(selected.parent);
         addDiff(previous);
+        return root;
     };
 
-    export const setChildNodes = function (tree: Tree, childNodes: Tree[]) {
+    export const setChildNodes = function (tree: Tree, childNodes: Tree[]): Tree {
         // TODO is there a way to stop anyone from explicitly setting childNodes?
         // We want that because if anyone ever sets childNodes, they should also set the parent
         // of the children
@@ -434,9 +453,10 @@ export namespace TreeNS {
         for (let i = 0; i < childNodes.length; i++) {
             childNodes[i].parent = tree;
         }
+        return tree;
     };
 
-    export const findDeepest = function (tree: Tree) {
+    export const findDeepest = function (tree: Tree): Tree {
         const completedHidden = isCompletedHidden(tree);
         if (tree.childNodes && !tree.collapsed) {
             for (let i = tree.childNodes.length - 1; i >= 0; i--) {
@@ -448,7 +468,7 @@ export namespace TreeNS {
         return tree;
     };
 
-    export const findSelected = function (node: Tree) {
+    export const findSelected = function (node: Tree): Tree {
         const root = getRoot(node);
         console.assert(root === node);
         if (!root.selected) {
@@ -457,21 +477,22 @@ export namespace TreeNS {
         return root.uuidMap[root.selected];
     };
 
-    export const collapseCurrent = function (tree: Tree) {
+    export const collapseCurrent = function (tree: Tree): Tree {
         const selected = findSelected(tree);
         if (selected.childNodes && selected.childNodes.length > 0) {
             selected.collapsed = !selected.collapsed;
         }
         addAllDiff(selected);
+        return getRoot(selected);
     };
 
     export const countVisibleChildren = function (tree: Tree) {
-        return tree.childNodes.filter(function (n) {
+        return tree.childNodes.filter((n) => {
             return !n.completed;
         }).length;
     };
 
-    export const completeCurrent = function (tree: Tree) {
+    export const completeCurrent = function (tree: Tree): Tree {
         const selected = findSelected(tree);
         const root = getRoot(tree);
         if (root.zoom === selected) {
@@ -501,9 +522,10 @@ export namespace TreeNS {
             setCompletedHidden(tree, backup);
         }
         addAllDiff(selected);
+        return root;
     };
 
-    export const findPreviousNode = function (tree: Tree) {
+    export const findPreviousNode = function (tree: Tree): Tree {
         if (!tree || !tree.parent) {
             return null;
         }
@@ -524,7 +546,7 @@ export namespace TreeNS {
         return tree.parent;
     };
 
-    export const findNextNode = function (tree: Tree) {
+    export const findNextNode = function (tree: Tree): Tree {
         const root = getRoot(tree);
         const completedHidden = isCompletedHidden(tree);
         if (tree.childNodes && tree.childNodes.length > 0 && (!tree.collapsed || root.zoom === tree)) {
@@ -537,7 +559,7 @@ export namespace TreeNS {
         return findNextNodeRec(tree, root.zoom);
     };
 
-    export const findNextNodeRec = function (tree: Tree, zoom: Tree) {
+    export const findNextNodeRec = function (tree: Tree, zoom: Tree): Tree {
         if (!tree || !tree.parent) {
             return null;
         }
@@ -553,7 +575,7 @@ export namespace TreeNS {
         return findNextNodeRec(tree.parent, zoom);
     };
 
-    export const makeTree = function (nodes?: Tree[]) {
+    export const makeTree = function (nodes?: Tree[]): Tree {
         let ret: Tree = { title: 'special_root_title', parent: null, childNodes: nodes };
         ret = clone(ret);
         ret.zoom = ret;
@@ -592,7 +614,7 @@ export namespace TreeNS {
         if (indexer.length <= 1) {
             return tree;
         }
-        const parts = indexer.substr(1).split('-');
+        const parts = indexer.slice(1).split('-');
         for (let i = 0; i < parts.length; i++) {
             tree = tree.childNodes[parts[i]];
         }
@@ -614,7 +636,7 @@ export namespace TreeNS {
         return JSON.stringify(tree);
     };
 
-    export const fromString = function (s) {
+    export const fromString = function (s): Tree {
         const obj = JSON.parse(s);
         const ret = clone(obj);
         if (!ret.zoomUUID) {
@@ -625,14 +647,14 @@ export namespace TreeNS {
         return ret;
     };
 
-    export const equals = function (one: Tree, two: Tree) {
+    export const equals = function (one: Tree, two: Tree): boolean {
         return toString(one) === toString(two);
     };
 
-    export const toOutline = function (tree: Tree) {
+    export const toOutline = function (tree: Tree): any {
         const ret = {
             text: tree.title,
-            _children: tree.childNodes.map(function (node) {
+            _children: tree.childNodes.map((node) => {
                 return toOutline(node);
             }),
         };
@@ -640,18 +662,19 @@ export namespace TreeNS {
         return ret;
     };
 
-    export const setCompletedHidden = function (tree: Tree, isHidden: boolean) {
+    export const setCompletedHidden = function (tree: Tree, isHidden: boolean): Tree {
         const root = getRoot(tree);
         // TODO or assert (tree == root)
         root.completedHidden = isHidden;
+        return root;
     };
 
-    export const isCompletedHidden = function (tree: Tree) {
+    export const isCompletedHidden = function (tree: Tree): boolean {
         const root = getRoot(tree);
         return root.completedHidden;
     };
 
-    export const recSearch = function (tree: Tree, query: string) {
+    export const recSearch = function (tree: Tree, query: string): Tree | null {
         const newTree = { title: tree.title, childNodes: [] };
         for (let i = 0; i < tree.childNodes.length; i++) {
             if (recSearch(tree.childNodes[i], query)) {
@@ -683,7 +706,7 @@ export namespace TreeNS {
             if (obj[i + 1] instanceof Array) {
                 ret.push({ title: obj[i], childNodes: yamlObjToTree(obj[i + 1]) });
                 i += 1;
-            } else if (typeof obj[i] === 'object' && obj[i].hasOwnProperty('title')) {
+            } else if (typeof obj[i] === 'object' && obj[i].hasOwn('title')) {
                 ret.push(obj[i]);
             } else {
                 ret.push({ title: obj[i] });

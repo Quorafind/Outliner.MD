@@ -14,6 +14,7 @@ const SearchBox: React.FC<Props> = () => {
     const setGlobalTree = useBaseStore((state) => state.setGlobalTree);
     const setGlobalTreeBak = useBaseStore((state) => state.setGlobalTreeBak);
     const setSelected = useBaseStore((state) => state.setSelected);
+    const setGlobalRenderAllNoUndo = useBaseStore((state) => state.setGlobalRenderAllNoUndo);
 
     const handleChange = (event: React.FormEvent<HTMLInputElement>) => {
         if (value?.length > 0) {
@@ -23,7 +24,7 @@ const SearchBox: React.FC<Props> = () => {
         if (event.currentTarget.value.length === 0) {
             setGlobalTree(globalTreeBak);
             setGlobalTreeBak(null);
-            renderAllNoUndo();
+            setGlobalRenderAllNoUndo();
             return;
         }
         if (!globalTreeBak) {
@@ -32,7 +33,7 @@ const SearchBox: React.FC<Props> = () => {
         } else {
             setGlobalTree(TreeNS.search(globalTree, event.currentTarget.value));
         }
-        renderAllNoUndo();
+        setGlobalRenderAllNoUndo();
     };
 
     const handleFocus = () => {

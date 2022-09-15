@@ -1,8 +1,8 @@
 export interface Tree {
-    title: string;
+    title?: string;
     childNodes?: Tree[] | undefined;
     uuid?: string;
-    uuidMap?: UUIDMap[];
+    uuidMap?: UUIDMap;
     parent?: Tree | null;
     selected?: string | null;
     zoom?: Tree;
@@ -25,5 +25,5 @@ export interface UUIDMap {
 }
 
 export interface DiffMap {
-    [key: string]: Tree;
+    [key: string]: boolean;
 }
