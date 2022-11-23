@@ -4,13 +4,16 @@ import { useEffect } from "react";
 import { useBaseStore } from "../../store/baseStore";
 import { TreeNS } from "../../utils/tree";
 import { Cursor } from "../../utils/cursor";
+import TreeChildren from "./TreeChildren";
+import opml from "opml-generator";
 
 interface Props {
+    topBullet: boolean;
     node: Tree;
 }
 
-const ResetBtn: React.FC<Props> = (props) => {
-    const { node } = props;
+const TreeNode: React.FC<Props> = (props) => {
+    const { topBullet, node } = props;
 
     const inputRef = React.useRef<HTMLInputElement>(null);
     const [mouseOver, setMouseOver] = React.useState(false);
@@ -23,10 +26,15 @@ const ResetBtn: React.FC<Props> = (props) => {
     const globalTree = useBaseStore((state) => state.globalTree);
     const globalTreeBak = useBaseStore((state) => state.globalTreeBak);
     const globalSkipFocus = useBaseStore((state) => state.globalSkipFocus);
-    const globalDiffUncommitted = useBaseStore((state) => state.globalDiffUncommitted);
+    const globalCompletedHidden = useBaseStore((state) => state.globalCompletedHidden);
+    const globalUndoRing = useBaseStore((state) => state.globalUndoRing);
+
     const setGloablSkipFocus = useBaseStore((state) => state.setGloablSkipFocus);
     const setGlobalDiffUncommitted = useBaseStore((state) => state.setGlobalDiffUncommitted);
     const setGlobalTree = useBaseStore((state) => state.setGlobalTree);
+    const setSelected = useBaseStore((state) => state.setSelected);
+    const setCaretLoc = useBaseStore((state) => state.setCaretLoc);
+    const setGlobalRenderAllNoUndo = useBaseStore((state) => state.setGlobalRenderAllNoUndo);
 
     useEffect(() => {
         if (node.uuid === globalTree.selected) {
@@ -59,39 +67,23 @@ const ResetBtn: React.FC<Props> = (props) => {
                     setClassName('dot togglable dot-collapsed');
                 }
             }
-
-            var children = '';
-            if (this.props.topBullet || !this.props.node.collapsed) {
-                children = (
-                    <ReactTree.TreeChildren childNodes={this.props.node.childNodes} />
-                );
-            }
-
-            if (
-                this.props.node.completed &&
-                globalCompletedHidden &&
-                !this.props.topBullet
-            ) {
-                return false;
-            }
         };
-    }, [node]);
+    }, []);
 
     useEffect(() => {
         return () => {
             // Content ClassName
             if (topBullet) {
-                setContentClassName( 'editable topBullet');
+                setContentClassName('editable topBullet');
             }
             if (node.title == 'special_root_title') {
-                setContentClassName( 'editable topBullet display-none');
+                setContentClassName('editable topBullet display-none');
             }
             if (node.completed) {
-                setContentClassName( 'editable topBullet display-none completed');
+                setContentClassName('editable topBullet display-none completed');
             }
         };
     }, [topBullet, node]);
-
 
     useEffect(() => {
         return () => {
@@ -108,12 +100,11 @@ const ResetBtn: React.FC<Props> = (props) => {
         const html = inputRef.current.textContent;
         if (html !== htmlContent) {
             setGlobalDiffUncommitted(true);
-            var currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
+            const currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
             currentNode.title = event.target.textContent;
-            globalTree.caretLoc = Cursor.getCaretCharacterOffsetWithin(
+            setCaretLoc(Cursor.getCaretCharacterOffsetWithin(
                 inputRef.current
-            );
-            renderAll();
+            ));
         } else {
             console.assert(
                 false,
@@ -121,22 +112,22 @@ const ResetBtn: React.FC<Props> = (props) => {
             );
         }
         setHtmlContent(html);
-    },
+    }
 
     const handleClick = (event) => {
         if (globalSkipFocus) {
             return;
         }
-        var currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
-        globalTree.selected = currentNode.uuid;
+        const currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
+        setSelected(currentNode.uuid);
         if (event.type === 'focus') {
             // clicking on the div, not the actual text. Also always fired when switching focus
-            globalTree.caretLoc = currentNode.title.length;
+            setCaretLoc(currentNode.title.length);
         } else {
             // clicking on the text directly
-            globalTree.caretLoc = Cursor.getCaretCharacterOffsetWithin(
+            setCaretLoc(Cursor.getCaretCharacterOffsetWithin(
                 inputRef.current
-            );
+            ));
         }
     }
 
@@ -159,115 +150,99 @@ const ResetBtn: React.FC<Props> = (props) => {
         };
         if (e.code === KEYS.LEFT) {
             if (e.ctrlKey) {
-                TreeNS.zoomOutOne(globalTree);
-                renderAll();
+                setGlobalTree(TreeNS.zoomOutOne(globalTree));
                 e.preventDefault();
             } else {
                 const newCaretLoc = Cursor.getCaretCharacterOffsetWithin(
                     inputRef.current
                 );
                 if (newCaretLoc === 0) {
-                    TreeNS.selectPreviousNode(globalTree);
-                    var selected = TreeNS.findSelected(globalTree); // TODO could do this faster than two searches
-                    globalTree.caretLoc = selected.title.length;
-                    renderAll();
+                    setGlobalTree(TreeNS.selectPreviousNode(globalTree));
+                    const selected = TreeNS.findSelected(globalTree); // TODO could do this faster than two searches
+                    setCaretLoc(selected.title.length);
                     e.preventDefault();
                 } else {
-                    globalTree.caretLoc = newCaretLoc - 1;
+                    setCaretLoc(newCaretLoc - 1);
                 }
             }
         } else if (e.code === KEYS.END && e.ctrlKey) {
-            TreeNS.selectLastNode(globalTree);
-            renderAll();
+            setGlobalTree(TreeNS.selectLastNode(globalTree));
             e.preventDefault();
         } else if (e.code === KEYS.HOME && e.ctrlKey) {
-            TreeNS.selectFirstNode(globalTree);
-            renderAll();
+            setGlobalTree(TreeNS.selectFirstNode(globalTree));
             e.preventDefault();
         } else if (e.code === KEYS.UP) {
             if (e.shiftKey && e.ctrlKey) {
-                TreeNS.shiftUp(globalTree);
+                setGlobalTree(TreeNS.shiftUp(globalTree));
             } else {
-                TreeNS.selectPreviousNode(globalTree);
-                globalTree.caretLoc = 0;
+                setGlobalTree(TreeNS.selectPreviousNode(globalTree));
+                setCaretLoc(0);
             }
-            renderAll();
             e.preventDefault();
         } else if (e.code === KEYS.RIGHT) {
             if (e.ctrlKey) {
-                var currentNode = TreeNS.findFromUUID(globalTree, this.props.node.uuid);
-                TreeNS.zoom(currentNode);
-                renderAll();
+                const currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
+                setGlobalTree(TreeNS.zoom(currentNode));
                 e.preventDefault();
             } else {
-                let newCaretLoc = Cursor.getCaretCharacterOffsetWithin(
+                const newCaretLoc = Cursor.getCaretCharacterOffsetWithin(
                     inputRef.current
                 );
                 if (newCaretLoc === inputRef.current.textContent.length) {
-                    TreeNS.selectNextNode(globalTree);
-                    globalTree.caretLoc = 0;
-                    renderAll();
+                    setGlobalTree(TreeNS.selectNextNode(globalTree));
+                    setCaretLoc(0);
                     e.preventDefault();
                 } else {
-                    globalTree.caretLoc = newCaretLoc + 1;
+                    setCaretLoc(newCaretLoc + 1);
                 }
             }
         } else if (e.code === KEYS.DOWN) {
             if (e.shiftKey && e.ctrlKey) {
-                TreeNS.shiftDown(globalTree);
+                setGlobalTree(TreeNS.shiftDown(globalTree));
             } else {
-                TreeNS.selectNextNode(globalTree);
-                globalTree.caretLoc = 0;
+                setGlobalTree(TreeNS.selectNextNode(globalTree));
+                setCaretLoc(0);
             }
-            renderAll();
             e.preventDefault();
         } else if (e.code === KEYS.ENTER && e.ctrlKey) {
-            TreeNS.completeCurrent(globalTree);
-            renderAll();
+            setGlobalTree(TreeNS.completeCurrent(globalTree));
             e.preventDefault();
         } else if (e.code === KEYS.ENTER) {
-            var caretLoc = Cursor.getCaretCharacterOffsetWithin(
-                this.refs.input.getDOMNode()
-            );
-            globalTree.caretLoc = caretLoc;
-            console.log('loc', caretLoc);
-            TreeNS.newLineAtCursor(globalTree);
-            renderAll();
+            setCaretLoc(Cursor.getCaretCharacterOffsetWithin(
+                inputRef.current
+            ));
+            setGlobalTree(TreeNS.newLineAtCursor(globalTree));
             e.preventDefault();
         } else if (e.code === KEYS.BACKSPACE) {
             if (e.ctrlKey && e.shiftKey) {
-                TreeNS.deleteSelected(globalTree);
-                renderAll();
+                setGlobalTree(TreeNS.deleteSelected(globalTree));
                 e.preventDefault();
             } else {
                 globalTree.caretLoc = Cursor.getCaretCharacterOffsetWithin(
                     inputRef.current
                 );
                 if (globalTree.caretLoc === 0) {
-                    TreeNS.backspaceAtBeginning(globalTree);
-                    renderAll();
+                    setGlobalTree(TreeNS.backspaceAtBeginning(globalTree));
                     e.preventDefault();
                 }
             }
         } else if (e.code === KEYS.TAB) {
             if (e.shiftKey) {
-                TreeNS.unindent(globalTree);
+                setGlobalTree(TreeNS.unindent(globalTree));
             } else {
-                TreeNS.indent(globalTree);
+                setGlobalTree(TreeNS.indent(globalTree));
             }
-            renderAll();
             e.preventDefault();
         } else if (e.code === KEYS.SPACE && e.ctrlKey) {
-            TreeNS.collapseCurrent(globalTree);
-            renderAll();
+            setGlobalTree(TreeNS.collapseCurrent(globalTree));
             e.preventDefault();
         } else if (e.code === KEYS.Z && (e.ctrlKey || e.metaKey)) {
             setGlobalTree(TreeNS.clone(globalUndoRing.undo()));
-            renderAllNoUndo();
+            setGlobalRenderAllNoUndo();
             e.preventDefault();
         } else if (e.code === KEYS.Y && (e.ctrlKey || e.metaKey)) {
             setGlobalTree(TreeNS.clone(globalUndoRing.redo()));
-            renderAllNoUndo();
+            setGlobalRenderAllNoUndo();
             e.preventDefault();
         } else if (e.code === KEYS.S && e.ctrlKey) {
             window.prompt(
@@ -276,8 +251,9 @@ const ResetBtn: React.FC<Props> = (props) => {
             );
             e.preventDefault();
         } else if (e.code === KEYS.C && e.ctrlKey) {
-            let currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
-            var outlines = TreeNS.toOutline(currentNode);
+            const currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
+            const outlines = TreeNS.toOutline(currentNode);
+            console.log(opml({}, [outlines]));
             e.preventDefault();
         } else {
             // console.log(e.keyCode);
@@ -285,10 +261,9 @@ const ResetBtn: React.FC<Props> = (props) => {
     }
 
     const toggle = () => {
-        var currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
+        const currentNode = TreeNS.findFromUUID(globalTree, node.uuid);
         globalTree.selected = currentNode.uuid;
-        TreeNS.collapseCurrent(globalTree);
-        renderAll();
+        setGlobalTree(TreeNS.collapseCurrent(globalTree));
     }
 
     const handleMouseOver = () => {
@@ -300,45 +275,45 @@ const ResetBtn: React.FC<Props> = (props) => {
     }
 
     const zoom = () => {
-        const node = TreeNS.findFromUUID(globalTree, node.uuid);
-        TreeNS.zoom(node);
-        globalTree.selected = node.uuid;
-        renderAll();
+        const nodeTemp = TreeNS.findFromUUID(globalTree, node.uuid);
+        setGlobalTree(TreeNS.zoom(nodeTemp));
+        setSelected(nodeTemp.uuid);
     }
 
 
     return (
-        <div className="node-wrapper" onMouseLeave={this.mouseOut}>
-            <div className="node-direct-wrapper">
-                {
-                    (!topBullet) ?
-                        <span
-                            onClick={zoom}
-                            onMouseOver={handleMouseOver}
-                            className={className}
-                        >
-					        {String.fromCharCode(8226)}
-				        </span> : ''
-                }
-                <div className="plus-wrapper">
-                    <div onClick={toggle} className="collapseButton">
-                        {plus ? '+' : '-'}
+        (node.completed && globalCompletedHidden && !topBullet) ? null :
+            <div className="node-wrapper" onMouseLeave={ handleMouseOut }>
+                <div className="node-direct-wrapper">
+                    {
+                        (!topBullet) ?
+                            <span
+                                onClick={ zoom }
+                                onMouseOver={ handleMouseOver }
+                                className={ className }
+                            >
+                                        { String.fromCharCode(8226) }
+                                    </span> : ''
+                    }
+                    <div className="plus-wrapper">
+                        <div onClick={ toggle } className="collapseButton">
+                            { plus ? '+' : '-' }
+                        </div>
                     </div>
+                    <div
+                        className={ contentClassName }
+                        contentEditable={ globalTreeBak ? false : true }
+                        ref={ inputRef }
+                        onKeyDown={ handleKeyDown }
+                        onInput={ handleChange }
+                        onFocus={ handleClick }
+                        onClick={ handleClick }
+                        dangerouslySetInnerHTML={ { __html: node.title } }
+                    />
                 </div>
-                <div
-                    className={contentClassName}
-                    {globalTreeBak ? '' : 'contentEditable'}
-                    ref={ inputRef }
-                    onKeyDown={handleKeyDown}
-                    onInput={handleChange}
-                    onFocus={handleClick}
-                    onClick={handleClick}
-                    dangerouslySetInnerHTML={{ __html: _.escape(node.title) }}
-                />
+                { (topBullet || !node.collapsed) ? <TreeChildren childNodes={ node.childNodes }/> : '' }
             </div>
-            {(topBullet || !node.collapsed) ? <TreeChildren childNodes={node.childNodes} /> : ''}
-        </div>
     );
 };
 
-export default ResetBtn;
+export default TreeNode;

@@ -10,7 +10,6 @@ const CompleteHiddenBtn: React.FC<Props> = () => {
 
     const handleClick = () => {
         changeHiddenComplete();
-        renderAll();
     };
 
     return (

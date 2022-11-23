@@ -2,7 +2,7 @@ import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
 import React from "react";
 import ReactDOM from "react-dom";
 
-import DiceRoller from "./component/DicerRoller";
+import OutlineTree from "./outlineTree";
 
 const VIEW_TYPE = "react-view";
 
@@ -22,7 +22,7 @@ class MyReactView extends ItemView {
     }
 
     async onOpen(): Promise<void> {
-        this.reactComponent = React.createElement(DiceRoller);
+        this.reactComponent = React.createElement(OutlineTree);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ReactDOM.render(this.reactComponent, (this as any).contentEl);

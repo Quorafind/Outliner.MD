@@ -33,7 +33,7 @@ export namespace Cursor {
     };
 
     // For contentEditable
-    export const getCaretCharacterOffsetWithin = function (element) {
+    export const getCaretCharacterOffsetWithin = function (element): number {
         let caretOffset = 0;
         const doc = element.ownerDocument || element.document;
         const win = doc.defaultView || doc.parentWindow;

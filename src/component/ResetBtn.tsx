@@ -10,7 +10,6 @@ const ResetBtn: React.FC<Props> = () => {
 
     const handleClick = () => {
         setGlobalTree(TreeNS.makeDefaultTree());
-        renderAll();
     };
 
     return (
