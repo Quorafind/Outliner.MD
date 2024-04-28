@@ -1,7 +1,7 @@
 {
 	"name": "outliner-view",
 	"version": "0.0.1",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Make notes work like workflowy, dynalist, Roam Research",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
