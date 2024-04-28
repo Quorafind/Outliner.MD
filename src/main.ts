@@ -12,33 +12,32 @@ import {
 } from 'obsidian';
 import { around } from "monkey-around";
 import { isEmebeddedLeaf, OUTLINER_EDITOR_VIEW_ID, OutlinerEditorView } from "./OutlinerEditorView";
+import { CalculateRangeForZooming } from "./utils";
+import { KeepOnlyZoomedContentVisible } from './checkVisible';
 
 
 const FRONT_MATTER_KEY = 'outliner';
 
-export default class MyPlugin extends Plugin {
+export default class OutlinerViewPlugin extends Plugin {
 	outlinerFileModes: Record<string, string> = {};
+
+	calculateRangeForZooming = new CalculateRangeForZooming();
+	KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
 
 	// backlinkComponent: any;
 
 	async onload() {
 		this.registerView(OUTLINER_EDITOR_VIEW_ID, (leaf) => new OutlinerEditorView(leaf, this) as View);
 
-		this.addRibbonIcon('list', 'Create new outliner file', async () => {
-			this.app.workspace.getLeaf(true).setViewState({
-				type: OUTLINER_EDITOR_VIEW_ID,
-				state: {
-					file: this.app.vault.getMarkdownFiles()[0].path,
-				},
-			});
-		});
+		this.registerRibbons();
 
 		this.patchMarkdownView();
 		this.patchWorkspaceLeaf();
 		this.patchItemView();
-		this.initTemplifyView();
+		this.initOutlinerView();
 
 		this.registerMenu();
+		this.registerCommands();
 	}
 
 	onunload() {
@@ -49,6 +48,22 @@ export default class MyPlugin extends Plugin {
 			}),
 		).then(() => {
 			super.unload();
+		});
+	}
+
+	registerRibbons() {
+		this.addRibbonIcon('list', 'New outliner file', async () => {
+			const folder = this.app.fileManager.getMarkdownNewFileParent();
+			if (folder) {
+				const newFile = await this.app.vault.create(`${folder.path}/outliner-${moment().format('YYYYMMDDHHmmss')}.md`, `---\noutliner: true\n---\n\n- `);
+				this.app.workspace.getLeaf(true).setViewState({
+					type: OUTLINER_EDITOR_VIEW_ID,
+					state: {
+						file: newFile.path,
+					},
+					active: true,
+				});
+			}
 		});
 	}
 
@@ -64,21 +79,21 @@ export default class MyPlugin extends Plugin {
 		);
 	}
 
-	initTemplifyView(): void {
+	initOutlinerView(): void {
 		const fileLeaves = this.app.workspace.getLeavesOfType('markdown');
 		for (const leaf of fileLeaves) {
 			const file = leaf.view.file;
 			const cache = this.app.metadataCache.getFileCache(file);
 			if (cache?.frontmatter && cache.frontmatter[FRONT_MATTER_KEY]) {
 				this.outlinerFileModes[leaf.id] = OUTLINER_EDITOR_VIEW_ID;
-				this.setTemplifyView(leaf, {
+				this.setOutlinerView(leaf, {
 					file: file.path,
 				});
 			}
 		}
 	}
 
-	async setTemplifyView(
+	async setOutlinerView(
 		leaf: WorkspaceLeaf,
 		{
 			file,
@@ -109,45 +124,6 @@ export default class MyPlugin extends Plugin {
 					return result;
 				},
 		});
-
-		// const patchEditor = () => {
-		// 	const activeEditor = this.app.workspace.activeEditor;
-		//
-		// 	if (!activeEditor && !activeEditor?.updateShowBacklinks) return false;
-		//
-		// 	const childrenList = activeEditor._children;
-		// 	if (!childrenList) return false;
-		//
-		// 	const children = childrenList.find((child) => {
-		// 		return !!child.backlinkDom;
-		// 	});
-		//
-		//
-		// 	if (!children) {
-		// 		activeEditor.toggleBacklinks();
-		// 		if (!activeEditor._children) return false;
-		// 		const children = activeEditor._children.find((child) => {
-		// 			return !!child.backlinkDom;
-		// 		});
-		// 		if (children) {
-		// 			this.backlinkComponent = children;
-		// 			this.app.workspace.trigger('backlinks:open', children);
-		// 			return true;
-		// 		}
-		// 		return false;
-		// 	}
-		// 	this.app.workspace.trigger('backlinks:open', children);
-		// 	return true;
-		// };
-
-		// this.app.workspace.onLayoutReady(() => {
-		// 	if (!patchEditor()) {
-		// 		const evt = this.app.workspace.on('file-open', () => {
-		// 			patchEditor() && this.app.workspace.offref(evt);
-		// 		});
-		// 		this.registerEvent(evt);
-		// 	}
-		// });
 	}
 
 	patchWorkspaceLeaf(): void {
@@ -239,7 +215,7 @@ export default class MyPlugin extends Plugin {
 									.setTitle('Open as Outliner View')
 									.onClick(async () => {
 										self.outlinerFileModes[(this.leaf?.view.leaf as any).id || file.path] = OUTLINER_EDITOR_VIEW_ID;
-										await self.setTemplifyView(this.leaf?.view.leaf, {
+										await self.setOutlinerView(this.leaf?.view.leaf, {
 											file: file.path,
 										});
 									})
@@ -260,8 +236,9 @@ export default class MyPlugin extends Plugin {
 				if (!(file instanceof TFolder)) return;
 				menu.addItem((item) => {
 					item
+						.setSection('action-primary')
 						.setIcon('list')
-						.setTitle('Create new outliner file')
+						.setTitle('New outliner file')
 						.onClick(async () => {
 							const newFile = await this.app.vault.create(`${file.path}/outliner-${moment().format('YYYYMMDDHHmmss')}.md`, `---\noutliner: true\n---\n\n- `);
 							this.app.workspace.getLeaf(true).setViewState({
@@ -269,11 +246,75 @@ export default class MyPlugin extends Plugin {
 								state: {
 									file: newFile.path,
 								},
+								active: true,
 							});
 						});
 				});
 			})
 		);
+	}
+
+	registerCommands() {
+		this.addCommand({
+			id: 'search-in-current-file',
+			name: 'Search in current file',
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const outlinerView = this.app.workspace.getActiveViewOfType(OutlinerEditorView);
+				if (outlinerView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						outlinerView.search();
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
+
+		this.addCommand({
+			id: 'open-as-outliner-view',
+			name: 'Open as Outliner View',
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (markdownView && markdownView.getViewType() === 'markdown' && this.app.metadataCache.getFileCache(markdownView.file)?.frontmatter?.[FRONT_MATTER_KEY]) {
+					if (!checking) {
+						this.outlinerFileModes[markdownView.leaf.id] = OUTLINER_EDITOR_VIEW_ID;
+						this.setOutlinerView(markdownView.leaf, {
+							file: markdownView.file?.path,
+						});
+
+						console.log(markdownView.leaf);
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
+
+		this.addCommand({
+			id: 'open-as-markdown-view',
+			name: 'Open as Markdown View',
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				const outlinerView = this.app.workspace.getActiveViewOfType(OutlinerEditorView);
+				if (outlinerView) {
+					if (!checking) {
+						this.outlinerFileModes[outlinerView.leaf.id] = 'markdown';
+						this.setMarkdownView(outlinerView.leaf);
+
+						console.log(outlinerView.leaf);
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
 	}
 
 }

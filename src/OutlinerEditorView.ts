@@ -3,7 +3,7 @@ import {
 	Component, Constructor,
 	Editor,
 	MarkdownFileInfo,
-	Menu,
+	Menu, Scope, Setting,
 	TextFileView,
 	TFile,
 	ViewStateResult,
@@ -13,6 +13,10 @@ import SamplePlugin from "./main";
 import { EmbeddableMarkdownEditor } from "./embedEditor";
 import { getIndent } from "./utils";
 import { ScrollableMarkdownEditor } from "./obsidian-ex";
+import { KeepOnlyZoomedContentVisible } from "./checkVisible";
+import { EditorView } from "@codemirror/view";
+import OutlinerViewPlugin from "./main";
+import { ClearSearchHighlightEffect, SearchHighlightEffect } from "./SearchHighlight";
 
 export function isEmebeddedLeaf(leaf: WorkspaceLeaf) {
 	// Work around missing enhance.js API by checking match condition instead of looking up parent
@@ -33,7 +37,14 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	editor: Editor;
 	filePath: string;
 	frontmatter: string;
-	tempData: string;
+	fileContentData: string;
+
+	filteredValue: string = "";
+
+	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible;
+
+	searchActionEl: HTMLElement;
+	clearFilterBtn: HTMLElement;
 
 	// backlinksEl: HTMLDivElement;
 	// showBacklinks: boolean;
@@ -43,10 +54,11 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	// editor: EmbeddableMarkdownEditor;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: SamplePlugin) {
+	constructor(leaf: WorkspaceLeaf, private plugin: OutlinerViewPlugin) {
 		super(leaf);
 
 		this.app = this.plugin.app;
+		this.scope = new Scope();
 	}
 
 	hoverPopover: any;
@@ -181,15 +193,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		};
 	}
 
-	// updateShowBacklinks() {
-	// 	if (this.backlinksEl.isShown()) {
-	// 		this.editor.updateBottomPadding();
-	// 	}
-	// 	// this.backlinks = this.addChild(new iZ(this.app, this.backlinksEl)),
-	// 	// this.currentMode === this.editor.owner.editMode && this.editor.owner.editMode.onResize();
-	// }
-
-
 	createEditor(container: HTMLElement) {
 		const embedEditor = new EmbeddableMarkdownEditor(this.app, container, {
 			// onEscape: (editor) => {
@@ -201,9 +204,9 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					const {line, ch} = (editor.editor as Editor).getCursor();
 					const lineText = editor.editor.getLine(line);
 
-					const range = app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
+					const range = this.app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
 					// const range = getZoomRange(editorView.state);
-					const indentNewLine = getIndent(app);
+					const indentNewLine = getIndent(this.app);
 
 					if (range) {
 						const firstLineInRange = range.from.line;
@@ -214,7 +217,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						const cursor = editor.editor.getCursor();
 						const lineText = editor.editor.getLine(cursor.line);
 
-						if (lineText.trim().startsWith('-')) {
+						if (/^((-|\*|\d+\.)(\s\[.\])?)/g.test(lineText.trim())) {
 							const currentLine = cursor.line;
 							const currentLineText = editor.editor.getLine(currentLine);
 							const spaceOnCurrentLine = currentLineText.match(/^\s*/)?.[0];
@@ -245,7 +248,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
 
-						if (lastLineInRangeText.trim() === '-' && spaceOnLastLine === (spaceOnFirstLine + indentNewLine)) {
+						if (/^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lastLineInRangeText.trim()) && spaceOnLastLine === (spaceOnFirstLine + indentNewLine)) {
 							editor.editor.transaction({
 								changes: [
 									{
@@ -306,12 +309,12 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			onDelete: (editor) => {
 				const {line, ch} = (editor.editor as Editor).getCursor();
 				const lineText = editor.editor.getLine(line);
-				if (/^(\s*?)-\s/g.test(lineText) && lineText.trim() === '-') {
+				if (/^(\s*?)((-|\*|\d+\.)(\s\[.\])?)\s/g.test(lineText) && /^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lineText.trim())) {
 					if (line === 0) {
 						return true;
 					}
 
-					const range = app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
+					const range = this.app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
 					if (range) {
 						const firstLineInRange = range.from.line;
 						if (firstLineInRange === line) {
@@ -356,7 +359,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			onIndent: (editor, mod: boolean, shift: boolean) => {
 				console.log('indent', mod, shift);
 				if (shift) {
-					const range = app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
+					const range = this.app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
 
 					if (range) {
 						const firstLineInRange = range.from.line;
@@ -366,7 +369,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
 						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
 						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
-						const indentNewLine = getIndent(app);
+						const indentNewLine = getIndent(this.app);
 
 						if (firstLineInRange === lastLineInRange) return true;
 
@@ -388,7 +391,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			// 	new Notice(`Unfocused the editor: (${editor.initial_value})`);
 			// 	this.removeChild(editor);
 			// },
-			value: this.tempData || "- ",
+			value: this.fileContentData || "- ",
 			view: this,
 		});
 
@@ -415,21 +418,24 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 				const file = this.app.vault.getFileByPath(state.file);
 				if (file) {
 					const data = await this.app.vault.read(file);
-					const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatterPosition;
+					// const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatterPosition;
+					const frontmatter = /^---\n[\s\S]*\n---/m.exec(data);
 					let finalData = data;
 
 					if (frontmatter) {
-						const frontmatterStart = frontmatter.start.line;
-						const frontmatterEnd = frontmatter.end.line;
-						const lines = data.split('\n');
-						const frontmatterLines = lines.slice(frontmatterStart, frontmatterEnd + 1);
-						this.frontmatter = frontmatterLines.join('\n');
-						finalData = lines.slice(frontmatterEnd + 1).join('\n');
+						// const frontmatterStart = frontmatter.index;
+						const frontmatterEnd = frontmatter.index + frontmatter[0].length;
+						this.frontmatter = frontmatter[0];
+						finalData = data.substring(frontmatterEnd);
 					}
 
-					this.tempData = finalData.trimStart();
-
+					this.fileContentData = finalData.trimStart();
 					this.loadEditor();
+					setTimeout(() => {
+						this.editor.focus();
+						const content = this.editor.getValue();
+						this.editor.setCursor(content.length - 1);
+					}, 200);
 				}
 
 			}
@@ -453,39 +459,97 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 		const editorContainer = container.createDiv({cls: 'outliner-editor '});
 		editorContainer.style.height = "100%";
-		// editorContainer.style.border = "1px solid var(--background-modifier-border)";
 
 		this.editors.push(editorContainer);
 		this.createEditor(editorContainer);
 	}
 
+	filter(view: EditorView, search: string) {
+		if (search === "") {
+			this.plugin.KeepOnlyZoomedContentVisible?.showAllContent(view);
+			this.filteredValue = "";
+			this.contentEl.toggleClass('filtered', false);
+			return;
+		}
+
+		// console.log();
+		const ranges = this.plugin.calculateRangeForZooming.calculateAllShowedContentRanges(
+			view,
+			this.editor.getAllFoldableLines(),
+			search
+		);
+
+		this.filteredValue = search;
+		this.plugin.KeepOnlyZoomedContentVisible?.keepRangesVisible(view, ranges);
+		this.contentEl.toggleClass('filtered', true);
+	}
+
+
+	registerSearchActionBtn() {
+		this.searchActionEl = this.addAction("search", "Search", (evt) => {
+			const searchMenu = new Menu();
+			searchMenu.dom.toggleClass('search-menu', true);
+			let block = false;
+			searchMenu.addItem((item) => {
+				const itemDom = (item as any).dom;
+				item.setIsLabel(true);
+				let tempValue = "";
+				const settingEl = new Setting(itemDom)
+					.setName("Filter")
+					.addSearch((search) => {
+						search.setValue(this.filteredValue).onChange((value) => {
+							if (block) return;
+							this.editor.cm.dispatch({
+								effects: ClearSearchHighlightEffect.of()
+							});
+
+							this.filter(this.editor.cm, value);
+
+
+						});
+
+						search.clearButtonEl.addEventListener('click', () => {
+							searchMenu.hide();
+						});
+
+						search.inputEl.addEventListener('compositionstart', () => {
+							block = true;
+						});
+						search.inputEl.addEventListener('compositionend', () => {
+							block = false;
+							this.filter(this.editor.cm, search.inputEl.value);
+						});
+					});
+
+
+				item.onClick((e) => {
+					e.preventDefault();
+					e.stopImmediatePropagation();
+					settingEl.components[0].inputEl.focus();
+				});
+			});
+			const {x, y} = this.searchActionEl.getBoundingClientRect();
+			searchMenu.showAtPosition({
+				x: x + this.searchActionEl.offsetHeight,
+				y: y + this.searchActionEl.offsetHeight
+			});
+
+			document.body.find('.search-menu input')?.focus();
+		});
+
+		this.clearFilterBtn = this.addAction("filter-x", "Clear Filter", (evt) => {
+			this.filter(this.editor.cm, "");
+		});
+		this.clearFilterBtn.toggleClass('filter-clear', true);
+	}
+
+	search() {
+		this.searchActionEl.click();
+		document.body.find('.search-menu input')?.focus();
+	}
+
 	async onOpen() {
-		// this.backlinksEl = createDiv("embedded-backlinks");
-		// this.backlinksEl.hide();
-		// this.showBacklinks = this.app.workspace.backlinkInDocument;
-		//
-		//
-		// if (!this.plugin.backlinkComponent) {
-		// 	this.registerEvent(
-		// 		this.app.workspace.on('backlinks:open', (
-		// 			backlinkComponent: any,
-		// 		) => {
-		// 			console.log(backlinkComponent);
-		// 			const backlinkConstructor = resolveBacklinkPrototype(backlinkComponent);
-		// 			const component = new (backlinkConstructor as any)(this.app, this.backlinksEl);
-		// 			console.log('backlink-open', component, backlinkConstructor);
-		// 			this.backlink = this.addChild(component);
-		// 			this.backlinksEl.show();
-		// 		})
-		// 	);
-		// } else {
-		// 	const backlinkConstructor = resolveBacklinkPrototype(this.plugin.backlinkComponent);
-		// 	const component = new (backlinkConstructor as any)(this.app, this.backlinksEl);
-		// 	console.log('backlink-open', component, backlinkConstructor);
-		// 	this.backlink = this.addChild(component);
-		// 	this.backlinksEl.show();
-		// }
-		//
-		// this.updateShowBacklinks();
+		this.load();
+		this.registerSearchActionBtn();
 	}
 }

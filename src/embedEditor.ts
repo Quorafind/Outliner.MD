@@ -24,6 +24,8 @@ import { AddNewLineBtn } from "./AddNewLine";
 // import { zoomStateField } from "./checkVisible";
 import { placeholder } from "./Placeholder";
 import { OutlinerEditorView } from "./OutlinerEditorView";
+import { KeepOnlyZoomedContentVisible } from "./checkVisible";
+import { SearchHighlight } from "./SearchHighlight";
 
 
 function resolveEditorPrototype(app: App) {
@@ -72,7 +74,7 @@ const defaultProperties: MarkdownEditorProps = {
 	value: '',
 	cls: '',
 	placeholder: '',
-	view: null,
+	view: undefined,
 
 	getViewType: () => '',
 	getDisplayText: () => '',
@@ -100,6 +102,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	initial_value: string;
 	scope: Scope;
 	view: OutlinerEditorView;
+	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible;
 
 	/**
 	 * Construct the editor
@@ -114,7 +117,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			// This mocks the MarkdownView functions, which is required for proper functioning of scrolling
 			onMarkdownScroll: () => {
 			},
-			getMode: () => 'preview',
+			getMode: () => 'source',
 			getDisplayText: () => this.options.getDisplayText(),
 		});
 		this.options = {...defaultProperties, ...options};
@@ -137,6 +140,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		this.owner.editMode = this;
 		this.owner.editor = this.editor;
+
 
 		this.set(options.value || '');
 		this.register(
@@ -187,23 +191,6 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		return this.editor.cm.state.doc.toString();
 	}
 
-	// updateBottomPadding() {
-	// 	const scrollHeight = this.cm.contentDOM.clientHeight;
-	// 	const backlinksElement = this.view.backlinksEl;  // 更清晰的变量命名
-	// 	const halfScrollHeight = Math.round(scrollHeight / 2);  // 变量名更明确地表达了其用途
-	// 	let paddingBottom = `${halfScrollHeight}px`;  // 使用模板字符串来设置样式
-	//
-	// 	console.log(paddingBottom, scrollHeight);
-	//
-	// 	if (backlinksElement.isShown()) {
-	// 		paddingBottom = "100px";
-	// 		const minHeight = Math.max(0, halfScrollHeight - 100) + "px";
-	// 		backlinksElement.style.minHeight = minHeight;  // 直接在条件内部设置属性
-	// 	}
-	//
-	// 	this.cm.contentDOM.style.paddingBottom = paddingBottom;
-	// }
-
 	onUpdate(update: ViewUpdate, changed: boolean) {
 		super.onUpdate(update, changed);
 		if (changed) this.options.onChange(update);
@@ -215,6 +202,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	 */
 	buildLocalExtensions(): Extension[] {
 		const extensions = super.buildLocalExtensions();
+		this.KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
 		// if (this.options.placeholder) extensions.push(placeholder(this.options.placeholder));
 
 		/* Editor extension for handling specific user inputs */
@@ -258,9 +246,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			}
 		])));
 
-		extensions.push([AddNewLineBtn, placeholder]);
-
-		/* Additional Editor extensions (renderers, ...) */
+		extensions.push([AddNewLineBtn, placeholder, this.KeepOnlyZoomedContentVisible?.getExtension(), SearchHighlight]);
 
 
 		return extensions;

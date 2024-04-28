@@ -6,7 +6,7 @@ import {
 	ExtraButtonComponent,
 	MarkdownFileInfo,
 } from "obsidian";
-import { getIndent, getVisibleRanges, getZoomRange } from "./utils";
+import { getIndent } from "./utils";
 
 export const AddNewLineBtn = StateField.define<DecorationSet>({
 	create() {

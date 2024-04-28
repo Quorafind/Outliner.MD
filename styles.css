@@ -34,3 +34,25 @@ If your plugin does not need CSS, delete this file.
 	color: var(--memos-text-faint);
 	position: absolute;
 }
+
+.filtered .outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button {
+	display: none;
+}
+
+.search-menu .setting-item {
+	border-top: unset;
+	padding: unset;
+}
+
+.workspace-leaf-content .view-header .filter-clear {
+	display: none;
+}
+
+.workspace-leaf-content:has(.filtered) .view-header .filter-clear {
+	display: flex;
+}
+
+
+.outliner-editor .markdown-source-view.mod-cm6 .outliner-highlight {
+	background: var(--color-yellow);
+}
