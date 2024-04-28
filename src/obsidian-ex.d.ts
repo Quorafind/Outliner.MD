@@ -1,5 +1,6 @@
 import 'obsidian';
 import { View, WorkspaceItem, WorkspaceParent } from "obsidian";
+import { EditorView } from "@codemirror/view";
 
 type ScrollableMarkdownEditor = any;
 
@@ -11,6 +12,19 @@ declare module "obsidian" {
 
 	interface EditableFileView {
 		titleParentEl: HTMLElement;
+	}
+
+	interface Editor {
+		cm: EditorView;
+
+		getAllFoldableLines(): {
+			from: number;
+			to: number;
+		}[];
+	}
+
+	interface Menu {
+		dom: HTMLElement;
 	}
 
 	interface Workspace {
@@ -67,6 +81,7 @@ declare module "obsidian" {
 		createNewMarkdownFile: (parent: TFolder, name: string) => Promise<TFile>;
 		promptForFileRename: (file: TFile) => void;
 		promptForFileDeletion: (file: TFile) => void;
+		getMarkdownNewFileParent: () => TFolder;
 	}
 
 	interface View {

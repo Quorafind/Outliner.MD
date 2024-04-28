@@ -56,7 +56,7 @@ export default class OutlinerViewPlugin extends Plugin {
 			const folder = this.app.fileManager.getMarkdownNewFileParent();
 			if (folder) {
 				const newFile = await this.app.vault.create(`${folder.path}/outliner-${moment().format('YYYYMMDDHHmmss')}.md`, `---\noutliner: true\n---\n\n- `);
-				this.app.workspace.getLeaf(true).setViewState({
+				await this.app.workspace.getLeaf(true).setViewState({
 					type: OUTLINER_EDITOR_VIEW_ID,
 					state: {
 						file: newFile.path,
@@ -151,6 +151,7 @@ export default class OutlinerViewPlugin extends Plugin {
 					return function (state: ViewState, ...rest: any[]) {
 						if (
 							// Don't force kanban mode during shutdown
+							// @ts-ignore
 							self._loaded &&
 							// If we have a markdown file
 							state.type === 'markdown' &&
@@ -260,12 +261,13 @@ export default class OutlinerViewPlugin extends Plugin {
 			name: 'Search in current file',
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
+				// @ts-ignore
 				const outlinerView = this.app.workspace.getActiveViewOfType(OutlinerEditorView);
 				if (outlinerView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
 					if (!checking) {
-						outlinerView.search();
+						(outlinerView as OutlinerEditorView).search();
 					}
 
 					// This command will only show up in Command Palette when the check function returns true
@@ -279,6 +281,7 @@ export default class OutlinerViewPlugin extends Plugin {
 			name: 'Open as Outliner View',
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
+				// @ts-ignore
 				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
 				if (markdownView && markdownView.getViewType() === 'markdown' && this.app.metadataCache.getFileCache(markdownView.file)?.frontmatter?.[FRONT_MATTER_KEY]) {
 					if (!checking) {
@@ -301,6 +304,7 @@ export default class OutlinerViewPlugin extends Plugin {
 			name: 'Open as Markdown View',
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
+				// @ts-ignore
 				const outlinerView = this.app.workspace.getActiveViewOfType(OutlinerEditorView);
 				if (outlinerView) {
 					if (!checking) {

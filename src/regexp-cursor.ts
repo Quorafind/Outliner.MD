@@ -1,6 +1,7 @@
 // from https://github.com/codemirror/search/blob/main/src/regexp.ts
 
 import { Text, TextIterator } from "@codemirror/state";
+// @ts-ignore
 import execWithIndices from 'regexp-match-indices';
 
 const empty = {from: -1, to: -1, match: /.*/.exec("")!};

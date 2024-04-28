@@ -3,7 +3,7 @@ import {
 	Component, Constructor,
 	Editor,
 	MarkdownFileInfo,
-	Menu, Scope, Setting,
+	Menu, Scope, SearchComponent, Setting,
 	TextFileView,
 	TFile,
 	ViewStateResult,
@@ -525,7 +525,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 				item.onClick((e) => {
 					e.preventDefault();
 					e.stopImmediatePropagation();
-					settingEl.components[0].inputEl.focus();
+					(settingEl.components[0] as SearchComponent).inputEl.focus();
 				});
 			});
 			const {x, y} = this.searchActionEl.getBoundingClientRect();
@@ -543,7 +543,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		this.clearFilterBtn.toggleClass('filter-clear', true);
 	}
 
-	search() {
+	public search() {
 		this.searchActionEl.click();
 		document.body.find('.search-menu input')?.focus();
 	}
