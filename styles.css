@@ -24,8 +24,12 @@ If your plugin does not need CSS, delete this file.
 	--icon-stroke: 1px;
 }
 
-.outliner-editor .markdown-source-view.mod-cm6 .cm-content {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-content:not(.embed-editor) {
 	padding-left: var(--size-4-4);
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-content.embed-editor {
+	padding-bottom: 0 !important;
 }
 
 
@@ -36,6 +40,10 @@ If your plugin does not need CSS, delete this file.
 }
 
 .filtered .outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button {
+	display: none;
+}
+
+.filtered .outliner-editor .markdown-source-view.mod-cm6 .cm-task-group {
 	display: none;
 }
 
@@ -54,5 +62,141 @@ If your plugin does not need CSS, delete this file.
 
 
 .outliner-editor .markdown-source-view.mod-cm6 .outliner-highlight {
-	background: var(--color-yellow);
+	background: rgba(255, 239, 155, 0.56);
+}
+
+/*.outliner-editor {*/
+/*	padding-top: var(--size-4-6);*/
+/*	padding-left: var(--size-4-4);*/
+/*}*/
+
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-sizer {
+	max-width: var(--file-line-width);
+	min-width: var(--file-line-width);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.cm-task-group .markdown-source-view.mod-cm6 .cm-sizer:has(.cm-content.embed-editor) {
+	min-width: auto;
+}
+
+.cm-task-group .cm-task-group-header {
+	font-size: 17px;
+	margin-bottom: var(--size-2-2);
+	margin-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: var(--size-4-2);
+	cursor: pointer;
+	display: flex;
+}
+
+.markdown-source-view.mod-cm6 .cm-task-group-container {
+	display: flex;
+	flex-direction: column;
+}
+
+span.cm-task-group-margin {
+	width: 100%;
+	height: var(--size-4-6);
+}
+
+.cm-task-group .cm-task-group-header .cm-group-title:hover {
+	text-decoration: underline;
+	color: var(--link-color);
+	font-weight: var(--link-weight);
+}
+
+.cm-task-group .cm-task-group-header .cm-group-collapse-button:not(.cm-task-container-collapsed) svg {
+	transform: rotate(90deg);
+
+	transition: all 100ms;
+}
+
+span.cm-group-collapse-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: var(--size-2-2);
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker {
+	/*display: inline-block;*/
+	position: relative;
+	z-index: 1;
+}
+
+.outliner-editor markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:not(.cm-active):not(.HyperMD-task-line) span.cm-bullet-menu-marker .clickable-icon {
+	padding-inline-end: var(--list-bullet-end-padding);
+	transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding)));
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker .clickable-icon {
+	position: absolute;
+	top: 0;
+	inset-inline-end: 0;
+	height: 100%;
+
+	padding: var(--size-2-2);
+
+	--icon-size: 14px;
+	--icon-stroke: 2px;
+
+	opacity: 0;
+
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker:hover .clickable-icon {
+	opacity: 1;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line:hover .clickable-icon {
+	opacity: 1;
+}
+
+/*.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
+/*	padding-inline-end: 0;*/
+/*}*/
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-bullet-menu-marker .clickable-icon {
+	margin-inline-end: 18px;
+}
+
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) {
+	height: fit-content;
+}
+
+.outliner-editor .cm-task-group .markdown-source-view.mod-cm6 .cm-editor {
+	min-height: fit-content;
+}
+
+.outliner-editor .cm-task-group .markdown-source-view.mod-cm6 .cm-editor .cm-gutters {
+	display: none;
+}
+
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) {
+	padding: var(--size-4-2);
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-m);
+	display: flex;
+	flex-direction: column;
+	padding-left: var(--size-4-4);
+	padding-right: var(--size-4-4);
+	padding-bottom: var(--size-4-3);
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-task-group-title {
+	/*margin-bottom: var(--size-4-2);*/
+}
+
+
+.outliner-editor .cm-task-group-container:has(.markdown-soruce-view) {
+	display: flex;
+}
+
+.outliner-editor .cm-task-group-container {
+	display: none;
 }

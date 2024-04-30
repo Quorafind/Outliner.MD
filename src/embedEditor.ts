@@ -13,9 +13,11 @@
 
 import {
 	Constructor, Keymap, Scope, App,
-	TFile, WorkspaceLeaf, Editor
+	TFile, WorkspaceLeaf
 } from "obsidian";
-
+import {
+	Editor
+} from 'obsidian-typings';
 import { EditorSelection, Extension, Prec } from "@codemirror/state";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
@@ -26,6 +28,8 @@ import { placeholder } from "./Placeholder";
 import { OutlinerEditorView } from "./OutlinerEditorView";
 import { KeepOnlyZoomedContentVisible } from "./checkVisible";
 import { SearchHighlight } from "./SearchHighlight";
+import { BulletMenu } from "./BulletMenu";
+import { TaskGroupComponent } from "./TaskGroupComponent";
 
 
 function resolveEditorPrototype(app: App) {
@@ -55,6 +59,9 @@ interface MarkdownEditorProps {
 	cls?: string;
 	placeholder?: string;
 	view?: OutlinerEditorView;
+	type: 'embed' | 'outliner';
+
+	path?: string;
 
 	getDisplayText: () => string;
 	getViewType: () => string;
@@ -64,7 +71,7 @@ interface MarkdownEditorProps {
 	onSubmit: (editor: EmbeddableMarkdownEditor) => void;
 	onBlur: (editor: EmbeddableMarkdownEditor) => void;
 	onPaste: (e: ClipboardEvent, editor: EmbeddableMarkdownEditor) => void;
-	onChange: (update: ViewUpdate) => void;
+	onChange: (update: ViewUpdate, path?: string) => void;
 	onDelete: (editor: EmbeddableMarkdownEditor) => boolean;
 	onIndent: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
 }
@@ -75,6 +82,9 @@ const defaultProperties: MarkdownEditorProps = {
 	cls: '',
 	placeholder: '',
 	view: undefined,
+	type: 'embed',
+
+	path: '',
 
 	getViewType: () => '',
 	getDisplayText: () => '',
@@ -135,13 +145,21 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			return true;
 		});
 
+		this.scope.register(["Mod"], "f", (e, ctx) => {
+			this.view && this.view?.search();
+			return true;
+		});
+
 		// Since the commands expect that this is a MarkdownView (with editMode as the Editor itself),
 		//   we need to mock this by setting both the editMode and editor to this instance and its containing view respectively
 
 		this.owner.editMode = this;
 		this.owner.editor = this.editor;
 
+		this.owner.getViewType = this.options.getViewType;
 
+
+		const self = this;
 		this.set(options.value || '');
 		this.register(
 			around(this.app.workspace, {
@@ -152,6 +170,25 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 							oldMethod.call(this.app.workspace, leaf, params);
 						}
 					},
+			}),
+		);
+
+		this.register(
+			around(this.editor.constructor.prototype, {
+				getClickableTokenAt: (oldMethod: any) => {
+					return function (...args: any[]) {
+						const token = oldMethod.call(this, ...args);
+						if (token && token.type === 'tag') {
+							const activeView = self.app.workspace.activeEditor.editMode.view as OutlinerEditorView;
+							// console.log(activeView, token.text, this.activeCM);
+							activeView?.searchWithText(token.text);
+							return;
+						}
+						if (!this.activeCM.hasFocus) {
+							return token;
+						}
+					};
+				}
 			}),
 		);
 
@@ -184,6 +221,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		}
 
 		this.view = this.options.view!;
+		this.editor.cm.contentDOM.toggleClass('embed-editor', this.options.type === 'embed');
 		// this.sizerEl.appendChild(this.options.view?.backlinksEl);
 	}
 
@@ -193,7 +231,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 	onUpdate(update: ViewUpdate, changed: boolean) {
 		super.onUpdate(update, changed);
-		if (changed) this.options.onChange(update);
+		if (changed) this.options.onChange(update, this.options?.path);
 	}
 
 	/**
@@ -246,7 +284,12 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			}
 		])));
 
-		extensions.push([AddNewLineBtn, placeholder, this.KeepOnlyZoomedContentVisible?.getExtension(), SearchHighlight]);
+		extensions.push([placeholder, this.KeepOnlyZoomedContentVisible?.getExtension()]);
+
+		if (this.options.type === 'outliner') {
+			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);
+		} else {
+		}
 
 
 		return extensions;

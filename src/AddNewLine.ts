@@ -15,11 +15,9 @@ export const AddNewLineBtn = StateField.define<DecorationSet>({
 	update(value, tr) {
 		const editor = tr.state.field(editorInfoField);
 
-		// console.log(tr.state.field(editorViewField));
 		const builder = new RangeSetBuilder<Decoration>();
 		const firstLine = tr.state.doc.line(tr.state.doc.lines).to;
 
-		// const widget = new ButtonWidget(app, 'string', firstLine, firstLine);
 		builder.add(firstLine, firstLine, Decoration.widget({
 			widget: new ButtonWidget(app, editor,
 				firstLine, firstLine, tr.state), side: 2, block: true
@@ -46,7 +44,7 @@ class ButtonWidget extends WidgetType {
 		});
 		new ExtraButtonComponent(button).setIcon('plus').onClick(() => {
 			const lastLine = this.editor.editor?.lastLine();
-			const range = app.plugins.getPlugin('obsidian-zoom').getZoomRange(this.editor.editor);
+			const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(this.editor.editor);
 			// const editor = this.app.workspace.activeEditor;
 			// const range2 = getZoomRange(editor?.editor?.cm.viewState.state);
 			// console.log(range, range2, this.app.workspace.activeEditor, getZoomRange(editor?.editor?.cm.state), editor?.editor?.cm.state.doc.toString());

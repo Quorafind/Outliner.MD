@@ -13,6 +13,8 @@ export const zoomInEffect = StateEffect.define<ZoomInRange>();
 
 export const zoomOutEffect = StateEffect.define<void>();
 
+export const zoomWithHideIndentEffect = StateEffect.define<{ range: { from: number, to: number }, indent: string }>();
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isZoomInEffect(e: StateEffect<any>): e is ZoomInStateEffect {
 	return e.is(zoomInEffect);
@@ -58,8 +60,6 @@ export const zoomStateField = StateField.define<DecorationSet>({
 				let hiddenRanges = [];
 				let lastVisibleEnd = 0;
 
-				console.log(visibleRanges);
-
 				visibleRanges.forEach(range => {
 					if (range.from > lastVisibleEnd + 1) {
 						// If there is a gap between the last visible range and the current range,
@@ -81,6 +81,21 @@ export const zoomStateField = StateField.define<DecorationSet>({
 						add: [zoomMarkHidden.range(range.from === 0 ? range.from : range.from + 1, range.to === totalLength ? range.to : range.to - 1)],
 					});
 				});
+			}
+
+			if (e.is(zoomWithHideIndentEffect)) {
+				// value = value.update({filter: () => false});
+				const {range, indent} = e.value;
+
+				const firstLine = tr.state.doc.lineAt(range.from);
+				const lastLine = tr.state.doc.lineAt(range.to);
+
+				for (let i = firstLine.number; i <= lastLine.number; i++) {
+					const line = tr.state.doc.line(i);
+					value = value.update({
+						add: [zoomMarkHidden.range(line.from, line.from + indent.length)]
+					});
+				}
 			}
 		}
 
@@ -151,7 +166,6 @@ export class KeepOnlyZoomedContentVisible {
 	}
 
 	public keepRangesVisible(view: EditorView, ranges: ZoomInRange[]) {
-		console.log(ranges);
 		view.dispatch({
 			effects: [zoomInRangesEffect.of({ranges})],
 		});

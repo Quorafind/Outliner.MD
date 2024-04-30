@@ -32,7 +32,7 @@ export const OUTLINER_EDITOR_VIEW_ID = "outliner-editor-view";
 // }
 
 export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo {
-	editors: HTMLElement[] = [];
+	// editors: HTMLElement[] = [];
 	app: App;
 	editor: Editor;
 	filePath: string;
@@ -45,6 +45,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	searchActionEl: HTMLElement;
 	clearFilterBtn: HTMLElement;
+
+	changedBySelf: boolean = false;
 
 	// backlinksEl: HTMLDivElement;
 	// showBacklinks: boolean;
@@ -74,18 +76,19 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	requestSave: () => void;
 
 	setViewData(data: string, clear: boolean) {
+		console.log('setViewData', data);
+
+		const lastCh = this.editor.offsetToPos(this.data.length);
+		this.editor.replaceRange(
+			data.replace(this.frontmatter, '').trimStart(), {
+				line: 0,
+				ch: 0
+			}, lastCh
+		);
 		this.data = data;
-		this.editor.setValue(this.data.replace(this.frontmatter, '').trimStart());
-		// if (clear) {
-		// 	this.tempData = "";
-		// 	this.frontmatter = "";
-		// }
-		//
-		// this.tempData = data;
-		// const finalData = this.frontmatter ? `${this.frontmatter}\n${data}` : data;
-		//
-		// this.data = finalData;
-		// if (this.file) this.app.vault.modify(this.file, finalData);
+		const currentScroll = this.editor.getScrollInfo();
+
+		this.editor.scrollTo(currentScroll.left, currentScroll.top);
 	}
 
 	getViewData(): string {
@@ -101,6 +104,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	}
 
 	onLoadFile(file: TFile): Promise<void> {
+		// this.inl;
+
 		return super.onLoadFile(file);
 	}
 
@@ -112,7 +117,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		super.onPaneMenu(menu, source);
 		menu.addItem((item) => {
 			item
-				.setIcon('list')
+				.setIcon('file-edit')
 				.setTitle('Open as Markdown View')
 				.onClick(async () => {
 					this.plugin.outlinerFileModes[(this.leaf as any).id] = 'markdown';
@@ -204,7 +209,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					const {line, ch} = (editor.editor as Editor).getCursor();
 					const lineText = editor.editor.getLine(line);
 
-					const range = this.app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
+					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
 					// const range = getZoomRange(editorView.state);
 					const indentNewLine = getIndent(this.app);
 
@@ -314,7 +319,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						return true;
 					}
 
-					const range = this.app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
+					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
 					if (range) {
 						const firstLineInRange = range.from.line;
 						if (firstLineInRange === line) {
@@ -359,7 +364,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			onIndent: (editor, mod: boolean, shift: boolean) => {
 				console.log('indent', mod, shift);
 				if (shift) {
-					const range = this.app.plugins.getPlugin('obsidian-zoom').getZoomRange(editor.editor);
+					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
 
 					if (range) {
 						const firstLineInRange = range.from.line;
@@ -393,6 +398,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			// },
 			value: this.fileContentData || "- ",
 			view: this,
+			type: 'outliner',
 		});
 
 		this.editor = embedEditor.editor;
@@ -460,7 +466,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		const editorContainer = container.createDiv({cls: 'outliner-editor '});
 		editorContainer.style.height = "100%";
 
-		this.editors.push(editorContainer);
+		// this.editors.push(editorContainer);
 		this.createEditor(editorContainer);
 	}
 
@@ -469,8 +475,17 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			this.plugin.KeepOnlyZoomedContentVisible?.showAllContent(view);
 			this.filteredValue = "";
 			this.contentEl.toggleClass('filtered', false);
+			this.editor.cm.dispatch({
+				effects: ClearSearchHighlightEffect.of()
+			});
 			return;
 		}
+
+		console.log(this.editor.getAllFoldableLines());
+
+		// for (const line of this.editor.getAllFoldableLines()) {
+		// 	// console.log(line, this.editor.cm.state.doc.lineAt(0).text, this.editor.cm.state.doc.lineAt(line.from).text);
+		// }
 
 		// console.log();
 		const ranges = this.plugin.calculateRangeForZooming.calculateAllShowedContentRanges(
@@ -534,11 +549,16 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 				y: y + this.searchActionEl.offsetHeight
 			});
 
+			searchMenu.onHide(() => {
+				this.editor.focus();
+			});
+
 			document.body.find('.search-menu input')?.focus();
 		});
 
 		this.clearFilterBtn = this.addAction("filter-x", "Clear Filter", (evt) => {
 			this.filter(this.editor.cm, "");
+
 		});
 		this.clearFilterBtn.toggleClass('filter-clear', true);
 	}
@@ -548,8 +568,27 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		document.body.find('.search-menu input')?.focus();
 	}
 
+	public searchWithText(text: string) {
+		this.searchActionEl.click();
+
+		console.log(this, text);
+
+		const searchInput = document.body.find('.search-menu input') as HTMLInputElement;
+		searchInput?.focus();
+		searchInput.value = text;
+		searchInput.dispatchEvent(new Event('input'));
+
+	}
+
 	async onOpen() {
 		this.load();
 		this.registerSearchActionBtn();
+	}
+
+	onunload() {
+		super.onunload();
+		this.searchActionEl.detach();
+		this.clearFilterBtn.detach();
+		this.filteredValue = "";
 	}
 }

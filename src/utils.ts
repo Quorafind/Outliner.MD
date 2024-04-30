@@ -47,16 +47,18 @@ export class CalculateRangeForZooming {
 
 		const containedRanges = getSearchRanges(view, keyString);
 
-		const addRangeToShow = (range: { from: number; to: number }) => {
-			const existing = showedRanges.some(r => r.from === range.from && r.to === range.to);
-			if (!existing) {
-				showedRanges.push(range);
-			}
-		};
+		// const addRangeToShow = (range: { from: number; to: number }) => {
+		// 	const existing = showedRanges.some(r => r.from === range.from && r.to === range.to);
+		// 	if (!existing) {
+		// 		showedRanges.push(range);
+		// 	}
+		// };
 
 		// Check each contained range against foldable ranges
+
 		for (const containedRange of containedRanges) {
-			const inFoldRanges = foldableRanges.find(r => r.from === containedRange.from);
+			console.log('foldedRanges', foldableRanges, containedRange.from, containedRange.to, view.state.doc.lineAt(containedRange.from).from);
+			const inFoldRanges = foldableRanges.find(r => r.from === containedRange.to);
 			const parentFoldRanges = foldableRanges.filter(r => r.from < containedRange.from && r.to >= containedRange.to);
 			if (parentFoldRanges.length > 0) {
 				const parentLines = parentFoldRanges.map(r => view.state.doc.lineAt(r.from));
@@ -70,6 +72,7 @@ export class CalculateRangeForZooming {
 			}
 
 			if (inFoldRanges) {
+				console.log('inFoldRanges', inFoldRanges);
 				const startLine = view.state.doc.lineAt(containedRange.from);
 				// Get fold ranges that start from the startLine;
 				showedRanges.push({
@@ -135,6 +138,8 @@ function getSearchRanges(view: EditorView, search: string) {
 
 		const bulletListVisibleLine = state.doc.lineAt(from);
 		ranges.push({from: bulletListVisibleLine.from, to: bulletListVisibleLine.to});
+
+		// console.log('from', from, 'to', to, bulletListVisibleLine.text, bulletListVisibleLine.from, bulletListVisibleLine.to);
 
 		view.dispatch({
 			effects: SearchHighlightEffect.of({

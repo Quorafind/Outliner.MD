@@ -23,6 +23,7 @@
 		"esbuild": "0.14.47",
 		"monkey-around": "^3.0.0",
 		"obsidian": "latest",
+		"obsidian-dataview": "^0.5.66",
 		"obsidian-typings": "^1.1.1",
 		"regexp-match-indices": "^1.0.2",
 		"tslib": "2.4.0",

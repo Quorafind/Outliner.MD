@@ -18,7 +18,7 @@ esbuild.build({
 	entryPoints: ['src/main.ts'],
 	bundle: true,
 	minify: prod,
-	// drop: ['console.log'],
+	// drop: ['console'],
 	external: [
 		'obsidian',
 		'electron',
