@@ -107,17 +107,18 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	setViewData(data: string, clear: boolean) {
 		console.log('setViewData', data);
 
-		const lastCh = this.editor.offsetToPos(this.data.length);
+		// const currentScrollInfo = this.editor.getScrollInfo();
+
 		this.editor.replaceRange(
 			data.replace(this.frontmatter, '').trimStart(), {
 				line: 0,
 				ch: 0
-			}, lastCh
+			}, this.editor.offsetToPos(this.editor.cm.state.doc.length)
 		);
-		this.data = data;
-		const currentScroll = this.editor.getScrollInfo();
 
-		this.editor.scrollTo(currentScroll.left, currentScroll.top);
+		// this.editor.scrollTo(null, currentScrollInfo.top);
+
+		this.data = data;
 	}
 
 	getViewData(): string {

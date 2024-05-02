@@ -71,7 +71,7 @@ interface MarkdownEditorProps {
 	onEnter: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
 	onEscape: (editor: EmbeddableMarkdownEditor) => void;
 	onSubmit: (editor: EmbeddableMarkdownEditor) => void;
-	onBlur: (editor: EmbeddableMarkdownEditor) => void;
+	onBlur: (editor: EmbeddableMarkdownEditor, path?: string) => void;
 	onPaste: (e: ClipboardEvent, editor: EmbeddableMarkdownEditor) => void;
 	onChange: (update: ViewUpdate, path?: string) => void;
 	onDelete: (editor: EmbeddableMarkdownEditor) => boolean;
@@ -209,7 +209,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			this.editor.cm.contentDOM.addEventListener('blur', () => {
 				this.app.keymap.popScope(this.scope);
 				if (this._loaded)
-					this.options.onBlur(this);
+					this.options.onBlur(this, this.options?.path);
 			});
 		}
 

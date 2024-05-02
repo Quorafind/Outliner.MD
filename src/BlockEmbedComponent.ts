@@ -44,8 +44,8 @@ class BlockEmbedWidget extends WidgetType {
 			cls: 'cm-task-group-container'
 		});
 
-		const groupComponent = new BlockEmbedEditor(this.app, blockEmbedEl);
-		groupComponent.onload();
+		// const groupComponent = new BlockEmbedEditor(this.app, blockEmbedEl);
+		// groupComponent.onload();
 		return blockEmbedEl;
 	}
 

@@ -29,6 +29,8 @@ export class OutlinerEmbedEditor extends Component {
 
 	changedBySelf: boolean = false;
 
+	editing: boolean = false;
+
 	constructor(app: App, readonly containerEl: HTMLElement) {
 		super();
 		this.app = app;
@@ -71,8 +73,11 @@ export class OutlinerEmbedEditor extends Component {
 	requestSave = debounce(async (path: string, data: string) => {
 		const file = this.app.vault.getFileByPath(path);
 		if (file) {
+			console.log('saving', path, data);
+			this.editing = false;
 			await this.app.vault.modify(file, data);
 		}
+
 	}, 3000);
 
 	createEditor(container: HTMLElement, path: string, data: string, range: { from: number, to: number } | {
@@ -274,20 +279,18 @@ export class OutlinerEmbedEditor extends Component {
 				// this.data = update.state.doc.toString();
 				// this.requestSave();
 
-
-				console.log('content', update.state.doc.toString());
-
 				if (path) {
 					if (!update.docChanged) return;
 					if (this.contentMap.get(path) === update.state.doc.toString()) return;
-
 
 					if (this.changedBySelf) {
 						this.changedBySelf = false;
 						return;
 					}
 
+					console.log('changed', "hello changed", update.state.doc.toString());
 
+					this.editing = true;
 					this.requestSave(path, update.state.doc.toString());
 				}
 			},
@@ -441,6 +444,8 @@ GROUP BY file.path`);
 	}, 1000);
 
 	async updateEditor(file: TFile, oldPath?: string) {
+		console.log('is editing', this.editing);
+		if (this.editing) return;
 
 		const api = getAPI(this.app);
 
@@ -469,9 +474,6 @@ GROUP BY file.path`);
 				if (editor) {
 					const data = await this.app.vault.read(targetFile);
 
-					console.log('data in file', data, ranges);
-
-
 					const lastContent = this.contentMap.get(targetFile.path);
 					if (lastContent !== data) {
 						console.log('changed', lastContent, data);
@@ -482,9 +484,8 @@ GROUP BY file.path`);
 
 						this.changedBySelf = true;
 						// const endPos = editor.offsetToPos((lastContent || editor.getValue()).length);
-						const lastLineofEditor = editor.lastLine();
-						const lastLine = editor.getLine(lastLineofEditor + 1);
-						editor.replaceRange(data, {line: 0, ch: 0}, {line: lastLineofEditor, ch: lastLine.length});
+						const lastLine = editor.cm.state.doc.lineAt(editor.cm.state.doc.length - 1);
+						editor.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length});
 						this.contentMap.set(targetFile.path, data);
 
 						const values = result.value.values;
