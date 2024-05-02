@@ -18,7 +18,7 @@ import {
 import {
 	Editor
 } from 'obsidian-typings';
-import { EditorSelection, Extension, Prec } from "@codemirror/state";
+import { EditorSelection, EditorState, Extension, Prec } from "@codemirror/state";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
 import { ScrollableMarkdownEditor } from "./obsidian-ex";
@@ -26,10 +26,12 @@ import { AddNewLineBtn } from "./AddNewLine";
 // import { zoomStateField } from "./checkVisible";
 import { placeholder } from "./Placeholder";
 import { OutlinerEditorView } from "./OutlinerEditorView";
-import { KeepOnlyZoomedContentVisible } from "./checkVisible";
 import { SearchHighlight } from "./SearchHighlight";
 import { BulletMenu } from "./BulletMenu";
 import { TaskGroupComponent } from "./TaskGroupComponent";
+import { bulletBulletLineWidget } from "./BlankBulletLine";
+import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
+import { selectionController } from "./SelectionController";
 
 
 function resolveEditorPrototype(app: App) {
@@ -74,6 +76,10 @@ interface MarkdownEditorProps {
 	onChange: (update: ViewUpdate, path?: string) => void;
 	onDelete: (editor: EmbeddableMarkdownEditor) => boolean;
 	onIndent: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
+	onArrowUp: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
+	onArrowDown: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
+	onArrowLeft: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
+	onArrowRight: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
 }
 
 const defaultProperties: MarkdownEditorProps = {
@@ -104,6 +110,10 @@ const defaultProperties: MarkdownEditorProps = {
 	},
 	onDelete: () => false,
 	onIndent: () => false,
+	onArrowUp: () => false,
+	onArrowDown: () => false,
+	onArrowLeft: () => false,
+	onArrowRight: () => false
 };
 
 
@@ -281,10 +291,40 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 				key: 'Tab',
 				run: (cm) => this.options.onIndent(this, false, false),
 				shift: (cm) => this.options.onIndent(this, false, true)
+			},
+			{
+				key: 'ArrowLeft',
+				run: (cm) => this.options.onArrowLeft(this, false, false),
+				shift: (cm) => this.options.onArrowLeft(this, false, true)
+			},
+			{
+				key: 'ArrowRight',
+				run: (cm) => this.options.onArrowRight(this, false, false),
+				shift: (cm) => this.options.onArrowRight(this, false, true)
+			},
+			{
+				key: 'ArrowUp',
+				run: (cm) => this.options.onArrowUp(this, false, false),
+				shift: (cm) => this.options.onArrowUp(this, false, true)
+			},
+			{
+				key: 'ArrowDown',
+				run: (cm) => this.options.onArrowDown(this, false, false),
+				shift: (cm) => this.options.onArrowDown(this, false, true)
+			},
+			{
+				key: 'Mod-ArrowUp',
+				run: (cm) => this.options.onArrowUp(this, true, false),
+				shift: (cm) => this.options.onArrowUp(this, true, true)
+			},
+			{
+				key: 'Mod-ArrowDown',
+				run: (cm) => this.options.onArrowDown(this, true, false),
+				shift: (cm) => this.options.onArrowDown(this, true, true)
 			}
 		])));
 
-		extensions.push([placeholder, this.KeepOnlyZoomedContentVisible?.getExtension()]);
+		extensions.push([placeholder, bulletBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController()]);
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);

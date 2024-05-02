@@ -1,10 +1,8 @@
 import { EditorState, RangeSet, RangeValue } from "@codemirror/state";
-import { zoomStateField } from "./checkVisible";
-import { foldable } from "@codemirror/language";
 import { App } from "obsidian";
 import { RegExpCursor } from "./regexp-cursor";
 import { EditorView } from "@codemirror/view";
-import { SearchHighlightDecoration, SearchHighlightEffect } from "./SearchHighlight";
+import { SearchHighlightEffect } from "./SearchHighlight";
 
 export function rangeSetToArray<T extends RangeValue>(
 	rs: RangeSet<T>
@@ -18,81 +16,6 @@ export function rangeSetToArray<T extends RangeValue>(
 	return res;
 }
 
-
-export class CalculateRangeForZooming {
-	public calculateRangeForZooming(state: EditorState, pos: number) {
-		const line = state.doc.lineAt(pos);
-		const foldRange = foldable(state, line.from, line.to);
-
-		if (!foldRange && /^\s*([-*+]|\d+\.)\s+/.test(line.text)) {
-			return {from: line.from, to: line.to};
-		}
-
-		if (!foldRange) {
-			return null;
-		}
-
-		return {from: line.from, to: foldRange.to};
-	}
-
-	public calculateAllShowedContentRanges(view: EditorView, foldableRanges: {
-		from: number;
-		to: number
-	}[], keyString: string) {
-		// This will hold all the ranges that need to be shown
-		const showedRanges: {
-			from: number;
-			to: number
-		}[] = [];
-
-		const containedRanges = getSearchRanges(view, keyString);
-
-		// const addRangeToShow = (range: { from: number; to: number }) => {
-		// 	const existing = showedRanges.some(r => r.from === range.from && r.to === range.to);
-		// 	if (!existing) {
-		// 		showedRanges.push(range);
-		// 	}
-		// };
-
-		// Check each contained range against foldable ranges
-
-		for (const containedRange of containedRanges) {
-			console.log('foldedRanges', foldableRanges, containedRange.from, containedRange.to, view.state.doc.lineAt(containedRange.from).from);
-			const inFoldRanges = foldableRanges.find(r => r.from === containedRange.to);
-			const parentFoldRanges = foldableRanges.filter(r => r.from < containedRange.from && r.to >= containedRange.to);
-			if (parentFoldRanges.length > 0) {
-				const parentLines = parentFoldRanges.map(r => view.state.doc.lineAt(r.from));
-				const visibleParentLines = parentLines.map((l) => {
-					return {
-						from: l.from,
-						to: l.to
-					};
-				});
-				showedRanges.push(...visibleParentLines);
-			}
-
-			if (inFoldRanges) {
-				console.log('inFoldRanges', inFoldRanges);
-				const startLine = view.state.doc.lineAt(containedRange.from);
-				// Get fold ranges that start from the startLine;
-				showedRanges.push({
-					from: startLine.from,
-					to: inFoldRanges.to
-				});
-			}
-		}
-
-		console.log(showedRanges);
-
-		containedRanges.forEach((range) => {
-			if (!showedRanges.some(r => r.from === range.from && r.to === range.to)) {
-				showedRanges.push(range);
-			}
-		});
-
-		return showedRanges;
-	}
-}
 
 export function getIndent(app: App) {
 	const useTab = app.vault.getConfig('useTab') === undefined || window.app.vault.getConfig('useTab') === true;
@@ -128,7 +51,7 @@ function findParentRange(state: EditorState, position: number): { from: number; 
 // }
 
 
-function getSearchRanges(view: EditorView, search: string) {
+export function getSearchRanges(view: EditorView, search: string) {
 	const state = view.state;
 	const searchCursor = new RegExpCursor(state.doc, search, {}, 0, state.doc.length);
 	const ranges = [];

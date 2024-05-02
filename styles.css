@@ -179,7 +179,7 @@ span.cm-group-collapse-button {
 
 .outliner-editor .cm-task-group:has(.markdown-source-view) {
 	padding: var(--size-4-2);
-	background-color: var(--background-secondary);
+	/*background-color: var(--background-secondary);*/
 	border-radius: var(--radius-m);
 	display: flex;
 	flex-direction: column;
@@ -199,4 +199,48 @@ span.cm-group-collapse-button {
 
 .outliner-editor .cm-task-group-container {
 	display: none;
+}
+
+.outliner-editor .inline-title {
+	color: rgb(23, 23, 23);
+	font-size: var(36px, 32px);
+	font-weight: 500;
+
+	margin-bottom: 21px;
+	padding-left: var(--size-4-5);
+}
+
+div[data-type="outliner-editor-view"] .view-header :is(.view-header-left, .view-header-title-container) {
+	visibility: hidden;
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-task-group-title {
+	/* margin-bottom: var(--size-4-2); */
+	display: flex;
+	justify-content: space-between;
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-task-group-title .cm-task-group-result {
+	color: var(--text-faint);
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-line {
+	padding-top: 0.4em;
+}
+
+.outliner-editor .HyperMD-list-line:has(.cm-blank-bullet-line) .cm-formatting-list {
+	visibility: hidden;
+}
+
+.outliner-editor .HyperMD-list-line:has(.cm-blank-bullet-line).cm-active .cm-formatting-list {
+	visibility: visible;
+}
+
+.outliner-editor .HyperMD-list-line:has(.cm-blank-bullet-line):hover .cm-formatting-list {
+	visibility: visible;
+}
+
+button.clickable-icon.view-action.hide-completed {
+	color: var(--color-green);
+	background: var(--background-secondary);
 }

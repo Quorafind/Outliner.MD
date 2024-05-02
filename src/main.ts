@@ -12,8 +12,9 @@ import {
 } from 'obsidian';
 import { around } from "monkey-around";
 import { isEmebeddedLeaf, OUTLINER_EDITOR_VIEW_ID, OutlinerEditorView } from "./OutlinerEditorView";
-import { CalculateRangeForZooming } from "./utils";
-import { KeepOnlyZoomedContentVisible } from './checkVisible';
+
+import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
+import { CalculateRangeForZooming } from "./calculateRangeForZooming";
 
 
 const FRONT_MATTER_KEY = 'outliner';

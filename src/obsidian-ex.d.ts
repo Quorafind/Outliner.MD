@@ -1,5 +1,5 @@
 import 'obsidian';
-import { View, WorkspaceItem, WorkspaceParent } from "obsidian";
+import { TFile, View, WorkspaceItem, WorkspaceParent } from "obsidian";
 import { EditorView } from "@codemirror/view";
 
 type ScrollableMarkdownEditor = any;
@@ -51,6 +51,14 @@ declare module "obsidian" {
 		floatingSplit: any;
 
 		pushUndoHistory(leaf: WorkspaceLeaf, id: string, e: any): void;
+
+
+	}
+
+	interface MetadataCache {
+		on(event: "dataview:metadata-change", callback: (type: any, file: TFile, oldPath?: string | undefined) => void): EventRef;
+
+		on(event: "dataview:index-ready", callback: () => void): EventRef;
 	}
 
 	interface App {

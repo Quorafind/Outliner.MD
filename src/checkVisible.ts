@@ -1,6 +1,5 @@
 import { Decoration, DecorationSet, EditorView } from "@codemirror/view";
-import { EditorState, Extension, StateEffect, StateField } from "@codemirror/state";
-import { rangeSetToArray } from "./utils";
+import { StateEffect, StateField } from "@codemirror/state";
 
 export interface ZoomInRange {
 	from: number;
@@ -9,6 +8,8 @@ export interface ZoomInRange {
 
 export type ZoomInStateEffect = StateEffect<ZoomInRange>;
 export const zoomInRangesEffect = StateEffect.define<{ ranges: Array<{ from: number, to: number }> }>();
+
+export const hideRangesEffect = StateEffect.define<{ ranges: Array<{ from: number, to: number }> }>();
 export const zoomInEffect = StateEffect.define<ZoomInRange>();
 
 export const zoomOutEffect = StateEffect.define<void>();
@@ -45,6 +46,19 @@ export const zoomStateField = StateField.define<DecorationSet>({
 						add: [zoomMarkHidden.range(e.value.to + 1, tr.newDoc.length)],
 					});
 				}
+			}
+
+			if (e.is(hideRangesEffect)) {
+				value = value.update({filter: () => false});
+
+
+				let totalLength = tr.state.doc.length;
+
+				e.value.ranges.forEach(range => {
+					value = value.update({
+						add: [zoomMarkHidden.range(range.from, range.to)]
+					});
+				});
 			}
 
 			if (e.is(zoomOutEffect)) {
@@ -106,79 +120,3 @@ export const zoomStateField = StateField.define<DecorationSet>({
 });
 
 
-export class KeepOnlyZoomedContentVisible {
-	constructor() {
-	}
-
-	public getExtension(): Extension {
-		return zoomStateField;
-	}
-
-	public calculateHiddenContentRanges(state: EditorState) {
-		return rangeSetToArray(state.field(zoomStateField));
-	}
-
-	public calculateVisibleContentRange(state: EditorState) {
-		const hidden = this.calculateHiddenContentRanges(state);
-
-		if (hidden.length === 1) {
-			const [a] = hidden;
-
-			if (a.from === 0) {
-				return {from: a.to + 1, to: state.doc.length};
-			} else {
-				return {from: 0, to: a.from - 1};
-			}
-		}
-
-		if (hidden.length === 2) {
-			const [a, b] = hidden;
-
-			return {from: a.to + 1, to: b.from - 1};
-		}
-
-		return null;
-	}
-
-	public keepOnlyZoomedContentVisible(
-		view: EditorView,
-		from: number,
-		to: number,
-		options: { scrollIntoView?: boolean } = {}
-	) {
-		const {scrollIntoView} = {...{scrollIntoView: true}, ...options};
-
-		const effect = zoomInEffect.of({from, to});
-
-		view.dispatch({
-			effects: [effect],
-		});
-
-		if (scrollIntoView) {
-			view.dispatch({
-				effects: [
-					EditorView.scrollIntoView(view.state.selection.main, {
-						y: "start",
-					}),
-				],
-			});
-		}
-	}
-
-	public keepRangesVisible(view: EditorView, ranges: ZoomInRange[]) {
-		view.dispatch({
-			effects: [zoomInRangesEffect.of({ranges})],
-		});
-	}
-
-	public showAllContent(view: EditorView) {
-		view.dispatch({effects: [zoomOutEffect.of()]});
-		view.dispatch({
-			effects: [
-				EditorView.scrollIntoView(view.state.selection.main, {
-					y: "center",
-				}),
-			],
-		});
-	}
-}

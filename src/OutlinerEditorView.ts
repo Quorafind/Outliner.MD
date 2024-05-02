@@ -3,7 +3,7 @@ import {
 	Component, Constructor,
 	Editor,
 	MarkdownFileInfo,
-	Menu, Scope, SearchComponent, Setting,
+	Menu, Scope, SearchComponent, setIcon, Setting,
 	TextFileView,
 	TFile,
 	ViewStateResult,
@@ -13,10 +13,13 @@ import SamplePlugin from "./main";
 import { EmbeddableMarkdownEditor } from "./embedEditor";
 import { getIndent } from "./utils";
 import { ScrollableMarkdownEditor } from "./obsidian-ex";
-import { KeepOnlyZoomedContentVisible } from "./checkVisible";
+import { hideRangesEffect, zoomWithHideIndentEffect } from "./checkVisible";
 import { EditorView } from "@codemirror/view";
 import OutlinerViewPlugin from "./main";
 import { ClearSearchHighlightEffect, SearchHighlightEffect } from "./SearchHighlight";
+import { foldable } from "@codemirror/language";
+import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
+import { SelectionAnnotation } from "./SelectionController";
 
 export function isEmebeddedLeaf(leaf: WorkspaceLeaf) {
 	// Work around missing enhance.js API by checking match condition instead of looking up parent
@@ -29,6 +32,28 @@ export const OUTLINER_EDITOR_VIEW_ID = "outliner-editor-view";
 // 	const BacklinkComponent = Object.getPrototypeOf(backlinkComponent) as any;
 //
 // 	return BacklinkComponent.constructor as Constructor<any>;
+// }
+
+// function mw(e, t) {
+// 	t.preventDefault();
+// 	var n = t.clipboardData.getData("text/plain")
+// 		, i = e.doc;
+// 	if (i.queryCommandSupported("insertText"))
+// 		i.execCommand("insertText", !1, n);
+// 	else {
+// 		var r = window.getSelection()
+// 			, o = r.getRangeAt(0);
+// 		if (!e.contains(o.commonAncestorContainer))
+// 			return;
+// 		o.deleteContents();
+// 		var a = document.createTextNode(n);
+// 		o.insertNode(a),
+// 			o.selectNodeContents(a),
+// 			o.collapse(!1),
+// 			r.removeAllRanges(),
+// 			r.addRange(o);
+// 	}
+// 	e.normalize();
 // }
 
 export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo {
@@ -47,6 +72,10 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	clearFilterBtn: HTMLElement;
 
 	changedBySelf: boolean = false;
+
+	inlineTitleEl: HTMLElement = createEl('div', {cls: 'inline-title'});
+
+	hideCompleted: boolean = false;
 
 	// backlinksEl: HTMLDivElement;
 	// showBacklinks: boolean;
@@ -96,7 +125,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	}
 
 	getIcon() {
-		return 'file-edit';
+		return 'list';
 	}
 
 	clear() {
@@ -196,6 +225,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			if (!this.file) return;
 			this.app.fileManager.promptForFileRename(this.file);
 		};
+
+		this.inlineTitleEl.setText(this.file?.basename || this.filePath);
 	}
 
 	createEditor(container: HTMLElement) {
@@ -314,8 +345,18 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			onDelete: (editor) => {
 				const {line, ch} = (editor.editor as Editor).getCursor();
 				const lineText = editor.editor.getLine(line);
+
+				const lineFrom = editor.editor.posToOffset({line, ch: 0});
+				const lineTo = editor.editor.posToOffset({line: line + 1, ch: 0}) - 1;
+
+				const foldRange = foldable(editor.editor.cm.state, lineFrom, lineTo);
+
 				if (/^(\s*?)((-|\*|\d+\.)(\s\[.\])?)\s/g.test(lineText) && /^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lineText.trim())) {
 					if (line === 0) {
+						return true;
+					}
+
+					if (foldRange) {
 						return true;
 					}
 
@@ -362,7 +403,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			// 	this.editor = editor.editor;
 			// },
 			onIndent: (editor, mod: boolean, shift: boolean) => {
-				console.log('indent', mod, shift);
 				if (shift) {
 					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
 
@@ -384,6 +424,56 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					}
 				}
 
+				return false;
+			},
+			onArrowUp: (editor, mod: boolean, shift: boolean) => {
+				if (shift) {
+					let currentLine = (editor.editor as Editor).cm.state.doc.lineAt((editor.editor as Editor).cm.state.selection.main.from);
+					const selection = (editor.editor as Editor).cm.state.selection.ranges[0];
+
+					if (selection.from === currentLine.from) {
+						currentLine = (editor.editor as Editor).cm.state.doc.lineAt(currentLine.from - 1);
+					}
+
+					const foldableRange = foldable(editor.editor.cm.state, currentLine.from, currentLine.to);
+
+
+					if (foldableRange) {
+						if (!/^(-|\*|\d{1,}\.)/.test(currentLine.text.trim())) {
+							(editor.editor as Editor).cm.dispatch({
+								selection: {
+									head: foldableRange.from - currentLine.length,
+									anchor: currentLine.to,
+								},
+								annotations: SelectionAnnotation.of('arrow.up.selection'),
+							});
+							return true;
+						}
+
+						(editor.editor as Editor).cm.dispatch({
+							selection: {
+								head: foldableRange.from - currentLine.length,
+								anchor: foldableRange.to,
+							},
+							annotations: SelectionAnnotation.of('arrow.up.selection'),
+						});
+						return true;
+					}
+
+					(editor.editor as Editor).cm.dispatch({
+						selection: {
+							head: editor.editor.cm.state.doc.line(currentLine.number).to,
+							anchor: editor.editor.cm.state.doc.line(currentLine.number).from,
+						},
+						annotations: SelectionAnnotation.of('arrow.up.selection'),
+					});
+					return true;
+
+				}
+				return false;
+			},
+			onArrowDown: (editor, mod: boolean, shift: boolean) => {
+				console.log('arrow down', mod, shift);
 				return false;
 			},
 			getDisplayText: () => this.getDisplayText(),
@@ -441,7 +531,14 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						this.editor.focus();
 						const content = this.editor.getValue();
 						this.editor.setCursor(content.length - 1);
+
+
 					}, 200);
+
+					console.log('set state', this.editor, this.editor.cm);
+					// @ts-ignore
+					this.editor.editorComponent.sizerEl?.prepend(this.inlineTitleEl);
+					this.inlineTitleEl.setText(file?.basename || this.filePath);
 				}
 
 			}
@@ -481,14 +578,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			return;
 		}
 
-		console.log(this.editor.getAllFoldableLines());
-
-		// for (const line of this.editor.getAllFoldableLines()) {
-		// 	// console.log(line, this.editor.cm.state.doc.lineAt(0).text, this.editor.cm.state.doc.lineAt(line.from).text);
-		// }
-
-		// console.log();
-		const ranges = this.plugin.calculateRangeForZooming.calculateAllShowedContentRanges(
+		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnSearch(
 			view,
 			this.editor.getAllFoldableLines(),
 			search
@@ -499,8 +589,42 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		this.contentEl.toggleClass('filtered', true);
 	}
 
+	hideCompletedItems(view: EditorView) {
+		console.log(view);
+
+		if (this.hideCompleted) {
+			this.plugin.KeepOnlyZoomedContentVisible?.showAllContent(view);
+			this.hideCompleted = false;
+			return;
+		}
+
+		// const ranges = this.editor.getAllFoldableLines().filter((range) => {
+		// 	const line = view.state.doc.lineAt(range.from);
+		// 	const text = line.text.trim();
+		// 	return !/^(-|\*|\d+\.)(\s\[.\])?$/g.test(text);
+		// });
+
+		// console.log(ranges);
+
+		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnType(view, 'completed');
+
+		this.editor.cm.dispatch({
+			effects: [hideRangesEffect.of({
+				ranges: ranges
+			})]
+		});
+		this.hideCompleted = true;
+
+
+	}
+
 
 	registerSearchActionBtn() {
+		const showCompletedEl = this.addAction("check", "Show Completed", (evt) => {
+			this.hideCompletedItems(this.editor.cm);
+			showCompletedEl.toggleClass('hide-completed', this.hideCompleted);
+		});
+
 		this.searchActionEl = this.addAction("search", "Search", (evt) => {
 			const searchMenu = new Menu();
 			searchMenu.dom.toggleClass('search-menu', true);
@@ -561,6 +685,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 		});
 		this.clearFilterBtn.toggleClass('filter-clear', true);
+
+
 	}
 
 	public search() {

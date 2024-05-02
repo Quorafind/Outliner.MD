@@ -1,9 +1,10 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { Decoration, DecorationSet, EditorView, MatchDecorator, WidgetType } from "@codemirror/view";
 import { App, editorInfoField, MarkdownFileInfo } from "obsidian";
 import { OutlinerEmbedEditor } from "./OutlinerEmbedEditor";
 
-export const TaskGroupComponent = StateField.define<DecorationSet>({
+
+export const BlockEmbedComponent = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
 	},
@@ -15,9 +16,13 @@ export const TaskGroupComponent = StateField.define<DecorationSet>({
 		const lastLineTo = tr.state.doc.line(tr.state.doc.lines).to;
 
 		builder.add(lastLineTo, lastLineTo, Decoration.widget({
-			widget: new TaskGroupWidget(app, editor,
+			widget: new BlockEmbedWidget(app, editor,
 				lastLineTo, lastLineTo, tr.state), side: 3, block: true
 		}));
+
+		const matchDecorator = new MatchDecorator({
+			regexp: /\+\[\[\]\]/g,
+		});
 		const dec = builder.finish();
 		return dec;
 	},
@@ -25,42 +30,23 @@ export const TaskGroupComponent = StateField.define<DecorationSet>({
 });
 
 
-class TaskGroupWidget extends WidgetType {
+class BlockEmbedWidget extends WidgetType {
 	constructor(readonly app: App, readonly editor: MarkdownFileInfo, public from: number, public to: number, readonly state: EditorState) {
 		super();
 	}
 
-	eq(other: TaskGroupWidget) {
+	eq(other: BlockEmbedWidget) {
 		return true;
 	}
 
 	toDOM() {
-		const taskContainer = createEl('div', {
+		const blockEmbedEl = createEl('div', {
 			cls: 'cm-task-group-container'
 		});
-		const marginSpan = taskContainer.createEl('span', {
-			cls: 'cm-task-group-margin'
-		});
-		const taskGroupContainerEl = taskContainer.createEl('span', {
-			cls: 'cm-task-group'
-		});
 
-		const titleEl = taskGroupContainerEl.createEl('span', {
-			cls: 'cm-task-group-title'
-		});
-
-		const titleInnerEl = titleEl.createEl('span', {
-			cls: 'cm-task-group-title-inner',
-			text: '⛏ Task Group'
-		});
-
-		const resultEl = titleEl.createEl('span', {
-			cls: 'cm-task-group-result'
-		});
-
-		const groupComponent = new OutlinerEmbedEditor(this.app, taskGroupContainerEl);
+		const groupComponent = new BlockEmbedEditor(this.app, blockEmbedEl);
 		groupComponent.onload();
-		return taskContainer;
+		return blockEmbedEl;
 	}
 
 	ignoreEvent(event: Event) {

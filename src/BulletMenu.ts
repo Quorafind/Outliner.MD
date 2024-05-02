@@ -1,6 +1,6 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view";
-import { App, editorInfoField, ExtraButtonComponent, MarkdownView, Menu, Notice, View } from "obsidian";
+import { App, editorInfoField, ExtraButtonComponent, MarkdownView, Menu, MenuItem, Notice, View } from "obsidian";
 
 class BulletMenuMarkerWidget extends WidgetType {
 	bulletSpanEl: HTMLSpanElement;
@@ -29,14 +29,15 @@ class BulletMenuMarkerWidget extends WidgetType {
 			const menu = new Menu();
 			const editor = this.view.field(editorInfoField).editor;
 			const currentLine = this.view.doc.lineAt(this.from);
-			const bulletStart = currentLine.text.match(/^\s*/)[0].length || 0;
-			const bulletMarker = currentLine.text.trimStart().match(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/)[0];
-			const bulletMarkerLength = currentLine.text.trimStart().match(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/)[0]?.length || 2;
+			const bulletStart = currentLine.text.match(/^\s*/)?.[0].length || 0;
+			const bulletMarker = currentLine.text.trimStart().match(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/)?.[0] || '-';
+			const bulletMarkerLength = currentLine.text.trimStart().match(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/)?.[0]?.length || 2;
 
 			console.log(bulletMarker, bulletMarkerLength, currentLine.text.trimStart());
 
 			menu.addItem((item) => {
-				const subMenu = item.setIcon('corner-up-right').setTitle('Turn into').setSubmenu();
+				// @ts-ignore
+				const subMenu = item.setIcon('corner-up-right').setTitle('Turn into').setSubmenu() as Menu;
 
 				subMenu.addItem((item) => {
 					item.setIcon('list').setTitle('Bullet').onClick(() => {
@@ -183,7 +184,7 @@ class BulletMenuMarkerWidget extends WidgetType {
 						});
 					});
 				});
-				subMenu.addItem((item) => {
+				subMenu.addItem((item: MenuItem) => {
 					item.setIcon('square-kanban').setTitle('Board').onClick(() => {
 						new Notice('Not yet available');
 					});
@@ -267,6 +268,38 @@ class BulletMenuMarkerWidget extends WidgetType {
 					new Notice('Not yet available');
 				});
 			});
+			menu.addSeparator();
+			menu.addItem((item) => {
+				// @ts-ignore
+				item.setIcon('trash').setTitle('Delete').setWarning(true).onClick(() => {
+					// Delete current line
+					editor?.transaction({
+						changes: [
+							{
+								from: {
+									line: currentLine.number - 1,
+									ch: 0
+								},
+								to: {
+									line: currentLine.number,
+									ch: 0
+								},
+								text: ''
+							}
+						],
+						selection: {
+							from: {
+								line: currentLine.number - 1,
+								ch: 0
+							},
+							to: {
+								line: currentLine.number - 1,
+								ch: 0
+							}
+						}
+					});
+				});
+			});
 
 			const rect = this.bulletSpanEl.getBoundingClientRect();
 			menu.showAtPosition({x: rect.left - 42, y: rect.bottom});
@@ -295,7 +328,7 @@ export const BulletMenu = StateField.define<DecorationSet>({
 
 		for (let i = 1; i <= tr.state.doc.lines; i++) {
 			const line = tr.state.doc.line(i);
-			const spacesLength = line.text.match(/^\s*/)[0].length; // 使用 \s* 匹配所有空白字符，包括空格和制表符
+			const spacesLength = line.text.match(/^\s*/)![0].length; // 使用 \s* 匹配所有空白字符，包括空格和制表符
 
 			if (spacesLength > 0) {
 				// 如果存在空格或缩进，将 widget 添加在这些空格之后

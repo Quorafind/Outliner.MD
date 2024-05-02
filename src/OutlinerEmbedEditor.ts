@@ -1,10 +1,13 @@
 import { App, Component, debounce, Editor, setIcon, TFile } from "obsidian";
 import { EmbeddableMarkdownEditor } from "./embedEditor";
-import { CalculateRangeForZooming, getIndent } from "./utils";
+import { getIndent } from "./utils";
 import OutlinerViewPlugin from "./main";
 import { ClearSearchHighlightEffect } from "./SearchHighlight";
-import { KeepOnlyZoomedContentVisible, zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
+import { zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
 import { getAPI } from "obsidian-dataview";
+import { foldable } from "@codemirror/language";
+import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
+import { CalculateRangeForZooming } from "./calculateRangeForZooming";
 
 
 export class OutlinerEmbedEditor extends Component {
@@ -44,7 +47,7 @@ export class OutlinerEmbedEditor extends Component {
 			));
 
 		this.registerEvent(
-			this.app.metadataCache.on("dataview:metadata-change", (type, file, oldPath?) => {
+			this.app.metadataCache.on("dataview:metadata-change", (type: any, file: TFile, oldPath?: string | undefined) => {
 					if (!this.indexed) return;
 					console.log(type, file, oldPath);
 
@@ -191,10 +194,21 @@ export class OutlinerEmbedEditor extends Component {
 			onDelete: (editor) => {
 				const {line, ch} = (editor.editor as Editor).getCursor();
 				const lineText = editor.editor.getLine(line);
+				// const from = editor.editor.posToOffset({line, ch});
+				const lineFrom = editor.editor.posToOffset({line, ch: 0});
+				const lineTo = editor.editor.posToOffset({line: line + 1, ch: 0}) - 1;
+
+				const foldRange = foldable(editor.editor.cm.state, lineFrom, lineTo);
+
 				if (/^(\s*?)((-|\*|\d+\.)(\s\[.\])?)\s/g.test(lineText) && /^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lineText.trim())) {
 					if (line === 0) {
 						return true;
 					}
+
+					if (foldRange) {
+						return true;
+					}
+
 
 					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
 					if (range) {
@@ -359,6 +373,12 @@ export class OutlinerEmbedEditor extends Component {
 		}
 	}
 
+	updateResultEl(
+		length: number,
+	) {
+		this.containerEl.find('.cm-task-group-result').setText(length.toString() + ' results');
+	}
+
 	async initEditor() {
 		const api = getAPI(this.app);
 		const result = await api.query(`TASK  
@@ -368,6 +388,8 @@ GROUP BY file.path`);
 
 		if (!result.successful) return;
 		const values = result.value.values;
+
+		let count = 0;
 
 		for (let v of values) {
 			if (!v.key || this.editorMap.has(v.key)) continue;
@@ -394,7 +416,8 @@ GROUP BY file.path`);
 			if (this.app.vault.getFileByPath(v.key)) {
 				const file = this.app.vault.getFileByPath(v.key);
 
-				const ranges = v.rows.map((r) => {
+				const ranges = v.rows.map((r: { position: any }) => {
+					count++;
 					return {
 						from: r.position.start.offset,
 						to: r.position.end.offset,
@@ -409,6 +432,8 @@ GROUP BY file.path`);
 
 
 		}
+
+		this.updateResultEl(count);
 	}
 
 	debounceUpdateEditor = debounce((file: TFile, oldPath?: string) => {
@@ -425,13 +450,12 @@ WHERE contains(text, "#now")
 GROUP BY file.path`);
 
 		if (!result.successful) return;
-
-		console.log(result);
-
 		const values = result.value.values;
 
+		let count = 0;
 		for (let v of values) {
-			const ranges = v.rows.map((r) => {
+			const ranges = v.rows.map((r: { position: any }) => {
+				count++;
 				return {
 					from: r.position.start.offset,
 					to: r.position.end.offset,
@@ -459,7 +483,7 @@ GROUP BY file.path`);
 						this.changedBySelf = true;
 						// const endPos = editor.offsetToPos((lastContent || editor.getValue()).length);
 						const lastLineofEditor = editor.lastLine();
-						const lastLine = editor.getLine(lastLineofEditor);
+						const lastLine = editor.getLine(lastLineofEditor + 1);
 						editor.replaceRange(data, {line: 0, ch: 0}, {line: lastLineofEditor, ch: lastLine.length});
 						this.contentMap.set(targetFile.path, data);
 
@@ -486,6 +510,8 @@ GROUP BY file.path`);
 				}
 			}
 		}
+
+		this.updateResultEl(count);
 
 		// if(!this.editorMap.has(file.path)) {
 		//
