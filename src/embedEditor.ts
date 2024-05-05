@@ -11,17 +11,11 @@
  * Make sure to also check out the original source code here: https://github.com/mgmeyers/obsidian-kanban/blob/main/src/components/Editor/MarkdownEditor.tsx
  */
 
-import {
-	Constructor, Keymap, Scope, App,
-	TFile, WorkspaceLeaf
-} from "obsidian";
-import {
-	Editor
-} from 'obsidian-typings';
-import { EditorSelection, EditorState, Extension, Prec } from "@codemirror/state";
+import { App, type Constructor, Scope, TFile, WorkspaceLeaf } from "obsidian";
+import { EditorSelection, type Extension, Prec } from "@codemirror/state";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
-import { ScrollableMarkdownEditor } from "./obsidian-ex";
+import type { ScrollableMarkdownEditor } from "./obsidian-ex";
 import { AddNewLineBtn } from "./AddNewLine";
 // import { zoomStateField } from "./checkVisible";
 import { placeholder } from "./Placeholder";
@@ -29,9 +23,12 @@ import { OutlinerEditorView } from "./OutlinerEditorView";
 import { SearchHighlight } from "./SearchHighlight";
 import { BulletMenu } from "./BulletMenu";
 import { TaskGroupComponent } from "./TaskGroupComponent";
-import { bulletBulletLineWidget } from "./BlankBulletLine";
+import { blankBulletLineWidget } from "./BlankBulletLine";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { selectionController } from "./SelectionController";
+import { createDateRendererPlugin } from "./DateRender";
+import { FoldingExtension, getAllFoldableRanges } from "./BulletDescAutoCollpase";
+import { foldEffect } from "@codemirror/language";
 
 
 function resolveEditorPrototype(app: App) {
@@ -62,6 +59,7 @@ interface MarkdownEditorProps {
 	placeholder?: string;
 	view?: OutlinerEditorView;
 	type: 'embed' | 'outliner';
+	foldByDefault?: boolean;
 
 	path?: string;
 
@@ -89,6 +87,7 @@ const defaultProperties: MarkdownEditorProps = {
 	placeholder: '',
 	view: undefined,
 	type: 'embed',
+	foldByDefault: true,
 
 	path: '',
 
@@ -122,7 +121,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	initial_value: string;
 	scope: Scope;
 	view: OutlinerEditorView;
-	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible;
+	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
 
 	/**
 	 * Construct the editor
@@ -169,8 +168,16 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		this.owner.getViewType = this.options.getViewType;
 
 
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
 		this.set(options.value || '');
+		// this.editor.cm.dispatch({
+		// 	effects: [
+		// 		EditorView.scrollIntoView(this.editor.cm.state.selection.main, {
+		// 			y: "center",
+		// 		}),
+		// 	],
+		// });
 		this.register(
 			around(this.app.workspace, {
 				setActiveLeaf: (oldMethod: (leaf: WorkspaceLeaf, params?: ({ focus?: boolean })) => void) =>
@@ -232,6 +239,16 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		this.view = this.options.view!;
 		this.editor.cm.contentDOM.toggleClass('embed-editor', this.options.type === 'embed');
+
+		if(options.foldByDefault) {
+			const ranges = getAllFoldableRanges(this.editor.cm.state);
+			if(ranges.length > 0) {
+				const effects = ranges.map(range => foldEffect.of(range));
+				this.editor.cm.dispatch({effects});
+			}
+		}
+
+		// this.editor.setCursor(0, 0);
 		// this.sizerEl.appendChild(this.options.view?.backlinksEl);
 	}
 
@@ -250,7 +267,6 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	 */
 	buildLocalExtensions(): Extension[] {
 		const extensions = super.buildLocalExtensions();
-		this.KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
 		// if (this.options.placeholder) extensions.push(placeholder(this.options.placeholder));
 
 		/* Editor extension for handling specific user inputs */
@@ -324,11 +340,10 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			}
 		])));
 
-		extensions.push([placeholder, bulletBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController()]);
+		extensions.push([placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);
-		} else {
 		}
 
 

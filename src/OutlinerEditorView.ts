@@ -1,22 +1,22 @@
 import {
 	App,
-	Component, Constructor,
 	Editor,
-	MarkdownFileInfo,
-	Menu, Scope, SearchComponent, setIcon, Setting,
+	type MarkdownFileInfo,
+	Menu,
+	Scope,
+	SearchComponent,
+	Setting,
 	TextFileView,
 	TFile,
-	ViewStateResult,
+	type ViewStateResult,
 	WorkspaceLeaf
 } from "obsidian";
-import SamplePlugin from "./main";
+import OutlinerViewPlugin from "./OutlinerViewIndex";
 import { EmbeddableMarkdownEditor } from "./embedEditor";
 import { getIndent } from "./utils";
-import { ScrollableMarkdownEditor } from "./obsidian-ex";
-import { hideRangesEffect, zoomWithHideIndentEffect } from "./checkVisible";
+import { hideRangesEffect } from "./checkVisible";
 import { EditorView } from "@codemirror/view";
-import OutlinerViewPlugin from "./main";
-import { ClearSearchHighlightEffect, SearchHighlightEffect } from "./SearchHighlight";
+import { ClearSearchHighlightEffect } from "./SearchHighlight";
 import { foldable } from "@codemirror/language";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { SelectionAnnotation } from "./SelectionController";
@@ -28,48 +28,20 @@ export function isEmebeddedLeaf(leaf: WorkspaceLeaf) {
 
 export const OUTLINER_EDITOR_VIEW_ID = "outliner-editor-view";
 
-// function resolveBacklinkPrototype(backlinkComponent: any) {
-// 	const BacklinkComponent = Object.getPrototypeOf(backlinkComponent) as any;
-//
-// 	return BacklinkComponent.constructor as Constructor<any>;
-// }
-
-// function mw(e, t) {
-// 	t.preventDefault();
-// 	var n = t.clipboardData.getData("text/plain")
-// 		, i = e.doc;
-// 	if (i.queryCommandSupported("insertText"))
-// 		i.execCommand("insertText", !1, n);
-// 	else {
-// 		var r = window.getSelection()
-// 			, o = r.getRangeAt(0);
-// 		if (!e.contains(o.commonAncestorContainer))
-// 			return;
-// 		o.deleteContents();
-// 		var a = document.createTextNode(n);
-// 		o.insertNode(a),
-// 			o.selectNodeContents(a),
-// 			o.collapse(!1),
-// 			r.removeAllRanges(),
-// 			r.addRange(o);
-// 	}
-// 	e.normalize();
-// }
-
 export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo {
 	// editors: HTMLElement[] = [];
 	app: App;
-	editor: Editor;
-	filePath: string;
-	frontmatter: string;
-	fileContentData: string;
+	editor: Editor | undefined;
+	filePath: string = "";
+	frontmatter: string = "";
+	fileContentData: string = "";
 
 	filteredValue: string = "";
 
-	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible;
+	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
 
-	searchActionEl: HTMLElement;
-	clearFilterBtn: HTMLElement;
+	searchActionEl: HTMLElement | undefined;
+	clearFilterBtn: HTMLElement | undefined;
 
 	changedBySelf: boolean = false;
 
@@ -102,12 +74,17 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		return this.file?.basename || this.filePath;
 	}
 
-	requestSave: () => void;
-
 	setViewData(data: string, clear: boolean) {
-		console.log('setViewData', data);
 
-		// const currentScrollInfo = this.editor.getScrollInfo();
+
+		if (data.replace(this.frontmatter, '').trimStart() === this.fileContentData.trimStart()) {
+			// new Notice('No changes to save');
+
+
+			return;
+		}
+
+		if (!this.editor) return;
 
 		this.editor.replaceRange(
 			data.replace(this.frontmatter, '').trimStart(), {
@@ -311,6 +288,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						}
 					}
 
+					const prevLine  = line > 0 ? editor.editor.getLine(line - 1) : "";
+
 					if (lineText.startsWith("- ")) {
 						(editor.editor as Editor).transaction({
 							changes: [
@@ -325,7 +304,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							}
 						});
 						return true;
-					} else if (!lineText.trim()) {
+					} else if (!lineText.trim() && (/^(-|\*|\d+\.)(\s\[.\])?/g.test(prevLine.trim()))) {
 						(editor.editor as Editor).transaction({
 							changes: [
 								{
@@ -339,6 +318,148 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							}
 						});
 						return true;
+					} else if(/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
+						const currentIndent = lineText.match(/^\s+/)?.[0];
+
+						(editor.editor as Editor).transaction({
+							changes: [
+								{
+									text: `\n${currentIndent}`,
+									from: {line, ch},
+								}
+							],
+							selection: {
+								from: {line: line + 1, ch: currentIndent.length},
+								to: {line: line + 1, ch: currentIndent.length},
+							}
+						});
+						return true;
+					}
+
+					if(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
+						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({line, ch: 0}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+						const indentNewLine = getIndent(this.app);
+						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
+						if (range) {
+							let foundValidLine = false;
+
+							const startLineNum = editor.editor.cm.state.doc.lineAt(range.from).number;
+							for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
+								const line = (editor.editor as Editor).cm.state.doc.line(i);
+								const lineText = line.text;
+
+								// 检查行是否有缩进并且不以列表标记开始
+								if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
+									foundValidLine = true;
+								} else {
+									// 遇到不满足条件的行，检查是否已经遍历过至少一行
+									if (foundValidLine) {
+										const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
+										if(currentLine.to === range.to) {
+											(editor.editor as Editor).transaction({
+												changes: [
+													{
+														text: `${spaceBeforeStartLine}- \n`,
+														from: {line: i - 1, ch: 0},
+													}
+												]
+											});
+											(editor.editor as Editor).cm.dispatch({
+												selection: {
+													head: line.from,
+													anchor: line.from,
+												}
+											});
+											return true;
+										} else {
+											(editor.editor as Editor).cm.dispatch({
+												changes: {
+													insert: `${spaceBeforeStartLine}${indentNewLine}- \n`,
+													from: line.from,
+												}
+											});
+											(editor.editor as Editor).cm.dispatch({
+												selection: {
+													head: line.from,
+													anchor: line.from,
+												}
+											});
+											return true;
+										}
+
+
+									}
+									return false;
+								}
+							}
+						}
+						return false;
+					}
+				}
+				if (shift) {
+					const {line, ch} = (editor.editor as Editor).getCursor();
+					const charOffset = (editor.editor as Editor).posToOffset({line, ch});
+					const charLine = (editor.editor as Editor).cm.state.doc.lineAt(charOffset);
+
+					if(/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+						const lineNum = charLine.number;
+
+						for(let i = lineNum; i >= 1; i--) {
+							const lineCursor = (editor.editor as Editor).cm.state.doc.line(i);
+							const lineText = lineCursor.text;
+							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
+								const currentLine = (editor.editor as Editor).cm.state.doc.line(i);
+								console.log('currentLine', currentLine.text, currentLine.from, currentLine.to);
+								(editor.editor as Editor).cm.dispatch({
+									selection: {
+										head: currentLine.to,
+										anchor: currentLine.to,
+									},
+									annotations: SelectionAnnotation.of('arrow.up.selection'),
+								});
+								return true;
+							}
+						}
+					} else if ((/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+						const startLineNum = charLine.number;
+						let foundValidLine = false;
+
+						for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
+							const line = (editor.editor as Editor).cm.state.doc.line(i);
+							const lineText = line.text;
+
+							// 检查行是否有缩进并且不以列表标记开始
+							if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
+								foundValidLine = true;
+							} else {
+								// 遇到不满足条件的行，检查是否已经遍历过至少一行
+								if (foundValidLine) {
+									const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
+									(editor.editor as Editor).cm.dispatch({
+										selection: {
+											head: currentLine.to,
+											anchor: currentLine.to,
+										},
+										annotations: SelectionAnnotation.of('arrow.up.selection'),
+									});
+									return true;
+								}
+								return false;
+							}
+						}
+						if (foundValidLine) {
+							const lastLine = (editor.editor as Editor).cm.state.doc.line((editor.editor as Editor).cm.state.doc.lines - 1);
+							(editor.editor as Editor).cm.dispatch({
+								selection: {
+									head: lastLine.to,
+									anchor: lastLine.to,
+								},
+								// annotations: SelectionAnnotation.of('arrow.up.selection'),
+							});
+							return true;
+						}
+
+						return false;
 					}
 				}
 				return false;
@@ -490,12 +611,18 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			value: this.fileContentData || "- ",
 			view: this,
 			type: 'outliner',
+			foldByDefault: true,
 		});
 
-		this.editor = embedEditor.editor;
+
+		this.editor = embedEditor.editor as Editor;
 		this.editor.getValue = () => {
 			return this.data || "";
 		};
+
+		// setTimeout(() => {
+		// 	this.editor.setCursor(0, 0);
+		// }, 1000);
 
 
 		// @ts-expect-error - This is a private method
@@ -527,8 +654,13 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					}
 
 					this.fileContentData = finalData.trimStart();
-					this.loadEditor();
+					try {
+						this.loadEditor();
+					} catch (e) {
+						console.log(e);
+					}
 					setTimeout(() => {
+						if (!this.editor) return;
 						this.editor.focus();
 						const content = this.editor.getValue();
 						this.editor.setCursor(content.length - 1);
@@ -536,7 +668,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 					}, 200);
 
-					console.log('set state', this.editor, this.editor.cm);
+					// console.log('set state', this.editor, this.editor.cm);
 					// @ts-ignore
 					this.editor.editorComponent.sizerEl?.prepend(this.inlineTitleEl);
 					this.inlineTitleEl.setText(file?.basename || this.filePath);
@@ -573,6 +705,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			this.plugin.KeepOnlyZoomedContentVisible?.showAllContent(view);
 			this.filteredValue = "";
 			this.contentEl.toggleClass('filtered', false);
+			if (!this.editor) return;
 			this.editor.cm.dispatch({
 				effects: ClearSearchHighlightEffect.of()
 			});
@@ -581,7 +714,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnSearch(
 			view,
-			this.editor.getAllFoldableLines(),
+			this.editor?.getAllFoldableLines() || [],
 			search
 		);
 
@@ -609,6 +742,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnType(view, 'completed');
 
+		if (!this.editor) return;
 		this.editor.cm.dispatch({
 			effects: [hideRangesEffect.of({
 				ranges: ranges
@@ -622,7 +756,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	registerSearchActionBtn() {
 		const showCompletedEl = this.addAction("check", "Show Completed", (evt) => {
-			this.hideCompletedItems(this.editor.cm);
+			this.editor && this.hideCompletedItems(this.editor.cm);
 			showCompletedEl.toggleClass('hide-completed', this.hideCompleted);
 		});
 
@@ -633,20 +767,20 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			searchMenu.addItem((item) => {
 				const itemDom = (item as any).dom;
 				item.setIsLabel(true);
-				let tempValue = "";
+				// let tempValue = "";
 				const settingEl = new Setting(itemDom)
 					.setName("Filter")
 					.addSearch((search) => {
 						search.setValue(this.filteredValue).onChange((value) => {
 							if (block) return;
-							this.editor.cm.dispatch({
+							this.editor && this.editor.cm.dispatch({
 								effects: ClearSearchHighlightEffect.of()
 							});
 
-							this.filter(this.editor.cm, value);
-
-
+							this.editor && this.filter(this.editor.cm, value);
 						});
+
+
 
 						search.clearButtonEl.addEventListener('click', () => {
 							searchMenu.hide();
@@ -657,6 +791,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						});
 						search.inputEl.addEventListener('compositionend', () => {
 							block = false;
+							if (!this.editor) return;
 							this.filter(this.editor.cm, search.inputEl.value);
 						});
 					});
@@ -668,6 +803,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					(settingEl.components[0] as SearchComponent).inputEl.focus();
 				});
 			});
+			if (!this.searchActionEl) return;
 			const {x, y} = this.searchActionEl.getBoundingClientRect();
 			searchMenu.showAtPosition({
 				x: x + this.searchActionEl.offsetHeight,
@@ -675,6 +811,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			});
 
 			searchMenu.onHide(() => {
+				if (!this.editor) return;
 				this.editor.focus();
 			});
 
@@ -682,7 +819,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		});
 
 		this.clearFilterBtn = this.addAction("filter-x", "Clear Filter", (evt) => {
-			this.filter(this.editor.cm, "");
+			this.editor && this.filter(this.editor.cm, "");
 
 		});
 		this.clearFilterBtn.toggleClass('filter-clear', true);
@@ -691,11 +828,13 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	}
 
 	public search() {
+		if (!this.searchActionEl) return;
 		this.searchActionEl.click();
 		document.body.find('.search-menu input')?.focus();
 	}
 
 	public searchWithText(text: string) {
+		if (!this.searchActionEl) return;
 		this.searchActionEl.click();
 
 		console.log(this, text);
@@ -714,8 +853,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	onunload() {
 		super.onunload();
-		this.searchActionEl.detach();
-		this.clearFilterBtn.detach();
+		this.searchActionEl && this.searchActionEl.detach();
+		this.clearFilterBtn && this.clearFilterBtn.detach();
 		this.filteredValue = "";
 	}
 }

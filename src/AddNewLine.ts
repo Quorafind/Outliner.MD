@@ -1,11 +1,6 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view";
-import {
-	App,
-	editorInfoField,
-	ExtraButtonComponent,
-	MarkdownFileInfo,
-} from "obsidian";
+import { App, editorInfoField, ExtraButtonComponent, MarkdownFileInfo, } from "obsidian";
 import { getIndent } from "./utils";
 
 export const AddNewLineBtn = StateField.define<DecorationSet>({

@@ -2,19 +2,20 @@ import {
 	ItemView,
 	MarkdownView,
 	Menu,
-	Plugin,
-	View,
-	ViewState,
-	Workspace,
-	WorkspaceLeaf,
 	moment,
-	TFolder
+	Plugin,
+	TFolder,
+	View,
+	type ViewState,
+	Workspace,
+	WorkspaceLeaf
 } from 'obsidian';
 import { around } from "monkey-around";
 import { isEmebeddedLeaf, OUTLINER_EDITOR_VIEW_ID, OutlinerEditorView } from "./OutlinerEditorView";
 
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { CalculateRangeForZooming } from "./calculateRangeForZooming";
+import "./less/global.less";
 
 
 const FRONT_MATTER_KEY = 'outliner';
@@ -56,6 +57,7 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.addRibbonIcon('list', 'New outliner file', async () => {
 			const folder = this.app.fileManager.getMarkdownNewFileParent();
 			if (folder) {
+				// @ts-ignore
 				const newFile = await this.app.vault.create(`${folder.path}/outliner-${moment().format('YYYYMMDDHHmmss')}.md`, `---\noutliner: true\n---\n\n- `);
 				await this.app.workspace.getLeaf(true).setViewState({
 					type: OUTLINER_EDITOR_VIEW_ID,
@@ -113,6 +115,7 @@ export default class OutlinerViewPlugin extends Plugin {
 		around(Workspace.prototype, {
 			getActiveViewOfType: (next: any) =>
 				function (t: any) {
+
 					const result = next.call(this, t);
 					if (!result) {
 						if (t?.VIEW_TYPE === 'markdown') {
@@ -198,6 +201,7 @@ export default class OutlinerViewPlugin extends Plugin {
 	}
 
 	patchItemView() {
+// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
 		// Once 0.15.3+ is min. required Obsidian, this can be simplified to View + "onPaneMenu"
 		const [cls, method] = View.prototype['onPaneMenu'] ? [View, 'onPaneMenu'] : [ItemView, 'onMoreOptionsMenu'];
@@ -257,6 +261,65 @@ export default class OutlinerViewPlugin extends Plugin {
 	}
 
 	registerCommands() {
+		this.addCommand({
+			id: 'duplicate-current-bullet-and-its-children',
+			name: 'Duplicate current bullet and its children',
+			checkCallback: (checking: boolean) => {
+				// Conditions to check
+				// @ts-ignore
+				const outlinerView = this.app.workspace.getActiveViewOfType(OutlinerEditorView);
+				if (outlinerView) {
+					// If checking is true, we're simply "checking" if the command can be run.
+					// If checking is false, then we want to actually perform the operation.
+					if (!checking) {
+						const editor = (outlinerView as OutlinerEditorView).editor;
+						const cursor = editor?.getCursor();
+						if (cursor === undefined) return;
+						const pos = editor?.posToOffset(cursor);
+						if(pos === undefined) return;
+						const line = editor?.cm.state.doc.lineAt(pos);
+						if (!line || !editor?.cm.state) return;
+						const ranges = this.calculateRangeForZooming.calculateRangeForZooming(editor?.cm.state, line?.from);
+						if (ranges) {
+							const newPos = ranges.from + editor?.cm.state.doc.slice(ranges.from, ranges.to).length;
+							editor?.cm.dispatch({
+								changes: [
+									{
+										from: ranges.to,
+										to: ranges.to,
+										insert: '\n' + editor?.cm.state.doc.slice(ranges.from, ranges.to),
+									}
+								],
+								selection: {
+										head: editor?.cm.state.doc.lineAt(newPos).to,
+										anchor: editor?.cm.state.doc.lineAt(newPos).to
+								}
+
+							});
+						} else {
+							const newPos = line.from + editor?.cm.state.doc.slice(line.from, line.to).length;
+							editor?.cm.dispatch({
+								changes: [
+									{
+										from: line.to,
+										to: line.to,
+										insert: '\n' + editor?.cm.state.doc.slice(line.from, line.to),
+									}
+								],
+								selection: {
+									head: editor?.cm.state.doc.lineAt(newPos).to,
+									anchor: editor?.cm.state.doc.lineAt(newPos).to
+								}
+							});
+						}
+					}
+
+					// This command will only show up in Command Palette when the check function returns true
+					return true;
+				}
+			}
+		});
+
 		this.addCommand({
 			id: 'search-in-current-file',
 			name: 'Search in current file',

@@ -1,6 +1,5 @@
-import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder, StateField } from "@codemirror/state";
-import { editorInfoField, MarkdownFileInfo } from "obsidian";
 
 
 // const placeholderLine = Decoration.line({
@@ -31,7 +30,7 @@ export const placeholder = StateField.define<DecorationSet>({
 		return Decoration.none;
 	},
 	update(value, tr) {
-		const editor = tr.state.field(editorInfoField);
+		// const editor = tr.state.field(editorInfoField);
 		const builder = new RangeSetBuilder<Decoration>();
 		const cursor = tr.state.selection.main.head;
 		const lineAtCursor = tr.state.doc.lineAt(cursor);

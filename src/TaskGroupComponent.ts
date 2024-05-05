@@ -1,6 +1,6 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view";
-import { App, editorInfoField, MarkdownFileInfo } from "obsidian";
+import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { App, editorInfoField, type MarkdownFileInfo } from "obsidian";
 import { OutlinerEmbedEditor } from "./OutlinerEmbedEditor";
 
 export const TaskGroupComponent = StateField.define<DecorationSet>({
@@ -38,7 +38,7 @@ class TaskGroupWidget extends WidgetType {
 		const taskContainer = createEl('div', {
 			cls: 'cm-task-group-container'
 		});
-		const marginSpan = taskContainer.createEl('span', {
+		taskContainer.createEl('span', {
 			cls: 'cm-task-group-margin'
 		});
 		const taskGroupContainerEl = taskContainer.createEl('span', {
@@ -49,12 +49,12 @@ class TaskGroupWidget extends WidgetType {
 			cls: 'cm-task-group-title'
 		});
 
-		const titleInnerEl = titleEl.createEl('span', {
+		titleEl.createEl('span', {
 			cls: 'cm-task-group-title-inner',
 			text: '⛏ Task Group'
 		});
 
-		const resultEl = titleEl.createEl('span', {
+		titleEl.createEl('span', {
 			cls: 'cm-task-group-result'
 		});
 

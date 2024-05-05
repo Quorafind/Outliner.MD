@@ -1,7 +1,6 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { Decoration, DecorationSet, EditorView, MatchDecorator, WidgetType } from "@codemirror/view";
-import { App, editorInfoField, MarkdownFileInfo } from "obsidian";
-import { OutlinerEmbedEditor } from "./OutlinerEmbedEditor";
+import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { App, editorInfoField, type MarkdownFileInfo } from "obsidian";
 
 
 export const BlockEmbedComponent = StateField.define<DecorationSet>({
@@ -20,9 +19,6 @@ export const BlockEmbedComponent = StateField.define<DecorationSet>({
 				lastLineTo, lastLineTo, tr.state), side: 3, block: true
 		}));
 
-		const matchDecorator = new MatchDecorator({
-			regexp: /\+\[\[\]\]/g,
-		});
 		const dec = builder.finish();
 		return dec;
 	},

@@ -1,6 +1,5 @@
 import { StateEffect, StateField } from "@codemirror/state";
 import { Decoration, EditorView } from "@codemirror/view";
-import { zoomInEffect } from "./checkVisible";
 
 // code mirror effect that you will use to define the effect you want (the decoration)
 
@@ -20,7 +19,7 @@ export const SearchHighlight = StateField.define({
 	update(value, transaction) {
 		value = value.map(transaction.changes);
 
-		for (let effect of transaction.effects) {
+		for (const effect of transaction.effects) {
 			if (effect.is(ClearSearchHighlightEffect)) {
 				value = Decoration.none;
 			}

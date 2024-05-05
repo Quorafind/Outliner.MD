@@ -1,11 +1,12 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { Decoration, DecorationSet, EditorView, WidgetType } from "@codemirror/view";
-import { App, editorInfoField, ExtraButtonComponent, MarkdownView, Menu, MenuItem, Notice, View } from "obsidian";
+import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
+import { App, Editor, editorInfoField, ExtraButtonComponent, Menu, MenuItem, moment, Notice } from "obsidian";
+import { foldable } from "@codemirror/language";
+import { SelectionAnnotation } from "./SelectionController";
+import { EmbeddableMarkdownEditor } from "./embedEditor";
 
 class BulletMenuMarkerWidget extends WidgetType {
-	bulletSpanEl: HTMLSpanElement;
-	listSpanEl: HTMLSpanElement;
-	menuButtonEl: HTMLButtonElement;
+	bulletSpanEl: HTMLSpanElement | undefined;
 
 	constructor(
 		readonly app: App,
@@ -25,7 +26,7 @@ class BulletMenuMarkerWidget extends WidgetType {
 			cls: 'cm-bullet-menu-marker',
 		});
 
-		const componentEl = new ExtraButtonComponent(this.bulletSpanEl).setIcon('menu').onClick(() => {
+		new ExtraButtonComponent(this.bulletSpanEl).setIcon('menu').onClick(() => {
 			const menu = new Menu();
 			const editor = this.view.field(editorInfoField).editor;
 			const currentLine = this.view.doc.lineAt(this.from);
@@ -224,8 +225,142 @@ class BulletMenuMarkerWidget extends WidgetType {
 			});
 			menu.addItem((item) => {
 				item.setIcon('pencil').setTitle('Add note').onClick(() => {
-					const currentLineIndent = currentLine.text.match(/^\s*/)?.[0];
-					const currentLineEnd = currentLine.to;
+					if ((/^(-|\*|\d+\.)(\s\[.\])?/g.test(currentLine.text.trimStart()))) {
+						editor?.focus();
+						editor?.transaction({
+							selection: {
+								from: {
+									line: currentLine.number - 1,
+									ch: currentLine.length - 1
+								},
+								to: {
+									line: currentLine.number - 1,
+									ch: currentLine.length - 1
+								}
+							}
+						});
+						// const result = editor && (editor.editorComponent as EmbeddableMarkdownEditor).options.onEnter(editor.editorComponent, false, true);
+						// console.log(result);
+					}
+
+					// const currentLineIndent = currentLine.text.match(/^\s*/)?.[0];
+					// const foldableRange = foldable(this.view, currentLine.from, currentLine.to);
+					// let targetLine = currentLine.number;
+					// if(foldableRange) {
+					// 	// No bullet line until the end of the foldable range
+					//
+					// 	if ((/^(-|\*|\d+\.)(\s\[.\])?/g.test(currentLine.text.trimStart()))) {
+					// 		const startLineNum = currentLine.number;
+					// 		let foundValidLine = false;
+					//
+					// 		for (let i = startLineNum + 1; i < this.view.doc.lines; i++) {
+					// 			const line = this.view.doc.line(i);
+					// 			const lineText = line.text;
+					//
+					// 			// 检查行是否有缩进并且不以列表标记开始
+					// 			if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
+					// 				foundValidLine = true;
+					// 			} else {
+					// 				// 遇到不满足条件的行，检查是否已经遍历过至少一行
+					// 				if (foundValidLine) {
+					// 					targetLine = this.view.doc.line(i - 1).number;
+					// 					break;
+					// 				}
+					// 			}
+					// 		}
+					// 	}
+					//
+					// 	if(targetLine !== currentLine.number) {
+					// 		editor?.transaction({
+					// 			selection: {
+					// 				from: {
+					// 					line: this.view.doc.line(targetLine - 1).number,
+					// 					ch: (currentLineIndent?.length || 0) + 2
+					// 				},
+					// 				to: {
+					// 					line: this.view.doc.line(targetLine- 1).number,
+					// 					ch: (currentLineIndent?.length || 0) + 2
+					// 				}
+					// 			}
+					// 		})
+					//
+					// 		const newCurrentLine = this.view.doc.line(targetLine);
+					// 		if(newCurrentLine.text.trim()) {
+					// 			editor?.transaction({
+					// 				changes: [
+					// 					{
+					// 						from: {
+					// 							line: targetLine - 1,
+					// 							ch: newCurrentLine.length
+					// 						},
+					// 						to: {
+					// 							line: targetLine - 1,
+					// 							ch: newCurrentLine.length
+					// 						},
+					// 						text: `\n${currentLineIndent}${(' ').repeat(2)}`
+					// 					}
+					// 				],
+					// 			});
+					//
+					// 			editor?.transaction({
+					// 				selection: {
+					// 					from: {
+					// 						line: this.view.doc.line(targetLine).number,
+					// 						ch: (currentLineIndent?.length || 0) + 2
+					// 					},
+					// 					to: {
+					// 						line: this.view.doc.line(targetLine).number,
+					// 						ch: (currentLineIndent?.length || 0) + 2
+					// 					}
+					// 				}
+					// 			})
+					// 		}
+					//
+					//
+					// 	}
+					//
+					// 	return;
+					// }
+					//
+					// new Notice(currentLine.number.toString());
+					//
+					// editor?.transaction({
+					// 	changes: [
+					// 		{
+					// 			from: {
+					// 				line: currentLine.number - 1,
+					// 				ch: currentLine.length
+					// 			},
+					// 			to: {
+					// 				line: currentLine.number - 1,
+					// 				ch: currentLine.length
+					// 			},
+					// 			text: `\n${currentLineIndent}${(' ').repeat(2)}`
+					// 		}
+					// 	],
+					// });
+					// editor?.transaction({
+					// 	selection: {
+					// 		from: {
+					// 			line: currentLine.number,
+					// 			ch: currentLine.length
+					// 		},
+					// 		to: {
+					// 			line: currentLine.number,
+					// 			ch: currentLine.length
+					// 		}
+					// 	}
+					// })
+
+
+
+				});
+			});
+			menu.addItem((item) => {
+				item.setIcon('calendar').setTitle('Add date').onClick(() => {
+					const currentDate = moment().format('YYYY-MM-DD');
+					const currentDateText = `📅 ${currentDate}`;
+					console.log(currentDateText);
 					editor?.transaction({
 						changes: [
 							{
@@ -233,29 +368,20 @@ class BulletMenuMarkerWidget extends WidgetType {
 									line: currentLine.number - 1,
 									ch: currentLine.length
 								},
-								to: {
-									line: currentLine.number - 1,
-									ch: currentLine.length
-								},
-								text: `\n${currentLineIndent}${(' ').repeat(bulletMarker.length)}`
+								text: ` ${currentDateText} `
 							}
 						],
 						selection: {
 							from: {
 								line: currentLine.number,
-								ch: (currentLineIndent?.length || 0) + bulletMarker.length
+								ch: currentLine.length
 							},
 							to: {
 								line: currentLine.number,
-								ch: (currentLineIndent?.length || 0) + bulletMarker.length
+								ch: currentLine.length
 							}
 						}
 					});
-				});
-			});
-			menu.addItem((item) => {
-				item.setIcon('calendar').setTitle('Add date').onClick(() => {
-					new Notice('Not yet available');
 				});
 			});
 			menu.addItem((item) => {
@@ -301,7 +427,8 @@ class BulletMenuMarkerWidget extends WidgetType {
 				});
 			});
 
-			const rect = this.bulletSpanEl.getBoundingClientRect();
+			if (!this.bulletSpanEl) return;
+			const rect = this.bulletSpanEl?.getBoundingClientRect();
 			menu.showAtPosition({x: rect.left - 42, y: rect.bottom});
 		});
 
@@ -322,12 +449,13 @@ export const BulletMenu = StateField.define<DecorationSet>({
 		return Decoration.none;
 	},
 	update(value, tr) {
-		let builder = new RangeSetBuilder<Decoration>();
+		const builder = new RangeSetBuilder<Decoration>();
 
 		const field = tr.state.field(editorInfoField);
 
 		for (let i = 1; i <= tr.state.doc.lines; i++) {
 			const line = tr.state.doc.line(i);
+			if(!(/^(-|\*|\d+\.)(\s(\[.\]))?/g.test(line.text.trimStart()))) continue;
 			const spacesLength = line.text.match(/^\s*/)![0].length; // 使用 \s* 匹配所有空白字符，包括空格和制表符
 
 			if (spacesLength > 0) {

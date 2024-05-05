@@ -1,7 +1,7 @@
 {
-	"id": "outliner-view",
+	"id": "outliner-view-beta",
 	"name": "Outliner View",
-	"version": "0.0.2",
+	"version": "0.0.6",
 	"minAppVersion": "0.15.0",
 	"description": "Powerful outliner (editor) view for Obsidian.",
 	"author": "Boninall",

@@ -1,13 +1,12 @@
 import { Decoration, DecorationSet, EditorView } from "@codemirror/view";
 import { RangeSetBuilder, StateField } from "@codemirror/state";
-import { editorInfoField } from "obsidian";
 
 const blankBulletLine = Decoration.mark({
 	attributes: {class: 'cm-blank-bullet-line'},
 	// class: 'cm-blank-bullet-line',
 });
 
-export const bulletBulletLineWidget = StateField.define<DecorationSet>({
+export const blankBulletLineWidget = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
 	},

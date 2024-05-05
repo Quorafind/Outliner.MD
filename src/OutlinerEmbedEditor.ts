@@ -1,23 +1,22 @@
 import { App, Component, debounce, Editor, setIcon, TFile } from "obsidian";
 import { EmbeddableMarkdownEditor } from "./embedEditor";
 import { getIndent } from "./utils";
-import OutlinerViewPlugin from "./main";
-import { ClearSearchHighlightEffect } from "./SearchHighlight";
 import { zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
 import { getAPI } from "obsidian-dataview";
 import { foldable } from "@codemirror/language";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { CalculateRangeForZooming } from "./calculateRangeForZooming";
+import { SelectionAnnotation } from "./SelectionController";
 
 
 export class OutlinerEmbedEditor extends Component {
 	app: App;
-	editor: Editor;
-	filePath: string;
-	file: TFile | null;
+	editor: Editor | undefined;
+	filePath: string | undefined;
+	file: TFile | null | undefined;
 
-	data: string;
-	range: { from: number, to: number };
+	data: string | undefined;
+	range: { from: number; to: number; } | undefined;
 
 	calculateRangeForZooming = new CalculateRangeForZooming();
 	KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
@@ -51,7 +50,6 @@ export class OutlinerEmbedEditor extends Component {
 		this.registerEvent(
 			this.app.metadataCache.on("dataview:metadata-change", (type: any, file: TFile, oldPath?: string | undefined) => {
 					if (!this.indexed) return;
-					console.log(type, file, oldPath);
 
 					this.debounceUpdateEditor(file, oldPath);
 				}
@@ -164,6 +162,8 @@ export class OutlinerEmbedEditor extends Component {
 						}
 					}
 
+					const prevLine  = line > 0 ? editor.editor.getLine(line - 1) : "";
+
 					if (lineText.startsWith("- ")) {
 						(editor.editor as Editor).transaction({
 							changes: [
@@ -178,7 +178,7 @@ export class OutlinerEmbedEditor extends Component {
 							}
 						});
 						return true;
-					} else if (!lineText.trim()) {
+					} else if (!lineText.trim() && (/^(-|\*|\d+\.)(\s\[.\])?/g.test(prevLine.trim()))) {
 						(editor.editor as Editor).transaction({
 							changes: [
 								{
@@ -192,6 +192,152 @@ export class OutlinerEmbedEditor extends Component {
 							}
 						});
 						return true;
+					} else if(/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
+						const currentIndent = lineText.match(/^\s+/)?.[0];
+
+						(editor.editor as Editor).transaction({
+							changes: [
+								{
+									text: `\n${currentIndent}`,
+									from: {line, ch},
+								}
+							],
+							selection: {
+								from: {line: line + 1, ch: currentIndent.length},
+								to: {line: line + 1, ch: currentIndent.length},
+							}
+						});
+						return true;
+					}
+
+					if(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
+						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({line, ch: 0}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+						const indentNewLine = getIndent(this.app);
+						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
+						if (range) {
+							let foundValidLine = false;
+
+							const startLineNum = editor.editor.cm.state.doc.lineAt(range.from).number;
+							for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
+								const line = (editor.editor as Editor).cm.state.doc.line(i);
+								const lineText = line.text;
+
+								// 检查行是否有缩进并且不以列表标记开始
+								if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
+									foundValidLine = true;
+								} else {
+									// 遇到不满足条件的行，检查是否已经遍历过至少一行
+									if (foundValidLine) {
+										const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
+										if(currentLine.to === range.to) {
+											(editor.editor as Editor).transaction({
+												changes: [
+													{
+														text: `${spaceBeforeStartLine}- \n`,
+														from: {line: i - 1, ch: 0},
+													}
+												]
+											});
+											(editor.editor as Editor).cm.dispatch({
+												selection: {
+													head: line.from,
+													anchor: line.from,
+												}
+											});
+											return true;
+										} else {
+											(editor.editor as Editor).cm.dispatch({
+												changes: {
+													insert: `${spaceBeforeStartLine}${indentNewLine}- \n`,
+													from: line.from,
+												}
+											});
+											(editor.editor as Editor).cm.dispatch({
+												selection: {
+													head: line.from,
+													anchor: line.from,
+												}
+											});
+											return true;
+										}
+
+
+									}
+									return false;
+								}
+							}
+						}
+						return false;
+					}
+				}
+				if (shift) {
+					const {line, ch} = (editor.editor as Editor).getCursor();
+					const charOffset = (editor.editor as Editor).posToOffset({line, ch});
+					const charLine = (editor.editor as Editor).cm.state.doc.lineAt(charOffset);
+
+					if(/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+						const lineNum = charLine.number;
+
+						for(let i = lineNum; i >= 1; i--) {
+							const lineCursor = (editor.editor as Editor).cm.state.doc.line(i);
+							const lineText = lineCursor.text;
+							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
+								const currentLine = (editor.editor as Editor).cm.state.doc.line(i);
+								console.log('currentLine', currentLine.text, currentLine.from, currentLine.to);
+								(editor.editor as Editor).cm.dispatch({
+									selection: {
+										head: currentLine.to,
+										anchor: currentLine.to,
+									},
+									annotations: SelectionAnnotation.of('arrow.up.selection'),
+								});
+								return true;
+							}
+						}
+						// lineCursor.next();
+
+						// console.log('lineNum', lineNum, lineCursor.done);
+						// return false;
+					} else if ((/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+						const startLineNum = charLine.number;
+						let foundValidLine = false;
+
+						for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
+							const line = (editor.editor as Editor).cm.state.doc.line(i);
+							const lineText = line.text;
+
+							// 检查行是否有缩进并且不以列表标记开始
+							if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
+								foundValidLine = true;
+							} else {
+								// 遇到不满足条件的行，检查是否已经遍历过至少一行
+								if (foundValidLine) {
+									const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
+									(editor.editor as Editor).cm.dispatch({
+										selection: {
+											head: currentLine.to,
+											anchor: currentLine.to,
+										},
+										annotations: SelectionAnnotation.of('arrow.up.selection'),
+									});
+									return true;
+								}
+								return false;
+							}
+						}
+						if (foundValidLine) {
+							const lastLine = (editor.editor as Editor).cm.state.doc.line((editor.editor as Editor).cm.state.doc.lines - 1);
+							(editor.editor as Editor).cm.dispatch({
+								selection: {
+									head: lastLine.to,
+									anchor: lastLine.to,
+								},
+								// annotations: SelectionAnnotation.of('arrow.up.selection'),
+							});
+							return true;
+						}
+
+						return false;
 					}
 				}
 				return false;
@@ -297,6 +443,7 @@ export class OutlinerEmbedEditor extends Component {
 			type: 'embed',
 			value: data || "",
 			path: path,
+			foldByDefault: true,
 		});
 
 		this.editorMap.set(path, embedEditor.editor);
@@ -313,6 +460,7 @@ export class OutlinerEmbedEditor extends Component {
 	}
 
 	zoomIn() {
+		if (!this.editor || !this.range) return;
 		const rangeForZooming = this.calculateRangeForZooming.calculateRangeForZooming(this.editor.cm.state, this.range.from);
 		if (rangeForZooming) {
 			this.editor.cm.dispatch({
@@ -379,6 +527,7 @@ export class OutlinerEmbedEditor extends Component {
 	updateResultEl(
 		length: number,
 	) {
+		this.containerEl.toggleClass('cm-task-group-result-empty', length === 0);
 		this.containerEl.find('.cm-task-group-result').setText(length.toString() + ' results');
 	}
 
@@ -389,12 +538,14 @@ FROM ""
 WHERE contains(text, "#now")
 GROUP BY file.path`);
 
+		console.log('result', result.successful, result.value.values);
+
 		if (!result.successful) return;
 		const values = result.value.values;
 
 		let count = 0;
 
-		for (let v of values) {
+		for (const v of values) {
 			if (!v.key || this.editorMap.has(v.key)) continue;
 
 
@@ -415,6 +566,10 @@ GROUP BY file.path`);
 					active: true,
 				});
 			};
+
+			taskGroupContainer.hide();
+			collapseButton.toggleClass('cm-task-container-collapsed', !taskGroupContainer.isShown());
+
 
 			if (this.app.vault.getFileByPath(v.key)) {
 				const file = this.app.vault.getFileByPath(v.key);
@@ -454,11 +609,13 @@ FROM ""
 WHERE contains(text, "#now")
 GROUP BY file.path`);
 
+		console.log('result', result.successful, result.value.values);
+
 		if (!result.successful) return;
 		const values = result.value.values;
 
 		let count = 0;
-		for (let v of values) {
+		for (const v of values) {
 			const ranges = v.rows.map((r: { position: any }) => {
 				count++;
 				return {
@@ -488,7 +645,7 @@ GROUP BY file.path`);
 						editor.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length});
 						this.contentMap.set(targetFile.path, data);
 
-						const values = result.value.values;
+						// const values = result.value.values;
 						this.updateVisibleRange(editor, ranges);
 					}
 				}

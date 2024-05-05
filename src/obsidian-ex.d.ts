@@ -1,5 +1,6 @@
 import 'obsidian';
-import { TFile, View, WorkspaceItem, WorkspaceParent } from "obsidian";
+// import type { View, WorkspaceParent } from "obsidian";
+import { TFile, WorkspaceItem } from "obsidian";
 import { EditorView } from "@codemirror/view";
 
 type ScrollableMarkdownEditor = any;

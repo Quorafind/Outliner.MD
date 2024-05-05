@@ -1,7 +1,7 @@
-import { EditorState, Extension } from "@codemirror/state";
+import type { EditorState, Extension } from "@codemirror/state";
 import { rangeSetToArray } from "./utils";
 import { EditorView } from "@codemirror/view";
-import { zoomInEffect, ZoomInRange, zoomInRangesEffect, zoomOutEffect, zoomStateField } from "./checkVisible";
+import { zoomInEffect, type ZoomInRange, zoomInRangesEffect, zoomOutEffect, zoomStateField } from "./checkVisible";
 
 export class KeepOnlyZoomedContentVisible {
 	constructor() {

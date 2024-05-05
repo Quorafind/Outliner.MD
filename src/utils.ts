@@ -1,4 +1,4 @@
-import { EditorState, RangeSet, RangeValue } from "@codemirror/state";
+import { RangeSet, RangeValue } from "@codemirror/state";
 import { App } from "obsidian";
 import { RegExpCursor } from "./regexp-cursor";
 import { EditorView } from "@codemirror/view";
@@ -7,7 +7,10 @@ import { SearchHighlightEffect } from "./SearchHighlight";
 export function rangeSetToArray<T extends RangeValue>(
 	rs: RangeSet<T>
 ): Array<{ from: number; to: number }> {
-	const res = [];
+	const res: {
+		from: number;
+		to: number;
+	}[] = [];
 	const i = rs.iter();
 	while (i.value !== null) {
 		res.push({from: i.from, to: i.to});
@@ -25,13 +28,6 @@ export function getIndent(app: App) {
 	const indentNewLine = (useTab ? '\t' : ' ').repeat(tabSize);
 
 	return indentNewLine;
-}
-
-
-function findParentRange(state: EditorState, position: number): { from: number; to: number } | null {
-	// This function should return the fold range that includes the position but is not exactly at the position
-	// Placeholder logic: Needs implementation based on actual folding logic used
-	return null;
 }
 
 // function consolidateRanges(ranges: { from: number; to: number }[]): { from: number; to: number }[] {
@@ -54,10 +50,13 @@ function findParentRange(state: EditorState, position: number): { from: number; 
 export function getSearchRanges(view: EditorView, search: string) {
 	const state = view.state;
 	const searchCursor = new RegExpCursor(state.doc, search, {}, 0, state.doc.length);
-	const ranges = [];
+	const ranges: {
+		from: number;
+		to: number;
+	}[] = [];
 
 	while (!searchCursor.next().done) {
-		let {from, to} = searchCursor.value;
+		const {from, to} = searchCursor.value;
 
 		const bulletListVisibleLine = state.doc.lineAt(from);
 		ranges.push({from: bulletListVisibleLine.from, to: bulletListVisibleLine.to});

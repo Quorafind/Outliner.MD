@@ -1,4 +1,4 @@
-import { Decoration, DecorationSet, EditorView } from "@codemirror/view";
+import { Decoration, type DecorationSet, EditorView } from "@codemirror/view";
 import { StateEffect, StateField } from "@codemirror/state";
 
 export interface ZoomInRange {
@@ -52,7 +52,7 @@ export const zoomStateField = StateField.define<DecorationSet>({
 				value = value.update({filter: () => false});
 
 
-				let totalLength = tr.state.doc.length;
+				// let totalLength = tr.state.doc.length;
 
 				e.value.ranges.forEach(range => {
 					value = value.update({
@@ -68,10 +68,13 @@ export const zoomStateField = StateField.define<DecorationSet>({
 			if (e.is(zoomInRangesEffect)) {
 				value = value.update({filter: () => false});
 
-				let totalLength = tr.state.doc.length;
-				let visibleRanges = e.value.ranges;
+				const totalLength = tr.state.doc.length;
+				const visibleRanges = e.value.ranges;
 				visibleRanges.sort((a, b) => a.from - b.from);
-				let hiddenRanges = [];
+				const hiddenRanges: {
+					from: number;
+					to: number;
+				}[] = [];
 				let lastVisibleEnd = 0;
 
 				visibleRanges.forEach(range => {

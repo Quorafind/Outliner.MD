@@ -1,0 +1,272 @@
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button {
+	color: var(--color-base-50);
+	display: flex;
+	justify-content: flex-start;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button div {
+	border-radius: 100%;
+	padding: var(--size-2-2) var(--size-2-2);
+	height: 24px;
+	width: 24px;
+
+	--icon-size: 16px;
+	margin-left: 2px;
+	--icon-stroke: 1px;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-content:not(.embed-editor) {
+	padding-left: var(--size-4-4);
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-content.embed-editor {
+	padding-bottom: 0 !important;
+}
+
+
+.outliner-editor .cm-placeholder:before {
+	content: attr(data-ph);
+	color: var(--memos-text-faint);
+	position: absolute;
+}
+
+.filtered .outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button {
+	display: none;
+}
+
+.filtered .outliner-editor .markdown-source-view.mod-cm6 .cm-task-group {
+	display: none;
+}
+
+.search-menu .setting-item {
+	border-top: unset;
+	padding: unset;
+}
+
+.workspace-leaf-content .view-header .filter-clear {
+	display: none;
+}
+
+.workspace-leaf-content:has(.filtered) .view-header .filter-clear {
+	display: flex;
+}
+
+
+.outliner-editor .markdown-source-view.mod-cm6 .outliner-highlight {
+	background: rgba(255, 239, 155, 0.56);
+}
+
+/*.outliner-editor {*/
+/*	padding-top: var(--size-4-6);*/
+/*	padding-left: var(--size-4-4);*/
+/*}*/
+
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-sizer {
+	max-width: var(--file-line-width);
+	min-width: var(--file-line-width);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.cm-task-group .markdown-source-view.mod-cm6 .cm-sizer:has(.cm-content.embed-editor) {
+	min-width: auto;
+}
+
+.cm-task-group .cm-task-group-header {
+	font-size: 17px;
+	margin-bottom: var(--size-2-2);
+	margin-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: var(--size-4-2);
+	cursor: pointer;
+	display: flex;
+}
+
+.markdown-source-view.mod-cm6 .cm-task-group-container {
+	display: flex;
+	flex-direction: column;
+}
+
+span.cm-task-group-margin {
+	width: 100%;
+	height: var(--size-4-6);
+}
+
+.cm-task-group .cm-task-group-header .cm-group-title:hover {
+	text-decoration: underline;
+	color: var(--link-color);
+	font-weight: var(--link-weight);
+}
+
+.cm-task-group .cm-task-group-header .cm-group-collapse-button:not(.cm-task-container-collapsed) svg {
+	transform: rotate(90deg);
+
+	transition: all 100ms;
+}
+
+span.cm-group-collapse-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: var(--size-2-2);
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker {
+	/*display: inline-block;*/
+	position: relative;
+	z-index: 1;
+}
+
+.outliner-editor markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:not(.cm-active):not(.HyperMD-task-line) span.cm-bullet-menu-marker .clickable-icon {
+	padding-inline-end: var(--list-bullet-end-padding);
+	transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding)));
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker .clickable-icon {
+	position: absolute;
+	top: 0;
+	inset-inline-end: 0;
+	height: 100%;
+
+	padding: var(--size-2-2);
+
+	--icon-size: 14px;
+	--icon-stroke: 2px;
+
+	opacity: 0;
+
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker:hover .clickable-icon {
+	opacity: 1;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line:hover .clickable-icon {
+	opacity: 1;
+}
+
+/*.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
+/*	padding-inline-end: 0;*/
+/*}*/
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-bullet-menu-marker .clickable-icon {
+	margin-inline-end: 18px;
+}
+
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) {
+	height: fit-content;
+}
+
+.outliner-editor .cm-task-group .markdown-source-view.mod-cm6 .cm-editor {
+	min-height: fit-content;
+}
+
+.outliner-editor .cm-task-group .markdown-source-view.mod-cm6 .cm-editor .cm-gutters {
+	display: none;
+}
+
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) {
+	padding: var(--size-4-2);
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-m);
+	display: flex;
+	flex-direction: column;
+	padding-left: var(--size-4-4);
+	padding-right: var(--size-4-4);
+	padding-bottom: var(--size-4-3);
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-task-group-title {
+	/*margin-bottom: var(--size-4-2);*/
+}
+
+
+.outliner-editor .cm-task-group-container:has(.markdown-soruce-view) {
+	display: flex;
+}
+
+.outliner-editor .cm-task-group-container {
+	display: none;
+}
+
+.outliner-editor .inline-title {
+	color: rgb(23, 23, 23);
+	font-size: var(36px, 32px);
+	font-weight: 500;
+
+	margin-bottom: 21px;
+	padding-left: var(--size-4-5);
+}
+
+div[data-type="outliner-editor-view"] .view-header :is(.view-header-left, .view-header-title-container) {
+	visibility: hidden;
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-task-group-title {
+	/* margin-bottom: var(--size-4-2); */
+	display: flex;
+	justify-content: space-between;
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-task-group-title .cm-task-group-result {
+	color: var(--text-faint);
+}
+
+.outliner-editor .cm-task-group:has(.markdown-source-view) .cm-line {
+	padding-top: 0.4em;
+}
+
+.outliner-editor .HyperMD-list-line:has(.cm-blank-bullet-line) .cm-formatting-list {
+	visibility: hidden;
+}
+
+.outliner-editor .HyperMD-list-line:has(.cm-blank-bullet-line).cm-active .cm-formatting-list {
+	visibility: visible;
+}
+
+.outliner-editor .HyperMD-list-line:has(.cm-blank-bullet-line):hover .cm-formatting-list {
+	visibility: visible;
+}
+
+button.clickable-icon.view-action.hide-completed {
+	color: var(--color-green);
+	background: var(--background-secondary);
+}
+
+.cm-date-button-container button {
+	box-shadow: unset;
+}
+
+span.cm-task-group-title {
+	display: flex;
+	justify-content: space-between;
+}
+
+.markdown-source-view.mod-cm6 .cm-task-group-container:has(.cm-task-group-result-empty) {
+	display: none;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .list-bullet {
+	font-size: large;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .HyperMD-list-line-nobullet {
+	color: var(--text-faint);
+	padding-top: 0;
+}
+
+//.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
+//	transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding) - 6px)) !important;
+//}

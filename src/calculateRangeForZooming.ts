@@ -1,7 +1,6 @@
 import { EditorState } from "@codemirror/state";
 import { foldable } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
-import { editorInfoField } from "obsidian";
 import { getSearchRanges } from "./utils";
 
 export class CalculateRangeForZooming {
@@ -22,7 +21,10 @@ export class CalculateRangeForZooming {
 
 	public calculateRangesBasedOnType(view: EditorView, type: 'completed' | 'incompleted') {
 		const state = view.state;
-		const ranges = [];
+		const ranges: {
+			from: number;
+			to: number;
+		}[] = [];
 		for (let i = 1; i <= state.doc.lines; i++) {
 			const line = state.doc.line(i);
 			if (type === 'completed' && line.text.includes('[x]')) {
@@ -34,7 +36,7 @@ export class CalculateRangeForZooming {
 			}
 		}
 
-		const markdownFileInfo = view.state.field(editorInfoField);
+		// const markdownFileInfo = view.state.field(editorInfoField);
 		// const foldableRanges = markdownFileInfo.editor?.getAllFoldableLines();
 		const finalRanges = ranges.map((range) => {
 			return this.calculateRangeForZooming(state, range.from) || range;

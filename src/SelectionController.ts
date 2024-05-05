@@ -1,6 +1,5 @@
 import { Annotation, EditorSelection, EditorState } from "@codemirror/state";
 import { foldable } from "@codemirror/language";
-import { Editor } from "obsidian";
 
 export const SelectionAnnotation = Annotation.define<string>();
 
@@ -24,7 +23,7 @@ export const selectionController = () => {
 		const allowedFrom = currentLine.from + currentFirstMark.length;
 		const allowedTo = (lastLine.number !== currentLine.number) ? lastLine.to : currentLine.to;
 
-		let sel = tr.newSelection;
+		const sel = tr.newSelection;
 		const foldableRange = foldable(tr.state, currentLine.from, currentLine.to);
 
 		if (foldableRange && currentLine?.number !== lastLine.number) {
@@ -36,8 +35,15 @@ export const selectionController = () => {
 
 		if (!sel.ranges.some(({from, to}) => from < allowedFrom || to > allowedTo))
 			return tr;
-		let clip = (n: number) => Math.min(Math.max(n, allowedFrom), allowedTo);
+		const clip = (n: number) => Math.min(Math.max(n, allowedFrom), allowedTo);
 
+		// console.log(sel.ranges.map(r => r.from, r => r.to), allowedFrom, allowedTo, sel.ranges.map(r => clip(r.from), r => clip(r.to)));
+		// new Notice('Selection clipped');
+
+		// new Notice(`${allowedFrom},${allowedTo}, ${sel.ranges.map(r => r.from, r => r.to)}`);
+
+		// console.log(EditorSelection.create(sel.ranges.map(
+		// 	r => EditorSelection.range(clip(r.anchor), clip(r.head))), sel.mainIndex));
 
 		// console.log(sel.ranges.map(r => r.from, r => r.to), allowedFrom, allowedTo, sel.ranges.map(r => clip(r.from), r => clip(r.to)));
 
