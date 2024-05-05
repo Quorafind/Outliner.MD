@@ -27,7 +27,7 @@ import { blankBulletLineWidget } from "./BlankBulletLine";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { selectionController } from "./SelectionController";
 import { createDateRendererPlugin } from "./DateRender";
-import { FoldingExtension, getAllFoldableRanges } from "./BulletDescAutoCollpase";
+import { FoldAnnotation, FoldingExtension, getAllFoldableRanges } from "./BulletDescAutoCollpase";
 import { foldEffect } from "@codemirror/language";
 
 
@@ -240,14 +240,17 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		this.view = this.options.view!;
 		this.editor.cm.contentDOM.toggleClass('embed-editor', this.options.type === 'embed');
 
-		if(options.foldByDefault) {
-			const ranges = getAllFoldableRanges(this.editor.cm.state);
-			if(ranges.length > 0) {
-				const effects = ranges.map(range => foldEffect.of(range));
-				this.editor.cm.dispatch({effects});
-			}
-		}
 
+		if(this.options.foldByDefault) {
+			const allFoldedRanges = getAllFoldableRanges(this.editor.cm.state);
+			const effects = allFoldedRanges.map((r) => {
+				return foldEffect.of({
+					from: r.from,
+					to: r.to,
+				});
+			});
+			this.editor.cm.dispatch({effects, annotations: [FoldAnnotation.of('outliner.fold')]});
+		}
 		// this.editor.setCursor(0, 0);
 		// this.sizerEl.appendChild(this.options.view?.backlinksEl);
 	}

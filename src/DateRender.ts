@@ -72,24 +72,28 @@ export function createDateRendererPlugin() {
 			regexp: /\b((?<date>\d{4}-\d{2}-\d{2})|(?<time>\d{2}:\d{2}(:\d{2})?))\b/g,
 			decorate: (add, from: number, to: number, match: RegExpExecArray, view: EditorView) => {
 				const shouldRender = this.shouldRender(view, from, to);
-				if (shouldRender) {
-					if(match.groups?.date) {
-						add(
-							from,
-							to,
-							Decoration.replace({
-								widget: new DateRenderWidget(view, match[1], from, to, 'date'),
-							}),
-						);
-					} else if (match.groups?.time) {
-						add(
-							from,
-							to,
-							Decoration.replace({
-								widget: new DateRenderWidget(view, match[1]?.length === 5 ? (match[1] + ':00') : match[1], from, to, 'time'),
-							}),
-						);
+				try {
+					if (shouldRender && from !== to) {
+						if(match.groups?.date) {
+							add(
+								from,
+								to,
+								Decoration.replace({
+									widget: new DateRenderWidget(view, match[1], from, to, 'date'),
+								}),
+							);
+						} else if (match.groups?.time) {
+							add(
+								from,
+								to,
+								Decoration.replace({
+									widget: new DateRenderWidget(view, match[1]?.length === 5 ? (match[1] + ':00') : match[1], from, to, 'time'),
+								}),
+							);
+						}
 					}
+				} catch (e) {
+					console.error(e);
 				}
 			},
 		});

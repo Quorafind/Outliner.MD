@@ -51,7 +51,7 @@ export function getAllFoldableRanges(state: EditorState): { from: number, to: nu
 
 		if( (!(/^\s+/.test(line.text)) || i === state.doc.lines || /^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(line.text.trim()))) {
 			const start = startStack.pop();
-			if (start !== undefined) {
+			if (start !== undefined && line.from - 1 !== start) {
 				ranges.push({from: start, to: line.from - 1});
 			}
 		}
@@ -64,7 +64,7 @@ function foldServiceFunc(state: EditorState, lineStart: number, lineEnd: number)
 	const range = findMatchingFoldRange(state, lineStart);
 	// console.log('range', range);
 	if (!range) return null;
-	if (range.to < range.from) return null;
+	if (range.to <= range.from) return null;
 
 	return range;
 }
@@ -101,7 +101,7 @@ export const unfoldWhenSelect = () => {
 					tr,
 					{
 						selection: EditorSelection.create([
-							EditorSelection.range(ranges[0].to, ranges[0].to)
+							EditorSelection.range(ranges[0].to - 1, ranges[0].to  - 1)
 						], sel.mainIndex)
 					}
 				];
@@ -126,14 +126,15 @@ export const unfoldWhenSelect = () => {
 				effects: [unfoldEffect.of(range)],
 				annotations: [FoldAnnotation.of('outliner.unfold')],
 			}];
-		} else if(allFoldedRanges.length > 0) {
+		} else if(!tr.docChanged && tr.newSelection) {
+			const allFoldedRanges = getAllFoldableRanges(tr.state);
 			const effects = allFoldedRanges.map((r) => {
-				return foldEffect.of(r);
+				return foldEffect.of({
+					from: r.from,
+					to: r.to,
+				});
 			});
-			return [tr, {
-				effects,
-				annotations: [FoldAnnotation.of('outliner.fold')],
-			}]
+			return [tr, {effects, annotations: [FoldAnnotation.of('outliner.fold')]}];
 		}
 
 		return tr;

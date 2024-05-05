@@ -239,8 +239,37 @@ class BulletMenuMarkerWidget extends WidgetType {
 								}
 							}
 						});
-						// const result = editor && (editor.editorComponent as EmbeddableMarkdownEditor).options.onEnter(editor.editorComponent, false, true);
-						// console.log(result);
+						const result = editor && (editor.editorComponent as EmbeddableMarkdownEditor).options.onEnter(editor.editorComponent, false, true);
+						if(result === false) {
+							editor?.transaction({
+								changes: [
+									{
+										from: {
+											line: currentLine.number - 1,
+											ch: currentLine.length
+										},
+										to: {
+											line: currentLine.number - 1,
+											ch: currentLine.length
+										},
+										text: `\n${currentLine.text.match(/^\s*/)?.[0] || ''}${(' ').repeat(2)}`
+									}
+								],
+							})
+
+							editor?.transaction({
+								selection: {
+									from: {
+										line: currentLine.number,
+										ch: 0
+									},
+									to: {
+										line: currentLine.number,
+										ch: 0
+									}
+								}
+							});
+						}
 					}
 
 					// const currentLineIndent = currentLine.text.match(/^\s*/)?.[0];
