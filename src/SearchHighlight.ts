@@ -22,6 +22,7 @@ export const SearchHighlight = StateField.define({
 		for (const effect of transaction.effects) {
 			if (effect.is(ClearSearchHighlightEffect)) {
 				value = Decoration.none;
+				return value;
 			}
 
 			if (effect.is(SearchHighlightEffect)) {

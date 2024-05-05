@@ -1,5 +1,6 @@
 import { foldEffect, foldService, foldState, unfoldEffect } from "@codemirror/language";
 import { Annotation, EditorSelection, EditorState, Extension, StateField } from "@codemirror/state";
+import { zoomInEffect, zoomInRangesEffect, zoomOutEffect, zoomWithHideIndentEffect } from "./checkVisible";
 
 export const FoldAnnotation = Annotation.define<string>();
 
@@ -86,14 +87,13 @@ export const unfoldWhenSelect = () => {
 	return EditorState.transactionFilter.of((tr) => {
 		if (
 			tr.effects.some((effect) => {
-				return (effect.is(foldEffect) || effect.is(unfoldEffect));
+				return effect.is(unfoldEffect)
 			})
 		) {
 			const ranges = tr.effects.map((effect) => {
 				return effect.value;
 			});
 
-			console.log('ranges', ranges, tr.state);
 			const sel = tr.state.selection;
 
 			if (ranges.length === 1) {
@@ -101,13 +101,32 @@ export const unfoldWhenSelect = () => {
 					tr,
 					{
 						selection: EditorSelection.create([
-							EditorSelection.range(ranges[0].to - 1, ranges[0].to  - 1)
+							EditorSelection.range(ranges[0].to, ranges[0].to)
 						], sel.mainIndex)
 					}
 				];
 			} else {
 				return tr;
 			}
+		}
+
+		if(tr.effects.some((effect)=> {
+			return effect.is(zoomInEffect) || effect.is(zoomInRangesEffect) || effect.is(zoomWithHideIndentEffect);
+		})) {
+			const allFoldedRanges = getAllFoldableRanges(tr.state);
+			const effects = allFoldedRanges.map((r) => {
+				return unfoldEffect.of({
+					from: r.from,
+					to: r.to,
+				});
+			});
+			return [tr, {effects, annotations: [FoldAnnotation.of('outliner.unfold')]}];
+		}
+
+		if(tr.effects.some((effect)=> {
+			return effect.is(zoomOutEffect);
+		})) {
+			return tr;
 		}
 
 		const allFoldedRanges = getAllFoldableRanges(tr.state);
@@ -122,6 +141,15 @@ export const unfoldWhenSelect = () => {
 		});
 
 		if(range) {
+			if(tr.effects.some((effect)=> {
+				return effect.is(foldEffect);
+			})) {
+				return [tr, {
+					effects: [foldEffect.of(range)],
+					annotations: [FoldAnnotation.of('outliner.fold')],
+				}];
+			}
+
 			return [tr, {
 				effects: [unfoldEffect.of(range)],
 				annotations: [FoldAnnotation.of('outliner.unfold')],

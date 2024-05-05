@@ -68,7 +68,6 @@ export class CalculateRangeForZooming {
 		// Check each contained range against foldable ranges
 
 		for (const containedRange of containedRanges) {
-			console.log('foldedRanges', foldableRanges, containedRange.from, containedRange.to, view.state.doc.lineAt(containedRange.from).from);
 			const inFoldRanges = foldableRanges.find(r => r.from === containedRange.to);
 			const parentFoldRanges = foldableRanges.filter(r => r.from < containedRange.from && r.to >= containedRange.to);
 			if (parentFoldRanges.length > 0) {

@@ -17,7 +17,7 @@ import { getIndent } from "./utils";
 import { hideRangesEffect } from "./checkVisible";
 import { EditorView } from "@codemirror/view";
 import { ClearSearchHighlightEffect } from "./SearchHighlight";
-import { foldable } from "@codemirror/language";
+import { foldable, unfoldAll } from "@codemirror/language";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { SelectionAnnotation } from "./SelectionController";
 
@@ -409,7 +409,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							const lineText = lineCursor.text;
 							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
 								const currentLine = (editor.editor as Editor).cm.state.doc.line(i);
-								console.log('currentLine', currentLine.text, currentLine.from, currentLine.to);
 								(editor.editor as Editor).cm.dispatch({
 									selection: {
 										head: currentLine.to,
@@ -417,6 +416,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 									},
 									annotations: SelectionAnnotation.of('arrow.up.selection'),
 								});
+
 								return true;
 							}
 						}
@@ -442,6 +442,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 										},
 										annotations: SelectionAnnotation.of('arrow.up.selection'),
 									});
+									// new Notice('No valid line found');
 									return true;
 								}
 								return false;
@@ -458,10 +459,11 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							});
 							return true;
 						}
-
 						return false;
 					}
 				}
+
+
 				return false;
 			},
 			onDelete: (editor) => {
@@ -702,15 +704,18 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	filter(view: EditorView, search: string) {
 		if (search === "") {
+			// console.log('show all', this.editor, view);
 			this.plugin.KeepOnlyZoomedContentVisible?.showAllContent(view);
 			this.filteredValue = "";
 			this.contentEl.toggleClass('filtered', false);
 			if (!this.editor) return;
-			this.editor.cm.dispatch({
+			view.dispatch({
 				effects: ClearSearchHighlightEffect.of()
 			});
 			return;
 		}
+
+		console.log(unfoldAll(view));
 
 		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnSearch(
 			view,
@@ -783,7 +788,9 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 
 						search.clearButtonEl.addEventListener('click', () => {
+							this.filter(this.editor?.cm as EditorView, "");
 							searchMenu.hide();
+
 						});
 
 						search.inputEl.addEventListener('compositionstart', () => {

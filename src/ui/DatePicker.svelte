@@ -70,6 +70,7 @@
 
 		padding-top: 0;
 		padding-bottom: 0;
+		height: var(--size-4-6);
 	}
 
 	.details > .summary {

@@ -7,8 +7,37 @@ If your plugin does not need CSS, delete this file.
 
 */
 
+.workspace-leaf-content[data-type="outliner-editor-view"] .view-content {
+	--outliner-text-color: rgb(23, 23, 23);
+	--outliner-button-color: var(--color-base-50);
+
+	--outliner-paper-background: #f4f4f5;
+	--outliner-overlay-background: #ffffff;
+
+	--outliner-highlight-color: rgba(255, 239, 155, 0.56);
+
+	--file-line-width: 800px;
+
+	padding: 0;
+
+}
+
+body.is-mobile .workspace-leaf-content[data-type="outliner-editor-view"] .view-content {
+	--file-line-width: unset;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
+	color: var(--outliner-text-color);
+	font-weight: bold;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet {
+	color: var(--color-faint);
+	font-weight: var(--font-light);
+}
+
 .outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button {
-	color: var(--color-base-50);
+	color: var(--outliner-button-color);
 	display: flex;
 	justify-content: flex-start;
 }
@@ -35,7 +64,7 @@ If your plugin does not need CSS, delete this file.
 
 .outliner-editor .cm-placeholder:before {
 	content: attr(data-ph);
-	color: var(--memos-text-faint);
+	color: var(--text-faint);
 	position: absolute;
 }
 
@@ -62,7 +91,7 @@ If your plugin does not need CSS, delete this file.
 
 
 .outliner-editor .markdown-source-view.mod-cm6 .outliner-highlight {
-	background: rgba(255, 239, 155, 0.56);
+	background: var(--outliner-highlight-color);
 }
 
 /*.outliner-editor {*/
@@ -73,13 +102,24 @@ If your plugin does not need CSS, delete this file.
 
 .outliner-editor .markdown-source-view.mod-cm6 .cm-sizer {
 	max-width: var(--file-line-width);
-	min-width: var(--file-line-width);
 	margin-left: auto;
 	margin-right: auto;
 }
 
 .cm-task-group .markdown-source-view.mod-cm6 .cm-sizer:has(.cm-content.embed-editor) {
 	min-width: auto;
+}
+
+body:not(.is-mobile) .outliner-editor .markdown-source-view.mod-cm6 .cm-sizer:has(.inline-title) {
+	margin-top: 48px;
+	background-color: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	z-index: -2;
+	transform: translateY(-20px);
+}
+
+body:not(.is-mobile) .workspace-leaf-content[data-type="outliner-editor-view"] .view-content {
+	background-color: var(--outliner-paper-background);
 }
 
 .cm-task-group .cm-task-group-header {
@@ -92,10 +132,7 @@ If your plugin does not need CSS, delete this file.
 	display: flex;
 }
 
-.markdown-source-view.mod-cm6 .cm-task-group-container {
-	display: flex;
-	flex-direction: column;
-}
+
 
 span.cm-task-group-margin {
 	width: 100%;
@@ -125,11 +162,6 @@ span.cm-group-collapse-button {
 	/*display: inline-block;*/
 	position: relative;
 	z-index: 1;
-}
-
-.outliner-editor markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:not(.cm-active):not(.HyperMD-task-line) span.cm-bullet-menu-marker .clickable-icon {
-	padding-inline-end: var(--list-bullet-end-padding);
-	transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding)));
 }
 
 .outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker .clickable-icon {
@@ -192,6 +224,16 @@ span.cm-group-collapse-button {
 	/*margin-bottom: var(--size-4-2);*/
 }
 
+.outliner-editor .markdown-source-view.mod-cm6 .cm-task-group-container {
+	display: flex;
+	flex-direction: column;
+
+	padding-right: var(--size-4-4);
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-task-group-container:has(.cm-task-group-result-empty) {
+	display: none;
+}
 
 .outliner-editor .cm-task-group-container:has(.markdown-soruce-view) {
 	display: flex;
@@ -201,6 +243,9 @@ span.cm-group-collapse-button {
 	display: none;
 }
 
+
+
+
 .outliner-editor .inline-title {
 	color: rgb(23, 23, 23);
 	font-size: var(36px, 32px);
@@ -208,6 +253,7 @@ span.cm-group-collapse-button {
 
 	margin-bottom: 21px;
 	padding-left: var(--size-4-5);
+	padding-top: var(--size-4-4);
 }
 
 div[data-type="outliner-editor-view"] .view-header :is(.view-header-left, .view-header-title-container) {
@@ -254,19 +300,37 @@ span.cm-task-group-title {
 	justify-content: space-between;
 }
 
-.markdown-source-view.mod-cm6 .cm-task-group-container:has(.cm-task-group-result-empty) {
-	display: none;
-}
 
-.outliner-editor .markdown-source-view.mod-cm6 .list-bullet {
-	font-size: large;
-}
+//.outliner-editor .markdown-source-view.mod-cm6 .list-bullet {
+//	font-size: large;
+//}
 
 .outliner-editor .markdown-source-view.mod-cm6 .HyperMD-list-line-nobullet {
 	color: var(--text-faint);
 	padding-top: 0;
 }
 
-//.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
-//	transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding) - 6px)) !important;
-//}
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
+	transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding) * 0.8));
+	padding-inline-end: var(--list-bullet-end-padding);
+}
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-gutters {
+	display: none;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
+	opacity: 0;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet:hover .collapse-indicator.collapse-icon {
+	opacity: 1;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon:hover {
+	opacity: 1;
+}
+
+.lc-list-callout.HyperMD-list-line {
+	padding-right: 0.4em;
+}

@@ -73,6 +73,7 @@ export class KeepOnlyZoomedContentVisible {
 	}
 
 	public showAllContent(view: EditorView) {
+
 		view.dispatch({effects: [zoomOutEffect.of()]});
 		view.dispatch({
 			effects: [
