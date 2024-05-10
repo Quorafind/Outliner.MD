@@ -2,6 +2,7 @@ import 'obsidian';
 // import type { View, WorkspaceParent } from "obsidian";
 import { TFile, WorkspaceItem } from "obsidian";
 import { EditorView } from "@codemirror/view";
+import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
 
 type ScrollableMarkdownEditor = any;
 
@@ -22,6 +23,8 @@ declare module "obsidian" {
 			from: number;
 			to: number;
 		}[];
+
+		editorComponent: EmbeddableMarkdownEditor;
 	}
 
 	interface Menu {
@@ -68,9 +71,11 @@ declare module "obsidian" {
 			getPlugin(name: string): any;
 		};
 		embedRegistry: {
+			constructor: ()=> void;
 			embedByExtension: {
 				md: (...args: any[]) => MarkdownInfo;
 			};
+			getEmbedCreator: (file: TFile) => any;
 		};
 		internalPlugins: {
 			getEnabledPluginById(id: string): any;

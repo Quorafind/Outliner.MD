@@ -1,7 +1,12 @@
-import { foldEffect, foldService, foldState, unfoldEffect } from "@codemirror/language";
-import { Annotation, EditorSelection, EditorState, Extension, StateField } from "@codemirror/state";
-import { zoomInEffect, zoomInRangesEffect, zoomOutEffect, zoomWithHideIndentEffect } from "./checkVisible";
-
+import { foldEffect, foldService, unfoldEffect } from "@codemirror/language";
+import { Annotation, EditorSelection, EditorState, Extension, SelectionRange, StateField } from "@codemirror/state";
+import {
+	zoomInEffect,
+	zoomInRangesEffect,
+	zoomOutEffect,
+	zoomStateField,
+	zoomWithHideIndentEffect
+} from "./checkVisible";
 export const FoldAnnotation = Annotation.define<string>();
 
 function findMatchingFoldRange(state: EditorState, currentPos: number): { from: number, to: number } | null {
@@ -85,6 +90,54 @@ const foldRanges = StateField.define<{ from: number, to: number }[]>({
 
 export const unfoldWhenSelect = () => {
 	return EditorState.transactionFilter.of((tr) => {
+		if(tr.state.field(zoomStateField, false)) {
+			const currentZoomState = tr.state.field(zoomStateField, false);
+			if (!tr.effects.some((effect) => {
+				return effect.is(zoomInEffect) || effect.is(zoomInRangesEffect) || effect.is(zoomWithHideIndentEffect) || effect.is(zoomOutEffect);
+			}) && currentZoomState && !tr.docChanged) {
+				let block = false;
+				const newRanges: SelectionRange[] = [];
+				tr.state.selection.ranges.forEach((range) => {
+					currentZoomState.between(range.from, range.to, (roFrom, roTo) => {
+
+						if(!roFrom && !roTo) return;
+
+						const selection = tr.startState.selection;
+						const movingUp = selection.main.from > tr.state.selection.main.from;
+						const movingDown = selection.main.to < tr.state.selection.main.to;
+
+						const currentSelection = tr.state.selection;
+
+						if (movingUp) {
+							// 如果向上移动并接近或进入顶部隐藏区域
+							if (currentSelection.main.from <= roTo) {
+								newRanges.push(EditorSelection.range(roTo, Math.max(roTo, range.to)));
+								block = true;
+								// console.log('Moving up: adjusted to', roTo + 1);
+							}
+						} else if (movingDown) {
+							// 如果向下移动并接近或进入底部隐藏区域
+							if (currentSelection.main.to >= roFrom) {
+								newRanges.push(EditorSelection.range(Math.min(range.from, roFrom), roFrom));
+								block = true;
+								// console.log('Moving down: adjusted to', roFrom - 1);
+							}
+						}
+					});
+				});
+
+				if (block) {
+					// new Notice('You have been moved away from the hidden area.');
+					return [
+						tr,
+						{
+							selection: EditorSelection.create(newRanges, tr.state.selection.mainIndex)
+						}
+					];
+				}
+			}
+		}
+
 		if (
 			tr.effects.some((effect) => {
 				return effect.is(unfoldEffect)

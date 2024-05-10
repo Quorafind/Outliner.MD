@@ -29,6 +29,7 @@ import { selectionController } from "./SelectionController";
 import { createDateRendererPlugin } from "./DateRender";
 import { FoldAnnotation, FoldingExtension, getAllFoldableRanges } from "./BulletDescAutoCollpase";
 import { foldEffect } from "@codemirror/language";
+import { createMarkRendererPlugin } from "./InlineMarker";
 
 
 function resolveEditorPrototype(app: App) {
@@ -63,6 +64,7 @@ interface MarkdownEditorProps {
 
 	path?: string;
 
+	toggleMode: () => void;
 	getDisplayText: () => string;
 	getViewType: () => string;
 	onFocus: (editor: EmbeddableMarkdownEditor) => void;
@@ -91,6 +93,7 @@ const defaultProperties: MarkdownEditorProps = {
 
 	path: '',
 
+	toggleMode: () => '',
 	getViewType: () => '',
 	getDisplayText: () => '',
 	onFocus: () => {
@@ -136,6 +139,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			// This mocks the MarkdownView functions, which is required for proper functioning of scrolling
 			onMarkdownScroll: () => {
 			},
+			toggleMode: () => this.options.toggleMode(),
 			getMode: () => 'source',
 			getDisplayText: () => this.options.getDisplayText(),
 		});
@@ -150,11 +154,11 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		//     2) Execute the command callback
 		//     3) Return the result of the callback (callback returns false if callback could not execute)
 		//     		(In this case, if cursor is not on a link token, the callback will return false, and onEnter will be applied)
-		this.scope.register(["Mod"], "Enter", (e, ctx) => {
-			return true;
-		});
+		// this.scope.register(["Mod"], "Enter", (e, ctx) => {
+		// 	return true;
+		// });
 
-		this.scope.register(["Mod"], "f", (e, ctx) => {
+		this.options?.type === 'outliner' && this.scope.register(["Mod"], "f", (e, ctx) => {
 			this.view && this.view?.search();
 			return true;
 		});
@@ -201,9 +205,8 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 							activeView?.searchWithText(token.text);
 							return;
 						}
-						if (!this.activeCM.hasFocus) {
-							return token;
-						}
+						return token;
+
 					};
 				}
 			}),
@@ -215,8 +218,9 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		if (this.options.onBlur !== defaultProperties.onBlur) {
 			this.editor.cm.contentDOM.addEventListener('blur', () => {
 				this.app.keymap.popScope(this.scope);
-				if (this._loaded)
+				if (this._loaded || this.options?.type === 'embed') {
 					this.options.onBlur(this, this.options?.path);
+				}
 			});
 		}
 
@@ -343,7 +347,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			}
 		])));
 
-		extensions.push([placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
+		extensions.push([createMarkRendererPlugin(), placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);

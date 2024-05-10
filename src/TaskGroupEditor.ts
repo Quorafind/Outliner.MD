@@ -1,5 +1,5 @@
 import { App, Component, debounce, Editor, setIcon, TFile } from "obsidian";
-import { EmbeddableMarkdownEditor } from "./embedEditor";
+import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
 import { getIndent } from "./utils";
 import { zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
 import { getAPI } from "obsidian-dataview";
@@ -9,7 +9,7 @@ import { CalculateRangeForZooming } from "./calculateRangeForZooming";
 import { SelectionAnnotation } from "./SelectionController";
 
 
-export class OutlinerEmbedEditor extends Component {
+export class TaskGroupEditor extends Component {
 	app: App;
 	editor: Editor | undefined;
 	filePath: string | undefined;
@@ -670,23 +670,5 @@ GROUP BY file.path`);
 		}
 
 		this.updateResultEl(count);
-
-		// if(!this.editorMap.has(file.path)) {
-		//
-		// }
-		//
-		// if (oldPath) {
-		// 	const oldComponent = this.editorMap.get(oldPath);
-		// 	if (oldComponent) {
-		// 		this.removeChild(oldComponent);
-		// 		oldComponent.unload();
-		// 		this.editorMap.delete(oldPath);
-		// 	}
-		// 	this.contentMap.delete(oldPath);
-		// }
-		// const newContent = await this.app.vault.read(file);
-		// this.contentMap.set(file.path, newContent);
-		// this.filePath = file.path;
-		// this.reloadEditor();
 	}
 }

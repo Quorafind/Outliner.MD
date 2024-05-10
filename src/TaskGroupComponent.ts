@@ -1,7 +1,7 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { App, editorInfoField, type MarkdownFileInfo } from "obsidian";
-import { OutlinerEmbedEditor } from "./OutlinerEmbedEditor";
+import { TaskGroupEditor } from "./TaskGroupEditor";
 
 export const TaskGroupComponent = StateField.define<DecorationSet>({
 	create() {
@@ -58,7 +58,7 @@ class TaskGroupWidget extends WidgetType {
 			cls: 'cm-task-group-result'
 		});
 
-		const groupComponent = new OutlinerEmbedEditor(this.app, taskGroupContainerEl);
+		const groupComponent = new TaskGroupEditor(this.app, taskGroupContainerEl);
 		groupComponent.onload();
 		return taskContainer;
 	}

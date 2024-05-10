@@ -73,3 +73,10 @@ export function getSearchRanges(view: EditorView, search: string) {
 	return ranges;
 
 }
+
+export function randomId(e: number): string {
+	const t: string[] = [];
+	let n = 0;
+	for (; n < e; n++) t.push(((16 * Math.random()) | 0).toString(16));
+	return t.join('');
+}

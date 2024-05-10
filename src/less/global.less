@@ -7,6 +7,18 @@ If your plugin does not need CSS, delete this file.
 
 */
 
+.theme-dark .workspace-leaf-content[data-type="outliner-editor-view"] .view-content {
+	--outliner-text-color: rgb(255, 255, 255);
+	--outliner-button-color: var(--color-base-50);
+
+	--outliner-paper-background: #1e1e1e;
+	--outliner-overlay-background: #2a2a2a;
+
+	--outliner-highlight-color: rgba(255, 239, 155, 0.56);
+
+	--file-line-width: 800px;
+}
+
 .workspace-leaf-content[data-type="outliner-editor-view"] .view-content {
 	--outliner-text-color: rgb(23, 23, 23);
 	--outliner-button-color: var(--color-base-50);
@@ -116,6 +128,8 @@ body:not(.is-mobile) .outliner-editor .markdown-source-view.mod-cm6 .cm-sizer:ha
 	box-shadow: var(--shadow-s);
 	z-index: -2;
 	transform: translateY(-20px);
+	padding-left: var(--size-4-8);
+	padding-right: var(--size-4-8);
 }
 
 body:not(.is-mobile) .workspace-leaf-content[data-type="outliner-editor-view"] .view-content {
@@ -235,7 +249,7 @@ span.cm-group-collapse-button {
 	display: none;
 }
 
-.outliner-editor .cm-task-group-container:has(.markdown-soruce-view) {
+.outliner-editor .cm-task-group-container:has(.markdown-source-view) {
 	display: flex;
 }
 
@@ -258,6 +272,10 @@ span.cm-group-collapse-button {
 
 div[data-type="outliner-editor-view"] .view-header :is(.view-header-left, .view-header-title-container) {
 	visibility: hidden;
+}
+
+div[data-type="outliner-editor-view"] .view-header:hover :is(.view-header-left, .view-header-title-container) {
+	visibility: visible;
 }
 
 .outliner-editor .cm-task-group:has(.markdown-source-view) .cm-task-group-title {
@@ -331,6 +349,143 @@ span.cm-task-group-title {
 	opacity: 1;
 }
 
-.lc-list-callout.HyperMD-list-line {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.lc-list-callout.HyperMD-list-line {
 	padding-right: 0.4em;
+}
+
+.internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event.is-live-preview .cm-editor {
+	height: 100%;
+	/* min-height: 100%; */
+	min-height: fit-content;
+}
+
+.internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event.is-live-preview .cm-editor .cm-content {
+	padding-bottom: 0 !important;
+}
+
+.outliner-editor .internal-embed + img.cm-widgetBuffer {
+	 height: 0 !important;
+	 display: none !important;
+}
+
+.outliner-editor .internal-embed + br {
+	height: 0 !important;
+	display: none !important;
+}
+
+.outliner-editor .internal-embed + div[contenteditable="false"] {
+	height: 0 !important;
+	display: none !important;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) .cm-content :is(.cm-line:not(:has(+ .cm-line))), .cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6 .cm-content [contenteditable="false"]  + .cm-line {
+	display: inline !important;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) :is(.cm-editor, .cm-scroller, .cm-sizer, .cm-contentContainer, .cm-content, .cm-content > div[contenteditable="false"]) {
+	display: inline !important;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)  {
+	display: inline !important;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part:has(.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)) {
+	display: inline !important;
+	width: fit-content;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6 .cm-content:not(:has(.cm-line ~ .cm-line)) .cm-line {
+	display: inline !important;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line)) :is(.cm-editor, .cm-scroller, .cm-sizer, .cm-contentContainer, .cm-content, .cm-content > div[contenteditable="false"]) {
+	display: inline !important;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line))  {
+	display: inline !important;
+}
+
+.cm-line .internal-embed.is-loaded.embedded-part:has(.markdown-source-view.mod-cm6):not(:has(.cm-line ~ .cm-line)) {
+	display: inline !important;
+	width: fit-content;
+}
+
+.internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6 .cm-line {
+	text-decoration: underline;
+}
+
+//.internal-embed.is-loaded:has(.markdown-source-view) .source-btn {
+//	position: absolute;
+//	right: 0;
+//	top: 0;
+//	background: #ffffff1a;
+//	opacity: 0;
+//}
+
+.internal-embed.is-loaded:has(.source-btn) {
+	position: relative;
+}
+
+.internal-embed.is-loaded .source-btn {
+	position: absolute;
+	right: 0;
+	top: 0;
+	background: #ffffff1a;
+	opacity: 0;
+}
+
+.internal-embed.is-loaded:hover .source-btn {
+	opacity: 1;
+}
+
+.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):before {
+	content: ' ';
+	width: 1px;
+	position: absolute;
+	height: 100%;
+	top: 0;
+	right: 0;
+	background-color: var(--color-accent);
+	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
+}
+
+.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):hover:before {
+	width: 3px;
+	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
+}
+
+
+body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-cm6 .cm-line.outliner-plugin-dropping-line, body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm6 .cm-line.outliner-plugin-dropping-line {
+	background-color: unset;
+}
+
+body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-cm6 .cm-line.outliner-plugin-dragging-line, body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm6 .cm-line.outliner-plugin-dragging-line {
+	background-color: unset;
+}
+
+.internal-embed.embedded-part .markdown-source-view.mod-cm6 .cm-edit-button-container {
+	text-decoration: unset;
+	display: inline-flex;
+	align-items: center;
+	vertical-align: middle;
+}
+
+.internal-embed.embedded-part .markdown-source-view.mod-cm6 .cm-edit-button-container:hover {
+	color: var(--color-accent);
+}
+
+.internal-embed.embedded-part .markdown-source-view.mod-cm6 .cm-edit-button-container + br {
+	display: none;
+}
+
+.internal-embed.is-loaded.embedded-part .cm-edit-button-container {
+	opacity: 0;
+	transition: opacity 200ms ease-in-out;
+}
+
+.internal-embed.is-loaded.embedded-part:hover .cm-edit-button-container {
+	opacity: 1;
+	transition: opacity 200ms ease-in-out;
 }

@@ -1,9 +1,10 @@
 import {
-	ItemView,
+	Editor,
+	ItemView, MarkdownFileInfo,
 	MarkdownView,
 	Menu,
-	moment,
-	Plugin,
+	moment, Notice,
+	Plugin, TFile,
 	TFolder,
 	View,
 	type ViewState,
@@ -16,6 +17,9 @@ import { isEmebeddedLeaf, OUTLINER_EDITOR_VIEW_ID, OutlinerEditorView } from "./
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { CalculateRangeForZooming } from "./calculateRangeForZooming";
 import "./less/global.less";
+import { EmbeddedEditor } from "./EmbeddedEditor";
+import { randomId } from "./utils";
+import { EmbeddedRender } from "./EmbeddedRender";
 
 
 const FRONT_MATTER_KEY = 'outliner';
@@ -34,12 +38,14 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.registerRibbons();
 
 		this.patchMarkdownView();
+		this.patchEmbedView();
 		this.patchWorkspaceLeaf();
 		this.patchItemView();
 		this.initOutlinerView();
 
 		this.registerMenu();
 		this.registerCommands();
+		// this.patchInlinePreview();
 	}
 
 	onunload() {
@@ -129,6 +135,117 @@ export default class OutlinerViewPlugin extends Plugin {
 				},
 		});
 	}
+
+	patchEmbedView() {
+		const mdFunction = this.app.embedRegistry.embedByExtension;
+
+		const newMdFunction = (e: any, t: any, n: any) => {
+			const fileCache = this.app.metadataCache.getFileCache(t);
+			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
+				return false;
+			}
+			return new EmbeddedEditor(e, t, n);
+		}
+
+
+		const renderReadingMode = (e: any, t: any, n: any) => {
+			const fileCache = this.app.metadataCache.getFileCache(t);
+			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
+				return false;
+			}
+			if(!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')))) {
+				return false;
+			}
+			return new EmbeddedRender(e, t, n);
+		}
+
+		this.register(around(mdFunction, {
+			md: (next) => {
+				return function (e: any, t: any, n: any) {
+
+					console.log(e, t, n);
+
+					if(e && e.displayMode === false && e.showInline) {
+						// console.log(this);
+						if(t.path.contains('.excalidraw.md')) return next.apply(this, [e, t, n]);
+						const newResult = newMdFunction(e, t, n);
+						if(newResult) {
+							return newResult;
+						} else {
+							return next.apply(this, [e, t, n]);
+						}
+					} else if (e && e.displayMode === undefined && e.showInline) {
+						// console.log(this);
+						if(t.path.contains('.excalidraw.md')) return next.apply(this, [e, t, n]);
+						const newResult = renderReadingMode(e, t, n);
+						if(newResult) {
+							return newResult;
+						} else {
+							return next.apply(this, [e, t, n]);
+						}
+					}
+
+					return next.apply(this, [e, t, n]);
+				};
+			}
+		}));
+
+		// const embedRegistry = this.app.embedRegistry;
+		// const originalFunction = this.app.embedRegistry.embedByExtension.md;
+		//
+		// this.app.embedRegistry.embedByExtension.md = function(e: any, t: any, n: any) {
+		// 	// 记录传入的参数
+		// 	console.log("Received arguments:", e, t, n);
+		//
+		// 	// 调用原始函数，并保留原始的this上下文和传递所有接收到的参数
+		// 	const result = originalFunction.apply(this,[ e, t, n]);
+		//
+		// 	// 这里可以插入你想在原函数执行后执行的代码
+		// 	console.log("After executing the original function");
+		//
+		// 	// 返回原函数的返回值
+		// 	return result;
+		// };
+	}
+
+	// private patchInlinePreview() {
+	// 	const patchWidget = (plugin: OutlinerViewPlugin, widget: WidgetType) => {
+	// 		const uninstaller = around(widget.constructor.prototype, {
+	// 			applyTitle: (old: any) => {
+	// 				return function (...e: any) {
+	// 					const result = old.apply(this, e);
+	// 					console.log(this, e);
+	// 					return result;
+	// 				};
+	// 			},
+	// 		});
+	//
+	// 		plugin.register(uninstaller);
+	// 	}
+	//
+	// 	const patchDecoration = (plugin: OutlinerViewPlugin) => {
+	// 		const uninstaller = around(Decoration, {
+	// 			set(old) {
+	// 				return function (a: any, sort?: boolean) {
+	// 					if(Array.isArray(a)) {
+	// 						for(const item of a) {
+	// 							if(item.value.widget && item.value.widget.depth !== undefined) {
+	// 								patchWidget(plugin, item.value.widget);
+	// 								console.log(item.value.widget);
+	// 								uninstaller();
+	// 							}
+	// 						}
+	// 					}
+	// 					return old.call(this, a, sort);
+	// 				};
+	// 			},
+	// 		});
+	//
+	// 		plugin.register(uninstaller);
+	// 	};
+	//
+	// 	patchDecoration(this);
+	// }
 
 	patchWorkspaceLeaf(): void {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -258,6 +375,32 @@ export default class OutlinerViewPlugin extends Plugin {
 				});
 			})
 		);
+
+		this.registerEvent(
+			this.app.workspace.on('editor-menu',(menu: Menu, editor: Editor, info: MarkdownView | MarkdownFileInfo)=> {
+				if(!editor.somethingSelected()) return;
+				if(!info?.file) return;
+
+				menu.addItem((item) => {
+					item
+						.setSection('selection-link')
+						.setIcon('list')
+						.setTitle('Copy inline embedded')
+						.onClick(() => {
+							const id = `o-${randomId(4)}`;
+							const mark = `%%${id}%%`;
+							const selection = editor.getSelection();
+							editor.replaceSelection(`${mark}${selection}${mark}`);
+
+							const markdownLink = this.app.fileManager.generateMarkdownLink(info?.file as TFile, info.file?.path || '', '', `${id}`)
+
+							navigator.clipboard.writeText('!' + markdownLink).then(() => {
+								new Notice('Copied to clipboard');
+							});
+						});
+				});
+			})
+		)
 	}
 
 	registerCommands() {

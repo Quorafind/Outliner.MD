@@ -12,7 +12,7 @@ import {
 	WorkspaceLeaf
 } from "obsidian";
 import OutlinerViewPlugin from "./OutlinerViewIndex";
-import { EmbeddableMarkdownEditor } from "./embedEditor";
+import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
 import { getIndent } from "./utils";
 import { hideRangesEffect } from "./checkVisible";
 import { EditorView } from "@codemirror/view";
