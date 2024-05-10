@@ -23,3 +23,26 @@
 - [ ] Print to PDF;
 - [ ] Import opml;
 - [ ] Kanban/board mode for list;
+
+
+### Style
+
+You can add css snippet to make the embed content more obvious.
+
+```css
+.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):before {
+	content: ' ';
+	width: 1px;
+	position: absolute;
+	height: 100%;
+	top: 0;
+	right: 0;
+	background-color: var(--color-accent);
+	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
+}
+
+.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):hover:before {
+	width: 3px;
+	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
+}
+```
