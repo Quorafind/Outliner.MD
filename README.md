@@ -11,4 +11,15 @@
 
 ### Roadmap
 
-
+- Support fully outliner support;
+  - Drag and drop;
+  - Keyboard shortcuts;
+  - Custom task group;
+  - Better selection;
+- [x] Support fully embed content editing;
+- [ ] Support infinite outliner view;
+- [ ] Support date filter;
+- [ ] Support `@` people filter;
+- [ ] Print to PDF;
+- [ ] Import opml;
+- [ ] Kanban/board mode for list;
