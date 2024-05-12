@@ -17,6 +17,7 @@
   - Custom task group;
   - Better selection;
 - [x] Support fully embed content editing;
+- [x] Support backlink editing;
 - [ ] Support infinite outliner view;
 - [ ] Support date filter;
 - [ ] Support `@` people filter;
