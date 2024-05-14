@@ -3,9 +3,10 @@
   <img alt="Light mode" src="https://github.com/Quorafind/Outliner.md/blob/main/assets/outliner-md.png">
 </picture>
 <p>Enhancing your Obsidian outliner experience.</p>
-</div>
 
 <img alt="GitHub Release" src="https://img.shields.io/github/downloads/quorafind/outliner.md/total?color=%23d12828"> <img alt="GitHub Release" src="https://img.shields.io/github/v/release/quorafind/outliner.md?color=%23d12828">
+
+</div>
 
 ## Documentation
 
@@ -30,43 +31,9 @@ Embed anything and then edit it there.
 
 Just open your note, scroll to the bottom, and you can edit the backlinks directly.
 
-### Roadmap
+### 📝 Quick note creation
 
-- [x] Website for [Outliner.md](https://outliner.md);
-- [x] Doc site: [Outliner.md docs](https://docs.outliner.md);
-- Support fully outliner support;
-  - Drag and drop;
-  - Keyboard shortcuts;
-  - Custom task group;
-  - Better selection;
-- [x] Support fully embed content editing;
-- [x] Support backlink editing;
-- [ ] Support infinite outliner view;
-- [ ] Support date filter;
-- [ ] Support `@` people filter;
-- [ ] Print to PDF;
-- [ ] Import opml;
-- [ ] Kanban/board mode for list;
+Click on the ribbon or right-click on the folder to create a new outliner note.
 
 
-### Style
 
-You can add css snippet to make the embed content more obvious.
-
-```css
-.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):before {
-	content: ' ';
-	width: 1px;
-	position: absolute;
-	height: 100%;
-	top: 0;
-	right: 0;
-	background-color: var(--color-accent);
-	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
-}
-
-.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):hover:before {
-	width: 3px;
-	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
-}
-```
