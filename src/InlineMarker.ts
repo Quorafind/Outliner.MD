@@ -2,12 +2,14 @@ import {
 	Decoration,
 	type DecorationSet,
 	EditorView,
-	MatchDecorator, type PluginSpec,
-	type PluginValue, ViewPlugin, ViewUpdate,
+	MatchDecorator,
+	type PluginSpec,
+	type PluginValue,
+	ViewPlugin,
+	ViewUpdate,
 	WidgetType
 } from "@codemirror/view";
-import { editorLivePreviewField, setIcon } from "obsidian";
-import { zoomStateField } from "./checkVisible";
+import { editorInfoField, editorLivePreviewField, Menu, setIcon } from "obsidian";
 
 interface DecoSpec {
 	widget?: MarkRenderWidget;
@@ -35,6 +37,23 @@ class MarkRenderWidget extends WidgetType {
 		});
 
 		setIcon(el, 'book-dashed');
+
+		el.onclick = (ev) => {
+			const menu = new Menu();
+			menu.addItem((item) => {
+				item.setIcon('copy').setTitle('Copy').onClick(async () => {
+					const file = this.view.state.field(editorInfoField);
+
+					const text = this.view.state.doc.sliceString(this.from, this.to).replace(/%%/g, '');
+					if (!file || !file.file) return;
+
+					const link = file.app.fileManager.generateMarkdownLink(file.file, file.file?.path || '', '', text);
+					await navigator.clipboard.writeText('!' + link);
+				});
+			});
+
+			menu.showAtMouseEvent(ev);
+		};
 
 		return el;
 	}
@@ -90,15 +109,15 @@ export function createMarkRendererPlugin() {
 		}
 
 		shouldRender(view: EditorView, decorationFrom: number, decorationTo: number) {
-			const hide = view.state.field(zoomStateField);
-			let shouldHide = true;
-			hide.between(decorationFrom, decorationTo, (from, to) => {
-				shouldHide = false;
-			});
-
-			if (!shouldHide) {
-				return false;
-			}
+			// const hide = view.state.field(zoomStateField);
+			// let shouldHide = true;
+			// hide.between(decorationFrom, decorationTo, (from, to) => {
+			// 	shouldHide = false;
+			// });
+			//
+			// if (!shouldHide) {
+			// 	return false;
+			// }
 
 			const overlap = view.state.selection.ranges.some((r) => {
 				if (r.from <= decorationFrom) {

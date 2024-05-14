@@ -73,6 +73,10 @@ body.is-mobile .workspace-leaf-content[data-type="outliner-editor-view"] .view-c
 	padding-bottom: 0 !important;
 }
 
+.search-result-file-match .markdown-source-view.mod-cm6 .cm-content.embed-editor {
+	padding-bottom: 0 !important;
+}
+
 
 .outliner-editor .cm-placeholder:before {
 	content: attr(data-ph);
@@ -145,7 +149,6 @@ body:not(.is-mobile) .workspace-leaf-content[data-type="outliner-editor-view"] .
 	cursor: pointer;
 	display: flex;
 }
-
 
 
 span.cm-task-group-margin {
@@ -258,8 +261,6 @@ span.cm-group-collapse-button {
 }
 
 
-
-
 .outliner-editor .inline-title {
 	color: rgb(23, 23, 23);
 	font-size: var(36px, 32px);
@@ -359,13 +360,19 @@ span.cm-task-group-title {
 	min-height: fit-content;
 }
 
+.search-result-file-match.embedded-part .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event .cm-editor {
+	height: 100%;
+	/* min-height: 100%; */
+	min-height: fit-content;
+}
+
 .internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event.is-live-preview .cm-editor .cm-content {
 	padding-bottom: 0 !important;
 }
 
 .outliner-editor .internal-embed + img.cm-widgetBuffer {
-	 height: 0 !important;
-	 display: none !important;
+	height: 0 !important;
+	display: none !important;
 }
 
 .outliner-editor .internal-embed + br {
@@ -378,7 +385,7 @@ span.cm-task-group-title {
 	display: none !important;
 }
 
-.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) .cm-content :is(.cm-line:not(:has(+ .cm-line))), .cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6 .cm-content [contenteditable="false"]  + .cm-line {
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) .cm-content :is(.cm-line:not(:has(+ .cm-line))), .cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6 .cm-content [contenteditable="false"] + .cm-line {
 	display: inline !important;
 }
 
@@ -386,7 +393,7 @@ span.cm-task-group-title {
 	display: inline !important;
 }
 
-.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)  {
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) {
 	display: inline !important;
 }
 
@@ -403,7 +410,7 @@ span.cm-task-group-title {
 	display: inline !important;
 }
 
-.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line))  {
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line)) {
 	display: inline !important;
 }
 
@@ -440,22 +447,6 @@ span.cm-task-group-title {
 	opacity: 1;
 }
 
-.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):before {
-	content: ' ';
-	width: 1px;
-	position: absolute;
-	height: 100%;
-	top: 0;
-	right: 0;
-	background-color: var(--color-accent);
-	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
-}
-
-.internal-embed.is-loaded:not(.embedded-part):has(.markdown-source-view):hover:before {
-	width: 3px;
-	transition: background-color 200ms ease-in-out, border-color 200ms ease-in-out, opacity 200ms ease-in-out;
-}
-
 
 body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-cm6 .cm-line.outliner-plugin-dropping-line, body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm6 .cm-line.outliner-plugin-dropping-line {
 	background-color: unset;
@@ -488,4 +479,30 @@ body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-c
 .internal-embed.is-loaded.embedded-part:hover .cm-edit-button-container {
 	opacity: 1;
 	transition: opacity 200ms ease-in-out;
+}
+
+.search-result-file-match.embedded-part > span {
+	display: none;
+}
+
+.search-result-file-match.embedded-part > .embedded-editor-container .markdown-source-view {
+	min-height: fit-content;
+}
+
+.search-result-file-match.embedded-part > .embedded-editor-container .markdown-source-view {
+	min-height: fit-content;
+}
+
+.search-result-file-match.embedded-part .markdown-source-view .cm-editor {
+	height: 100%;
+	/* min-height: 100%; */
+	min-height: fit-content;
+}
+
+.search-result-file-match .cm-line:has(br:only-child):not(:has(img, div)) {
+	display: none;
+}
+
+.outliner-view-setting-container .setting-item:not(.show-reload-button) button {
+	display: none;
 }

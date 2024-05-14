@@ -162,7 +162,7 @@ export class TaskGroupEditor extends Component {
 						}
 					}
 
-					const prevLine  = line > 0 ? editor.editor.getLine(line - 1) : "";
+					const prevLine = line > 0 ? editor.editor.getLine(line - 1) : "";
 
 					if (lineText.startsWith("- ")) {
 						(editor.editor as Editor).transaction({
@@ -192,7 +192,7 @@ export class TaskGroupEditor extends Component {
 							}
 						});
 						return true;
-					} else if(/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
+					} else if (/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
 						const currentIndent = lineText.match(/^\s+/)?.[0];
 
 						(editor.editor as Editor).transaction({
@@ -210,8 +210,11 @@ export class TaskGroupEditor extends Component {
 						return true;
 					}
 
-					if(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
-						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({line, ch: 0}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+					if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
+						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({
+							line,
+							ch: 0
+						}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
 						const indentNewLine = getIndent(this.app);
 						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
 						if (range) {
@@ -229,7 +232,7 @@ export class TaskGroupEditor extends Component {
 									// 遇到不满足条件的行，检查是否已经遍历过至少一行
 									if (foundValidLine) {
 										const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
-										if(currentLine.to === range.to) {
+										if (currentLine.to === range.to) {
 											(editor.editor as Editor).transaction({
 												changes: [
 													{
@@ -275,10 +278,10 @@ export class TaskGroupEditor extends Component {
 					const charOffset = (editor.editor as Editor).posToOffset({line, ch});
 					const charLine = (editor.editor as Editor).cm.state.doc.lineAt(charOffset);
 
-					if(/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+					if (/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
 						const lineNum = charLine.number;
 
-						for(let i = lineNum; i >= 1; i--) {
+						for (let i = lineNum; i >= 1; i--) {
 							const lineCursor = (editor.editor as Editor).cm.state.doc.line(i);
 							const lineText = lineCursor.text;
 							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
@@ -609,8 +612,6 @@ FROM ""
 WHERE contains(text, "#now")
 GROUP BY file.path`);
 
-		console.log('result', result.successful, result.value.values);
-
 		if (!result.successful) return;
 		const values = result.value.values;
 
@@ -642,7 +643,7 @@ GROUP BY file.path`);
 						this.changedBySelf = true;
 						// const endPos = editor.offsetToPos((lastContent || editor.getValue()).length);
 						const lastLine = editor.cm.state.doc.lineAt(editor.cm.state.doc.length - 1);
-						editor.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length});
+						editor.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length - 1});
 						this.contentMap.set(targetFile.path, data);
 
 						// const values = result.value.values;

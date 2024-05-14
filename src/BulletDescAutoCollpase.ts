@@ -7,6 +7,7 @@ import {
 	zoomStateField,
 	zoomWithHideIndentEffect
 } from "./checkVisible";
+
 export const FoldAnnotation = Annotation.define<string>();
 
 function findMatchingFoldRange(state: EditorState, currentPos: number): { from: number, to: number } | null {
@@ -15,16 +16,16 @@ function findMatchingFoldRange(state: EditorState, currentPos: number): { from: 
 
 	const currentLine = state.doc.lineAt(currentPos);
 
-	if(currentLine.number === 1) return null;
+	if (currentLine.number === 1) return null;
 	const prevLine = state.doc.line(currentLine.number - 1);
-	if(!(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(prevLine.text.trim()))) return null;
+	if (!(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(prevLine.text.trim()))) return null;
 
 	startStack.push(currentLine.to);
 
 	for (let i = currentLine.number; i <= endLine; i++) {
 		const line = state.doc.line(i);
 
-		if( (!(/^\s+/.test(line.text)) || i === endLine || /^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(line.text.trim()))) {
+		if ((!(/^\s+/.test(line.text)) || i === endLine || /^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(line.text.trim()))) {
 			const start = startStack.pop();
 
 			if (start !== undefined) {
@@ -46,7 +47,7 @@ export function getAllFoldableRanges(state: EditorState): { from: number, to: nu
 
 		// Reset regular expressions
 
-		if(/^\s+/.test(line.text) && !(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(line.text.trim()))) {
+		if (/^\s+/.test(line.text) && !(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(line.text.trim()))) {
 			// Check prev line if bullet line
 			const prevLine = state.doc.line(i - 1);
 			if (!prevLine) continue;
@@ -55,7 +56,7 @@ export function getAllFoldableRanges(state: EditorState): { from: number, to: nu
 			startStack.push(line.to);
 		}
 
-		if( (!(/^\s+/.test(line.text)) || i === state.doc.lines || /^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(line.text.trim()))) {
+		if ((!(/^\s+/.test(line.text)) || i === state.doc.lines || /^(-|\*|(\d{1,}\.))(\s(\[.\]))?/g.test(line.text.trim()))) {
 			const start = startStack.pop();
 			if (start !== undefined && line.from - 1 !== start) {
 				ranges.push({from: start, to: line.from - 1});
@@ -90,7 +91,7 @@ const foldRanges = StateField.define<{ from: number, to: number }[]>({
 
 export const unfoldWhenSelect = () => {
 	return EditorState.transactionFilter.of((tr) => {
-		if(tr.state.field(zoomStateField, false)) {
+		if (tr.state.field(zoomStateField, false)) {
 			const currentZoomState = tr.state.field(zoomStateField, false);
 			if (!tr.effects.some((effect) => {
 				return effect.is(zoomInEffect) || effect.is(zoomInRangesEffect) || effect.is(zoomWithHideIndentEffect) || effect.is(zoomOutEffect);
@@ -100,7 +101,7 @@ export const unfoldWhenSelect = () => {
 				tr.state.selection.ranges.forEach((range) => {
 					currentZoomState.between(range.from, range.to, (roFrom, roTo) => {
 
-						if(!roFrom && !roTo) return;
+						if (!roFrom && !roTo) return;
 
 						const selection = tr.startState.selection;
 						const movingUp = selection.main.from > tr.state.selection.main.from;
@@ -140,7 +141,7 @@ export const unfoldWhenSelect = () => {
 
 		if (
 			tr.effects.some((effect) => {
-				return effect.is(unfoldEffect)
+				return effect.is(unfoldEffect);
 			})
 		) {
 			const ranges = tr.effects.map((effect) => {
@@ -163,7 +164,7 @@ export const unfoldWhenSelect = () => {
 			}
 		}
 
-		if(tr.effects.some((effect)=> {
+		if (tr.effects.some((effect) => {
 			return effect.is(zoomInEffect) || effect.is(zoomInRangesEffect) || effect.is(zoomWithHideIndentEffect);
 		})) {
 			const allFoldedRanges = getAllFoldableRanges(tr.state);
@@ -176,7 +177,7 @@ export const unfoldWhenSelect = () => {
 			return [tr, {effects, annotations: [FoldAnnotation.of('outliner.unfold')]}];
 		}
 
-		if(tr.effects.some((effect)=> {
+		if (tr.effects.some((effect) => {
 			return effect.is(zoomOutEffect);
 		})) {
 			return tr;
@@ -193,8 +194,8 @@ export const unfoldWhenSelect = () => {
 			return (currentLine.number >= rangeFromLine.number && currentLine.number <= rangeToLine.number) || (currentAnchorLine.number >= rangeFromLine.number && currentAnchorLine.number <= rangeToLine.number);
 		});
 
-		if(range) {
-			if(tr.effects.some((effect)=> {
+		if (range) {
+			if (tr.effects.some((effect) => {
 				return effect.is(foldEffect);
 			})) {
 				return [tr, {
@@ -207,7 +208,7 @@ export const unfoldWhenSelect = () => {
 				effects: [unfoldEffect.of(range)],
 				annotations: [FoldAnnotation.of('outliner.unfold')],
 			}];
-		} else if(!tr.docChanged && tr.newSelection) {
+		} else if (!tr.docChanged && tr.newSelection) {
 			const allFoldedRanges = getAllFoldableRanges(tr.state);
 			const effects = allFoldedRanges.map((r) => {
 				return foldEffect.of({

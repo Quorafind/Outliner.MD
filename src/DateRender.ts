@@ -47,8 +47,6 @@ class DateRenderWidget extends WidgetType {
 			}
 		});
 
-		console.log(this.component, this.date, this.type);
-
 		// this.component = new DatePicker({
 		// 	target: el, props: {}
 		// });
@@ -74,7 +72,7 @@ export function createDateRendererPlugin() {
 				const shouldRender = this.shouldRender(view, from, to);
 				try {
 					if (shouldRender && from !== to) {
-						if(match.groups?.date) {
+						if (match.groups?.date) {
 							add(
 								from,
 								to,

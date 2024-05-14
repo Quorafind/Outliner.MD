@@ -1,10 +1,13 @@
 import {
 	Editor,
-	ItemView, MarkdownFileInfo,
+	ItemView,
+	MarkdownFileInfo,
 	MarkdownView,
 	Menu,
-	moment, Notice,
-	Plugin, TFile,
+	moment,
+	Notice,
+	Plugin,
+	TFile,
 	TFolder,
 	View,
 	type ViewState,
@@ -20,12 +23,15 @@ import "./less/global.less";
 import { EmbeddedEditor } from "./EmbeddedEditor";
 import { randomId } from "./utils";
 import { EmbeddedRender } from "./EmbeddedRender";
+import { createMarkRendererPlugin } from "./InlineMarker";
+import { DEFAULT_SETTINGS, OutlinerViewSettings, OutlinerViewSettingTab } from "./OutlinerViewSettings";
 
 
 const FRONT_MATTER_KEY = 'outliner';
 
 export default class OutlinerViewPlugin extends Plugin {
 	outlinerFileModes: Record<string, string> = {};
+	settings: OutlinerViewSettings = DEFAULT_SETTINGS;
 
 	calculateRangeForZooming = new CalculateRangeForZooming();
 	KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
@@ -33,6 +39,10 @@ export default class OutlinerViewPlugin extends Plugin {
 	// backlinkComponent: any;
 
 	async onload() {
+
+		await this.loadSettings();
+		this.addSettingTab(new OutlinerViewSettingTab(this.app, this));
+
 		this.registerView(OUTLINER_EDITOR_VIEW_ID, (leaf) => new OutlinerEditorView(leaf, this) as View);
 
 		this.registerRibbons();
@@ -41,10 +51,13 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.patchEmbedView();
 		this.patchWorkspaceLeaf();
 		this.patchItemView();
+		this.patchVchildren();
 		this.initOutlinerView();
 
 		this.registerMenu();
 		this.registerCommands();
+
+		this.registerEditorExtension([createMarkRendererPlugin()]);
 		// this.patchInlinePreview();
 	}
 
@@ -62,9 +75,13 @@ export default class OutlinerViewPlugin extends Plugin {
 	registerRibbons() {
 		this.addRibbonIcon('list', 'New outliner file', async () => {
 			const folder = this.app.fileManager.getMarkdownNewFileParent();
+			if (!folder) {
+				new Notice('No folder to create file in');
+				return;
+			}
 			if (folder) {
 				// @ts-ignore
-				const newFile = await this.app.vault.create(`${folder.path}/outliner-${moment().format('YYYYMMDDHHmmss')}.md`, `---\noutliner: true\n---\n\n- `);
+				const newFile = await this.app.vault.create((folder.path ? `${folder.path}/` : '') + `outliner-${moment().format('YYYYMMDDHHmmss')}.md`, `---\noutliner: true\n---\n\n- `);
 				await this.app.workspace.getLeaf(true).setViewState({
 					type: OUTLINER_EDITOR_VIEW_ID,
 					state: {
@@ -137,6 +154,8 @@ export default class OutlinerViewPlugin extends Plugin {
 	}
 
 	patchEmbedView() {
+		if (!this.settings.editableBlockEmbeds) return;
+
 		const mdFunction = this.app.embedRegistry.embedByExtension;
 
 		const newMdFunction = (e: any, t: any, n: any) => {
@@ -144,8 +163,8 @@ export default class OutlinerViewPlugin extends Plugin {
 			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
 				return false;
 			}
-			return new EmbeddedEditor(e, t, n);
-		}
+			return new EmbeddedEditor(this, e, t, n);
+		};
 
 
 		const renderReadingMode = (e: any, t: any, n: any) => {
@@ -153,11 +172,11 @@ export default class OutlinerViewPlugin extends Plugin {
 			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
 				return false;
 			}
-			if(!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')))) {
+			if (!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')))) {
 				return false;
 			}
 			return new EmbeddedRender(e, t, n);
-		}
+		};
 
 		this.register(around(mdFunction, {
 			md: (next) => {
@@ -165,20 +184,20 @@ export default class OutlinerViewPlugin extends Plugin {
 
 					console.log(e, t, n);
 
-					if(e && e.displayMode === false && e.showInline) {
+					if (e && e.displayMode === false && e.showInline) {
 						// console.log(this);
-						if(t.path.contains('.excalidraw.md')) return next.apply(this, [e, t, n]);
+						if (t.path.contains('.excalidraw.md')) return next.apply(this, [e, t, n]);
 						const newResult = newMdFunction(e, t, n);
-						if(newResult) {
+						if (newResult) {
 							return newResult;
 						} else {
 							return next.apply(this, [e, t, n]);
 						}
 					} else if (e && e.displayMode === undefined && e.showInline) {
 						// console.log(this);
-						if(t.path.contains('.excalidraw.md')) return next.apply(this, [e, t, n]);
+						if (t.path.contains('.excalidraw.md')) return next.apply(this, [e, t, n]);
 						const newResult = renderReadingMode(e, t, n);
-						if(newResult) {
+						if (newResult) {
 							return newResult;
 						} else {
 							return next.apply(this, [e, t, n]);
@@ -353,6 +372,174 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.register(uninstaller);
 	}
 
+	patchVchildren() {
+		if (!this.settings.editableBacklinks) return;
+
+		const patchSearchResultDom = (plugin: OutlinerViewPlugin, child: any) => {
+			const resultUninstaller = around(child.constructor.prototype, {
+				render: (old) => {
+					return function (
+						e: any, b: any
+					) {
+
+						// if (!this.parent?.isBacklink && !this.parentDom?.isBacklink) {
+						// 	return old.call(this, e, b);
+						// }
+						const containerEl = this.parentDom.parentDom.el.closest(".mod-global-search");
+						this.isBacklink = !!containerEl;
+						if (this.isBacklink) {
+							return old.call(this, e, b);
+						}
+						// new Notice(this.isBacklink.toString());
+						if (this.embeddedEditor) {
+							const firstChild = this.embeddedEditor;
+							if (firstChild) {
+								(firstChild as EmbeddedEditor).updateRange(
+									this.currentRange || {
+										from: this.start,
+										to: this.end,
+									}
+								);
+								return;
+							}
+						} else {
+							// new Notice('No embedded editor');
+							if (this.parentDom.file) {
+								this.embeddedEditor = new EmbeddedEditor(plugin, {
+									sourcePath: this.parentDom.file.path,
+									app: this.parentDom.app,
+									containerEl: this.el,
+								}, this.parentDom.file, '', {
+									from: this.start,
+									to: this.end,
+								}, this.content);
+
+								this.embeddedEditor.load();
+								// this.parent?.vChildren.addChild(this.embeddedEditor);
+								return;
+							}
+							// this.addChild(children);
+						}
+
+						const result = old.call(this, e, b);
+
+						return result;
+					};
+				},
+				onResultClick: (old) => {
+					return function (e: any) {
+						// console.log(this, e);
+						if (this.embeddedEditor) {
+							// this.embeddedEditor.editor.focus();
+							return;
+						}
+						return old.call(this, e);
+					};
+				},
+				showMoreAfter: (old) => {
+					return function () {
+						const result = old.call(this);
+						this.currentRange = {
+							from: this.start,
+							to: this.end,
+						};
+
+						console.log('afterRange', this.currentRange, this);
+
+						return result;
+					};
+				},
+				showMoreBefore: (old) => {
+					return function () {
+						const result = old.call(this);
+						this.currentRange = {
+							from: this.start,
+							to: this.end,
+						};
+
+						return result;
+					};
+				},
+
+			});
+			this.register(resultUninstaller);
+
+			const parent = child.parent;
+			console.log('parent', parent);
+
+			const componentUninstaller = around(parent.constructor.prototype, {
+				renderContentMatches: (old) => {
+					return function () {
+						// new Notice('renderContentMatches');
+						// console.log(this);
+						this.vChildren._children.forEach((child: any) => {
+							if (child?.embeddedEditor) {
+								child?.embeddedEditor.unload();
+							}
+						});
+						// const backlink = this.el.closest('.backlink-pane');
+						// this.isBacklink = !!backlink;
+						return old.call(this);
+					};
+				},
+				// onResultClick: (old) => {
+				// 	return function (e: any) {
+				// 		new Notice('onResultClick');
+				// 		return old.call(this, e);
+				// 	};
+				// }
+			});
+
+			this.register(componentUninstaller);
+		};
+
+		const patchSearchDom = (plugin: OutlinerViewPlugin) => {
+			const searchView = this.app.workspace.getLeavesOfType("search")[0]?.view as any;
+			if (!searchView) return false;
+
+			const dom = searchView.dom.constructor;
+
+			const uninstaller = around(dom.prototype, {
+				stopLoader(old) {
+					return function () {
+						old.call(this);
+						// console.log(this?.vChildren?.children);
+						this?.vChildren?.children?.forEach((child: any) => {
+							if (child?.file && !child?.pathEl) {
+								if (child.vChildren._children[0]) {
+									patchSearchResultDom(plugin, child.vChildren._children[0]);
+									console.log('child', child.vChildren._children[0], this);
+									uninstaller();
+									setTimeout(() => {
+										// child.vChildren._children.forEach((child: any) => {
+										// 	child.render(true, true);
+										// });
+										child.vChildren.owner.renderContentMatches();
+									}, 800);
+								}
+							}
+						});
+
+					};
+				}
+			});
+
+			this.register(
+				uninstaller
+			);
+			return true;
+		};
+		this.app.workspace.onLayoutReady(() => {
+			if (!patchSearchDom(this)) {
+				const evt = this.app.workspace.on("layout-change", () => {
+					patchSearchDom(this) && this.app.workspace.offref(evt);
+				});
+				this.registerEvent(evt);
+			}
+		});
+
+	}
+
 	registerMenu() {
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu, file) => {
@@ -377,22 +564,33 @@ export default class OutlinerViewPlugin extends Plugin {
 		);
 
 		this.registerEvent(
-			this.app.workspace.on('editor-menu',(menu: Menu, editor: Editor, info: MarkdownView | MarkdownFileInfo)=> {
-				if(!editor.somethingSelected()) return;
-				if(!info?.file) return;
+			this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, info: MarkdownView | MarkdownFileInfo) => {
+				if (!editor.somethingSelected()) return;
+				if (!info?.file) return;
 
 				menu.addItem((item) => {
 					item
 						.setSection('selection-link')
 						.setIcon('list')
-						.setTitle('Copy inline embedded')
+						.setTitle('Copy inline embed')
 						.onClick(() => {
 							const id = `o-${randomId(4)}`;
 							const mark = `%%${id}%%`;
 							const selection = editor.getSelection();
-							editor.replaceSelection(`${mark}${selection}${mark}`);
+							if (!selection) return;
 
-							const markdownLink = this.app.fileManager.generateMarkdownLink(info?.file as TFile, info.file?.path || '', '', `${id}`)
+							let newLine = false;
+							if (selection.split('\n').length > 1) {
+								const startCursor = editor.getCursor('from');
+
+								if (startCursor.ch === 0) {
+									newLine = true;
+								}
+							}
+
+							editor.replaceSelection(`${mark + (newLine ? '\n' : '')}${selection}${mark}`);
+
+							const markdownLink = this.app.fileManager.generateMarkdownLink(info?.file as TFile, info.file?.path || '', '', `${id}`);
 
 							navigator.clipboard.writeText('!' + markdownLink).then(() => {
 								new Notice('Copied to clipboard');
@@ -400,7 +598,7 @@ export default class OutlinerViewPlugin extends Plugin {
 						});
 				});
 			})
-		)
+		);
 	}
 
 	registerCommands() {
@@ -419,7 +617,7 @@ export default class OutlinerViewPlugin extends Plugin {
 						const cursor = editor?.getCursor();
 						if (cursor === undefined) return;
 						const pos = editor?.posToOffset(cursor);
-						if(pos === undefined) return;
+						if (pos === undefined) return;
 						const line = editor?.cm.state.doc.lineAt(pos);
 						if (!line || !editor?.cm.state) return;
 						const ranges = this.calculateRangeForZooming.calculateRangeForZooming(editor?.cm.state, line?.from);
@@ -434,8 +632,8 @@ export default class OutlinerViewPlugin extends Plugin {
 									}
 								],
 								selection: {
-										head: editor?.cm.state.doc.lineAt(newPos).to,
-										anchor: editor?.cm.state.doc.lineAt(newPos).to
+									head: editor?.cm.state.doc.lineAt(newPos).to,
+									anchor: editor?.cm.state.doc.lineAt(newPos).to
 								}
 
 							});
@@ -526,6 +724,44 @@ export default class OutlinerViewPlugin extends Plugin {
 				}
 			}
 		});
+
+		this.addCommand({
+			id: 'create-inline-embed',
+			name: 'Create inline embed',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				const id = `o-${randomId(4)}`;
+				const mark = `%%${id}%%`;
+				const selection = editor.getSelection();
+				if (!selection) return;
+
+				let newLine = false;
+				if (selection.split('\n').length > 1) {
+					const startCursor = editor.getCursor('from');
+
+					if (startCursor.ch === 0) {
+						newLine = true;
+					}
+				}
+
+				editor.replaceSelection(`${mark + (newLine ? '\n' : '')}${selection}${mark}`);
+
+				if (!view.file) return;
+				const markdownLink = this.app.fileManager.generateMarkdownLink(view.file, view.file.path, '', `${id}`);
+
+				navigator.clipboard.writeText('!' + markdownLink).then(() => {
+					new Notice('Copied to clipboard');
+				});
+			}
+		});
+	}
+
+	public async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
 	}
 
 }

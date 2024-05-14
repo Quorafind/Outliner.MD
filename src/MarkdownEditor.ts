@@ -29,7 +29,6 @@ import { selectionController } from "./SelectionController";
 import { createDateRendererPlugin } from "./DateRender";
 import { FoldAnnotation, FoldingExtension, getAllFoldableRanges } from "./BulletDescAutoCollpase";
 import { foldEffect } from "@codemirror/language";
-import { createMarkRendererPlugin } from "./InlineMarker";
 
 
 function resolveEditorPrototype(app: App) {
@@ -245,7 +244,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		this.editor.cm.contentDOM.toggleClass('embed-editor', this.options.type === 'embed');
 
 
-		if(this.options.foldByDefault) {
+		if (this.options.foldByDefault) {
 			const allFoldedRanges = getAllFoldableRanges(this.editor.cm.state);
 			const effects = allFoldedRanges.map((r) => {
 				return foldEffect.of({
@@ -347,7 +346,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			}
 		])));
 
-		extensions.push([createMarkRendererPlugin(), placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
+		extensions.push([placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);

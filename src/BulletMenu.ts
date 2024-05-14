@@ -238,7 +238,7 @@ class BulletMenuMarkerWidget extends WidgetType {
 							}
 						});
 						const result = editor && (editor.editorComponent as EmbeddableMarkdownEditor).options.onEnter(editor.editorComponent, false, true);
-						if(result === false) {
+						if (result === false) {
 							editor?.transaction({
 								changes: [
 									{
@@ -253,7 +253,7 @@ class BulletMenuMarkerWidget extends WidgetType {
 										text: `\n${currentLine.text.match(/^\s*/)?.[0] || ''}${(' ').repeat(2)}`
 									}
 								],
-							})
+							});
 
 							editor?.transaction({
 								selection: {
@@ -380,7 +380,6 @@ class BulletMenuMarkerWidget extends WidgetType {
 					// })
 
 
-
 				});
 			});
 			menu.addItem((item) => {
@@ -482,7 +481,7 @@ export const BulletMenu = StateField.define<DecorationSet>({
 
 		for (let i = 1; i <= tr.state.doc.lines; i++) {
 			const line = tr.state.doc.line(i);
-			if(!(/^(-|\*|\d+\.)(\s(\[.\]))?/g.test(line.text.trimStart()))) continue;
+			if (!(/^(-|\*|\d+\.)(\s(\[.\]))?/g.test(line.text.trimStart()))) continue;
 			const spacesLength = line.text.match(/^\s*/)![0].length; // 使用 \s* 匹配所有空白字符，包括空格和制表符
 
 			if (spacesLength > 0) {

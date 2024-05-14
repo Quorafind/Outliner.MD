@@ -1,6 +1,6 @@
 {
-	"name": "outliner-view",
-	"version": "0.0.1",
+	"name": "outliner-md",
+	"version": "0.0.12",
 	"description": "Make notes work like workflowy, dynalist, Roam Research",
 	"main": "main.js",
 	"scripts": {

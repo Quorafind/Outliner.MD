@@ -4,10 +4,12 @@ import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
 import { getIndent } from "./utils";
 import { foldable } from "@codemirror/language";
 import { SelectionAnnotation } from "./SelectionController";
-import { zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
+import { hideFrontMatterEffect, zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
+import OutlinerViewPlugin from "./OutlinerViewIndex";
 
 export class EmbeddedEditor extends Component {
+	plugin: OutlinerViewPlugin;
 	app: App;
 	editor: Editor | undefined;
 
@@ -20,17 +22,18 @@ export class EmbeddedEditor extends Component {
 
 	containerEl: HTMLElement;
 
-	range: { from: number; to: number; } |  { from: number; to: number; }[] | undefined;
+	range: { from: number; to: number; } | { from: number; to: number; }[] | undefined;
 
 	calculateRangeForZooming = new CalculateRangeForZooming();
 	KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
 
-	constructor(e: {
+	constructor(plugin: OutlinerViewPlugin, e: {
 		sourcePath: string;
 		app: App;
 		containerEl: HTMLElement;
-	}, file: TFile, subpath: string) {
+	}, file: TFile, subpath: string, readonly targetRange?: { from: number, to: number }, readonly initData?: string) {
 		super();
+		this.plugin = plugin;
 		this.app = e.app;
 		this.containerEl = e.containerEl;
 
@@ -43,37 +46,80 @@ export class EmbeddedEditor extends Component {
 		super.onload();
 
 		const targetFile = this.file;
-		targetFile && this.app.vault.read(targetFile).then((data) => {
+		targetFile && !this.initData && this.app.vault.read(targetFile).then((data) => {
 			this.data = data;
-			if(!targetFile) return;
+			if (!targetFile) return;
 
 			const targetRange = this.getRange(targetFile);
 
-			this.createEditor(this.containerEl, targetFile?.path, this.data || "", targetRange);
+
+			const embedEl = this.containerEl.createEl('div', {
+				cls: 'embedded-editor-container',
+			});
+
+			this.createEditor(embedEl, targetFile?.path, this.data || "", targetRange);
 		});
+
+		if (this.initData && targetFile && this.targetRange) {
+			this.data = this.initData;
+			console.log('initdata', this.initData.slice(this.targetRange.from, this.targetRange.to));
+			// const targetRange = this.getRange(targetFile);
+			this.createEditor(this.containerEl, targetFile?.path, this.data || "", {
+				...this.targetRange,
+				type: 'part'
+			});
+		}
 
 		this.registerEvent(this.app.metadataCache.on('changed', (file) => {
 			this.updateFile(file);
-		}))
+		}));
 	}
 
-	updateFile = debounce((file: TFile)=> {
+	updateFile = debounce(async (file: TFile) => {
 		if (file.path === this.file?.path) {
-			this.app.vault.read(file).then((data) => {
-				if(this.data === data) return;
-				this.data = data;
-				const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
-				lastLine && this.editor?.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length});
+			const data = await this.app.vault.read(file);
+			if (this.data === data) return;
+			//
+			// const targetData = data;
+			//
+			// if (this.range && !Array.isArray(this.range)) {
+			// 	const dataInRange = this.editor?.cm.state.doc.toString()?.slice(this.range.from, this.range.to);
+			// 	const originData = this.data?.slice(this.range.from, this.range.to);
+			//
+			// 	if (dataInRange && originData && dataInRange !== originData) {
+			// 		targetData.replace(originData, dataInRange);
+			// 	}
+			// }
+			//
+			// this.data = targetData;
+			//
+			// const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
+			// lastLine && this.editor?.replaceRange(targetData, {line: 0, ch: 0}, {
+			// 	line: lastLine.number,
+			// 	ch: lastLine.length - 1
+			// });
+			//
+			// const targetRange = this.getRange(file);
+			// this.range = {
+			// 	from: targetRange.from,
+			// 	to: targetRange.to
+			// };
+			// targetRange.type !== 'whole' && this.updateVisibleRange(this.editor as Editor, this.range, targetRange.type as 'part' | 'block' | 'heading');
 
-				const targetRange = this.getRange(file);
-				this.range = {
-					from: targetRange.from,
-					to: targetRange.to
-				}
-				targetRange.type !== 'whole' && this.updateVisibleRange(this.editor as Editor, this.range, targetRange.type as 'part' | 'block' | 'heading');
-			});
+
+			this.data = data;
+			const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
+			lastLine && this.editor?.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length});
+
+			const targetRange = this.getRange(file);
+			this.range = {
+				from: targetRange.from,
+				to: targetRange.to
+			};
+			targetRange.type !== 'whole' && this.updateVisibleRange(this.editor as Editor, this.range, targetRange.type as 'part' | 'block' | 'heading');
+			targetRange.type === 'whole' && this.plugin.settings.hideFrontmatter && this.updateFrontMatterVisible(this.editor as Editor, this.file as TFile);
 		}
-	}, 2000);
+	}, 800);
 
 	async onunload() {
 		super.onunload();
@@ -89,16 +135,51 @@ export class EmbeddedEditor extends Component {
 
 	requestSave = debounce(async (file: TFile, data: string) => {
 		if (file) {
+			// let targetData = data;
+			//
+			// const currentVisible = this.editor?.cm.visibleRanges;
+			// console.log('currentVisible', currentVisible);
+			//
+			// if (currentVisible && currentVisible[0]) {
+			// 	console.log(currentVisible);
+			// 	const currentData = this.editor?.cm.state.doc.toString().slice(
+			// 		currentVisible[0].from,
+			// 		currentVisible[0].to
+			// 	);
+			// 	if (this.range && !Array.isArray(this.range)) {
+			// 		const fileData = await this.app.vault.read(file);
+			//
+			// 		const originData = this.data?.slice(
+			// 			this.range?.from - 1,
+			// 			this.range?.to + 1
+			// 		);
+			//
+			// 		console.log('originData', originData, currentData, currentData !== originData);
+			//
+			// 		if (currentData && originData && currentData !== originData) {
+			// 			targetData = fileData.replace(originData, currentData);
+			// 		}
+			// 	}
+			// }
+			//
+			//
+			// this.data = targetData;
+			// await this.app.vault.modify(file, targetData);
+
 			this.data = data;
 			await this.app.vault.modify(file, data);
 		}
-	}, 3000);
+	}, 400);
 
 	longWaitUpdate = debounce((data: string) => {
 		this.data = data;
 	});
 
-	createEditor(container: HTMLElement, path: string, data: string, range: { from: number, to: number, type: string }) {
+	createEditor(container: HTMLElement, path: string, data: string, range: {
+		from: number,
+		to: number,
+		type: string
+	}) {
 		const embedEditor = new EmbeddableMarkdownEditor(this.app, container, {
 			// onEscape: (editor) => {
 			// 	new Notice(`Escaped the editor: (${editor.initial_value})`);
@@ -179,7 +260,7 @@ export class EmbeddedEditor extends Component {
 						}
 					}
 
-					const prevLine  = line > 0 ? editor.editor.getLine(line - 1) : "";
+					const prevLine = line > 0 ? editor.editor.getLine(line - 1) : "";
 
 					if (lineText.startsWith("- ")) {
 						(editor.editor as Editor).transaction({
@@ -209,7 +290,7 @@ export class EmbeddedEditor extends Component {
 							}
 						});
 						return true;
-					} else if(/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
+					} else if (/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
 						const currentIndent = lineText.match(/^\s+/)?.[0];
 
 						(editor.editor as Editor).transaction({
@@ -227,8 +308,11 @@ export class EmbeddedEditor extends Component {
 						return true;
 					}
 
-					if(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
-						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({line, ch: 0}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+					if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
+						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({
+							line,
+							ch: 0
+						}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
 						const indentNewLine = getIndent(this.app);
 						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
 						if (range) {
@@ -246,7 +330,7 @@ export class EmbeddedEditor extends Component {
 									// 遇到不满足条件的行，检查是否已经遍历过至少一行
 									if (foundValidLine) {
 										const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
-										if(currentLine.to === range.to) {
+										if (currentLine.to === range.to) {
 											(editor.editor as Editor).transaction({
 												changes: [
 													{
@@ -292,10 +376,10 @@ export class EmbeddedEditor extends Component {
 					const charOffset = (editor.editor as Editor).posToOffset({line, ch});
 					const charLine = (editor.editor as Editor).cm.state.doc.lineAt(charOffset);
 
-					if(/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+					if (/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
 						const lineNum = charLine.number;
 
-						for(let i = lineNum; i >= 1; i--) {
+						for (let i = lineNum; i >= 1; i--) {
 							const lineCursor = (editor.editor as Editor).cm.state.doc.line(i);
 							const lineText = lineCursor.text;
 							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
@@ -436,14 +520,19 @@ export class EmbeddedEditor extends Component {
 
 				return false;
 			},
-			// onBlur: (editor, path) => {
-			// 	if (path) {
-			// 		const data = editor.editor?.cm.state.doc.toString();
-			// 		console.log('data', data, this.data, data === this.data);
-			// 		if (this.data === data) return;
-			// 		this.file && this.requestSave(this.file, data);
-			// 	}
-			// },
+			onBlur: (editor, path) => {
+				if (this.file && this.targetRange) {
+					const data = editor.editor?.cm.state.doc.toString();
+					// console.log('data', data, this.data, data === this.data);
+					if (this.data === data) return;
+					// this.file && this.requestSave(this.file, data);
+
+					// if (!update.docChanged) return;
+					// if (this.data === data) return;
+
+					this.requestSave(this.file, data);
+				}
+			},
 			onChange: (update, path) => {
 				if (path) {
 					if (!update.docChanged) return;
@@ -453,13 +542,13 @@ export class EmbeddedEditor extends Component {
 					// 	return;
 					// }
 
-					this.file && this.requestSave(this.file, update.state.doc.toString());
+					!this.targetRange && this.file && this.requestSave(this.file, update.state.doc.toString());
 				}
 			},
-			toggleMode: ()=> {
+			toggleMode: () => {
 				// @ts-expect-error
 				const cmView = this.containerEl.cmView;
-				if(cmView) {
+				if (cmView) {
 					// console.log(cmView.widget.editor);
 					cmView.widget.editor.owner.toggleMode();
 				}
@@ -477,25 +566,58 @@ export class EmbeddedEditor extends Component {
 		this.range = {
 			from: range.from,
 			to: range.to
-		}
+		};
 		this.editor = embedEditor.editor;
 
-		range.type !== 'whole' && this.updateVisibleRange(embedEditor.editor, range, range.type as 'part' | 'block' | 'heading');
+		if (this.targetRange && !this.plugin.settings.livePreviewForBacklinks) {
+			// console.log('targetRange', this.targetRange);
+			this.editor?.editorComponent.toggleSource();
 
-		if(range.type !== 'part') {
+			// this.containerEl.onclick = (e) => {
+			// 	e.stopPropagation();
+			// 	// e.preventDefault();
+			// 	new Notice('Click to toggle source mode');
+			// };
+
+		}
+
+		// console.log('editor', this.editor);
+
+		range.type !== 'whole' && this.updateVisibleRange(embedEditor.editor, range, range.type as 'part' | 'block' | 'heading');
+		range.type === 'whole' && this.plugin.settings.hideFrontmatter && this.updateFrontMatterVisible(this.editor as Editor, this.file as TFile);
+
+		// range.type === 'while' && this.editor?.editorComponent.toggleFrontMatter();
+
+		if (range.type !== 'part') {
 			const button = this.containerEl.createEl('div', {
 				cls: 'source-btn',
-			})
+			});
 
-			new ExtraButtonComponent(button).setIcon('link')
+			new ExtraButtonComponent(button).setIcon('link');
 		}
 
 		// @ts-expect-error - This is a private method
 		return this.addChild(embedEditor);
 	}
 
+	public updateRange(range: { from: number, to: number }) {
+		this.range = {
+			from: range.from,
+			to: range.to
+		};
+		this.updateVisibleRange(this.editor as Editor, range, 'part');
+		// this.updateIndentVisible(
+		// 	this.editor as Editor,
+		// 	range
+		// );
+	}
 
-	updateVisibleRange(editor: Editor, range: { from: number, to: number } | { from: number, to: number }[], type: 'part' | 'block' | 'heading') {
+
+	updateVisibleRange(editor: Editor, range: { from: number, to: number } | {
+		from: number,
+		to: number
+	}[], type: 'part' | 'block' | 'heading') {
+
 		if (Array.isArray(range)) {
 			const wholeRanges = range.map((r) => {
 				return (this.calculateRangeForZooming.calculateRangeForZooming(editor.cm.state, r.from) || {
@@ -529,18 +651,23 @@ export class EmbeddedEditor extends Component {
 
 		} else {
 			// if(range.from === 0 && range.to === this.editor?.cm.state.doc.length) return;
-			if(type === 'part') {
-
-console.log(this.containerEl);
-
+			if (type === 'part') {
+				console.log('range', range, this.targetRange, this.containerEl, this.data?.slice(
+					range.from,
+					range.to
+				));
 				editor.cm.dispatch({
 					effects: [zoomInEffect.of({
 						from: range.from,
 						to: range.to,
 						type: 'part',
-						container: this.containerEl,
+						container: this.targetRange ? undefined : this.containerEl,
 					})]
 				});
+				// this.updateIndentVisible(
+				// 	editor,
+				// 	range
+				// );
 				this.containerEl.toggleClass('embedded-part', true);
 				return;
 			}
@@ -578,41 +705,46 @@ console.log(this.containerEl);
 			// 	effects: [zoomInEffect.of(range)]
 			// });
 		}
-
-
 	}
+
 
 	getRange(targetFile: TFile) {
 		const cache = this.app.metadataCache.getFileCache(targetFile);
 
-		if(this.sourcePath && !this.subpath) {
+		if (this.sourcePath && !this.subpath && this.targetRange) {
+			return {
+				from: this.targetRange.from,
+				to: this.targetRange.to,
+				type: 'part'
+			};
+		}
+
+		if (this.sourcePath && !this.subpath) {
 			const title = this.containerEl.getAttr('alt');
 
-			if(title) {
+			if (title) {
 				const content = this.data;
 				const targetBlockId = `%%${title}%%`;
 
 				// console.log('content', content, targetBlockId, title);
 
-				if(!content) {
+				if (!content) {
 					return {
 						from: 0,
 						to: 0,
 						type: 'whole'
-					}
+					};
 				}
 
 				const start = content.indexOf(targetBlockId);
 				const end = content.indexOf(targetBlockId, start + 1);
 
-				console.log('start', start, end, targetBlockId, content, title);
-
-				if(start !== -1 && end !== -1) {
+				if (start !== -1 && end !== -1) {
 					return {
 						from: start + targetBlockId.length + 1,
 						to: end - 1,
 						type: 'part'
-					}
+					};
 				}
 			}
 		}
@@ -621,19 +753,19 @@ console.log(this.containerEl);
 			from: 0,
 			to: this.data?.length || 0,
 			type: 'whole',
-		}
-		if(cache && this.subpath) {
+		};
+		if (cache && this.subpath) {
 			if (/#\^/.test(this.subpath)) {
 				const id = this.subpath.slice(2);
 				const block = Object.values(cache?.blocks || {}).find((key) => {
 					return key.id === id;
-				})
+				});
 				if (block) {
 					targetRange = {
 						from: block.position?.start.offset,
 						to: block.position?.end.offset,
 						type: 'block'
-					}
+					};
 
 					// console.log('cache', cache, block);
 				}
@@ -651,12 +783,47 @@ console.log(this.containerEl);
 						from: headingBlock.position.start.offset,
 						to: headingBlock.position.end.offset,
 						type: 'heading'
-					}
+					};
 				}
 
 				return targetRange;
 			}
 		}
 		return targetRange;
+	}
+
+
+	updateIndentVisible(editor: Editor, range: { from: number, to: number }) {
+		const firstLine = editor.cm.state.doc.lineAt(range.from);
+		const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
+		if (firstLineIndent) {
+			editor.cm.dispatch({
+				effects: zoomWithHideIndentEffect.of({
+					range: {
+						from: range.from,
+						to: range.to,
+					},
+					indent: firstLineIndent
+				})
+			});
+		}
+	}
+
+	updateFrontMatterVisible(editor: Editor, file: TFile) {
+		const cache = this.app.metadataCache.getFileCache(file);
+		const frontMatter = cache?.frontmatterPosition;
+
+		console.log('frontMatter', frontMatter);
+		if (frontMatter) {
+			editor.cm.dispatch({
+				effects: hideFrontMatterEffect.of({
+					range: {
+						from: frontMatter.start.offset,
+						to: frontMatter.end.offset,
+					}
+				})
+			});
+		}
+
 	}
 }

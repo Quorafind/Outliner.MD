@@ -1,6 +1,6 @@
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { StateEffect, StateField } from "@codemirror/state";
-import { Editor, ExtraButtonComponent, setIcon } from "obsidian";
+import { ExtraButtonComponent } from "obsidian";
 
 export interface ZoomInRange {
 	from: number;
@@ -18,6 +18,8 @@ export const zoomInEffect = StateEffect.define<ZoomInRange>();
 export const zoomOutEffect = StateEffect.define<void>();
 
 export const zoomWithHideIndentEffect = StateEffect.define<{ range: { from: number, to: number }, indent: string }>();
+
+export const hideFrontMatterEffect = StateEffect.define<{ range: { from: number, to: number } }>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isZoomInEffect(e: StateEffect<any>): e is ZoomInStateEffect {
@@ -47,7 +49,7 @@ export class EditWidget extends WidgetType {
 			const embeddedContainer = el.closest('.internal-embed.is-loaded');
 
 			// @ts-ignore
-			if(embeddedContainer && embeddedContainer.cmView) {
+			if (embeddedContainer && embeddedContainer.cmView) {
 				// @ts-ignore
 				const widget = embeddedContainer.cmView.widget;
 
@@ -94,7 +96,7 @@ export const zoomStateField = StateField.define<DecorationSet>({
 				// 	})
 				// }
 
-				if(e.value.type === 'part' && e.value.container) {
+				if (e.value.type === 'part' && e.value.container) {
 					value = value.update({
 						add: [Decoration.widget({
 							widget: new EditWidget(e.value.to + 1, e.value.to + 1),
@@ -108,13 +110,19 @@ export const zoomStateField = StateField.define<DecorationSet>({
 
 				if (e.value.from > 0) {
 					value = value.update({
-						add: [e.value.type === 'part' ? Decoration.replace({block: true, inclusiveEnd: false}).range(0, e.value.from - 1 ) : zoomMarkHidden.range(0, e.value.from - 1)],
+						add: [e.value.type === 'part' ? Decoration.replace({
+							block: true,
+							inclusiveEnd: false
+						}).range(0, e.value.from - 1) : zoomMarkHidden.range(0, e.value.from - 1)],
 					});
 				}
 
 				if (e.value.to < tr.newDoc.length) {
 					value = value.update({
-						add: [e.value.type === 'part' ? Decoration.replace({block: true, inclusiveStart: false}).range(e.value.to + 1, tr.newDoc.length) : zoomMarkHidden.range(e.value.to + 1, tr.newDoc.length)],
+						add: [e.value.type === 'part' ? Decoration.replace({
+							block: true,
+							inclusiveStart: false
+						}).range(e.value.to + 1, tr.newDoc.length) : zoomMarkHidden.range(e.value.to + 1, tr.newDoc.length)],
 					});
 				}
 
@@ -186,6 +194,13 @@ export const zoomStateField = StateField.define<DecorationSet>({
 						add: [zoomMarkHidden.range(line.from, line.from + indent.length)]
 					});
 				}
+			}
+
+			if (e.is(hideFrontMatterEffect)) {
+				const {range} = e.value;
+				value = value.update({
+					add: [zoomMarkHidden.range(range.from, range.to)]
+				});
 			}
 		}
 
