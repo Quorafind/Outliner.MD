@@ -1,4 +1,4 @@
-## Outliner View
+## Outliner.md
 
 > You need to install `Obsidian Zoom`, `Obsidian Outliner` and also `Obsidian Dataview` plugins to use this plugin better.
 
@@ -11,6 +11,8 @@
 
 ### Roadmap
 
+- [x] Website for [Outliner.md](https://outliner.md);
+- [x] Doc site: [Outliner.md docs](https://docs.outliner.md);
 - Support fully outliner support;
   - Drag and drop;
   - Keyboard shortcuts;

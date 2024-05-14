@@ -1,7 +1,7 @@
 {
-  "name": "outliner-view",
+  "name": "outliner-md",
   "version": "0.9.9",
-  "description": "A local outliner plugin for Obsidian.",
+  "description": "A supercharge outliner plugin for Obsidian.",
   "author": "Boninall",
   "main": "main.js",
   "license": "MIT",
