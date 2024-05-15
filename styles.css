@@ -364,12 +364,6 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 .search-result-file-match.embedded-part > span {
   display: none;
 }
-.search-result-file-match.embedded-part > .embedded-editor-container .markdown-source-view {
-  min-height: fit-content;
-}
-.search-result-file-match.embedded-part > .embedded-editor-container .markdown-source-view {
-  min-height: fit-content;
-}
 .search-result-file-match.embedded-part .markdown-source-view .cm-editor {
   height: 100%;
   /* min-height: 100%; */

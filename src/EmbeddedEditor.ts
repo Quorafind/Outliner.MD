@@ -1,4 +1,4 @@
-import { App, Component, debounce, Editor, ExtraButtonComponent, TFile } from "obsidian";
+import { App, Component, debounce, Editor, ExtraButtonComponent, Notice, TFile } from "obsidian";
 import { CalculateRangeForZooming } from "./calculateRangeForZooming";
 import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
 import { getIndent } from "./utils";
@@ -53,11 +53,11 @@ export class EmbeddedEditor extends Component {
 			const targetRange = this.getRange(targetFile);
 
 
-			const embedEl = this.containerEl.createEl('div', {
-				cls: 'embedded-editor-container',
-			});
+			// const embedEl = this.containerEl.createEl('div', {
+			// 	cls: 'embedded-editor-container',
+			// });
 
-			this.createEditor(embedEl, targetFile?.path, this.data || "", targetRange);
+			this.createEditor(this.containerEl, targetFile?.path, this.data || "", targetRange);
 		});
 
 		if (this.initData && targetFile && this.targetRange) {

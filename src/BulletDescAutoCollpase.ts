@@ -7,6 +7,7 @@ import {
 	zoomStateField,
 	zoomWithHideIndentEffect
 } from "./checkVisible";
+import { editorEditorField, editorInfoField } from "obsidian";
 
 export const FoldAnnotation = Annotation.define<string>();
 
@@ -91,6 +92,8 @@ const foldRanges = StateField.define<{ from: number, to: number }[]>({
 
 export const unfoldWhenSelect = () => {
 	return EditorState.transactionFilter.of((tr) => {
+
+
 		if (tr.state.field(zoomStateField, false)) {
 			const currentZoomState = tr.state.field(zoomStateField, false);
 			if (!tr.effects.some((effect) => {

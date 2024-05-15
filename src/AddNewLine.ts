@@ -14,7 +14,7 @@ export const AddNewLineBtn = StateField.define<DecorationSet>({
 		const firstLine = tr.state.doc.line(tr.state.doc.lines).to;
 
 		builder.add(firstLine, firstLine, Decoration.widget({
-			widget: new ButtonWidget(app, editor,
+			widget: new ButtonWidget(editor.app, editor,
 				firstLine, firstLine, tr.state), side: 2, block: true
 		}));
 		const dec = builder.finish();
