@@ -288,7 +288,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						}
 					}
 
-					const prevLine  = line > 0 ? editor.editor.getLine(line - 1) : "";
+					const prevLine = line > 0 ? editor.editor.getLine(line - 1) : "";
 
 					if (lineText.startsWith("- ")) {
 						(editor.editor as Editor).transaction({
@@ -318,7 +318,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							}
 						});
 						return true;
-					} else if(/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
+					} else if (/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
 						const currentIndent = lineText.match(/^\s+/)?.[0];
 
 						(editor.editor as Editor).transaction({
@@ -336,8 +336,11 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						return true;
 					}
 
-					if(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
-						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({line, ch: 0}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+					if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
+						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({
+							line,
+							ch: 0
+						}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
 						const indentNewLine = getIndent(this.app);
 						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
 						if (range) {
@@ -355,7 +358,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 									// 遇到不满足条件的行，检查是否已经遍历过至少一行
 									if (foundValidLine) {
 										const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
-										if(currentLine.to === range.to) {
+										if (currentLine.to === range.to) {
 											(editor.editor as Editor).transaction({
 												changes: [
 													{
@@ -401,10 +404,10 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					const charOffset = (editor.editor as Editor).posToOffset({line, ch});
 					const charLine = (editor.editor as Editor).cm.state.doc.lineAt(charOffset);
 
-					if(/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+					if (/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
 						const lineNum = charLine.number;
 
-						for(let i = lineNum; i >= 1; i--) {
+						for (let i = lineNum; i >= 1; i--) {
 							const lineCursor = (editor.editor as Editor).cm.state.doc.line(i);
 							const lineText = lineCursor.text;
 							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
@@ -667,13 +670,14 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						const content = this.editor.getValue();
 						this.editor.setCursor(content.length - 1);
 
-
+						this.editor.editorComponent.sizerEl?.prepend(this.inlineTitleEl);
+						this.inlineTitleEl.setText(file?.basename || this.filePath);
 					}, 200);
 
 					// console.log('set state', this.editor, this.editor.cm);
 					// @ts-ignore
-					this.editor.editorComponent.sizerEl?.prepend(this.inlineTitleEl);
-					this.inlineTitleEl.setText(file?.basename || this.filePath);
+					// this.editor.editorComponent.sizerEl?.prepend(this.inlineTitleEl);
+					// this.inlineTitleEl.setText(file?.basename || this.filePath);
 				}
 
 			}
@@ -784,7 +788,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 							this.editor && this.filter(this.editor.cm, value);
 						});
-
 
 
 						search.clearButtonEl.addEventListener('click', () => {

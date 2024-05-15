@@ -330,7 +330,15 @@ span.cm-task-group-title {
   background: #ffffff1a;
   opacity: 0;
 }
-.internal-embed.is-loaded:hover .source-btn {
+.internal-embed.is-loaded .lock-btn {
+  position: absolute;
+  right: 36px;
+  top: 0;
+  background: #ffffff1a;
+  opacity: 0;
+}
+.internal-embed.is-loaded:hover .source-btn,
+.internal-embed.is-loaded:hover .lock-btn {
   opacity: 1;
 }
 body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-cm6 .cm-line.outliner-plugin-dropping-line,

@@ -12,7 +12,7 @@
  */
 
 import { App, type Constructor, Scope, TFile, WorkspaceLeaf } from "obsidian";
-import { EditorSelection, type Extension, Prec } from "@codemirror/state";
+import { Compartment, EditorSelection, type Extension, Prec, EditorState } from "@codemirror/state";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
 import type { ScrollableMarkdownEditor } from "./obsidian-ex";
@@ -123,6 +123,8 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	initial_value: string;
 	scope: Scope;
 	view: OutlinerEditorView;
+
+	readOnlyDepartment = new Compartment();
 	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
 
 	/**
@@ -346,7 +348,9 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 			}
 		])));
 
-		extensions.push([placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
+		extensions.push([this.readOnlyDepartment.of(
+			EditorState.readOnly.of(false)
+		), placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);

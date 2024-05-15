@@ -172,7 +172,7 @@ export default class OutlinerViewPlugin extends Plugin {
 			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
 				return false;
 			}
-			if (!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')))) {
+			if (!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')?.replace('readonly', '')))) {
 				return false;
 			}
 			return new EmbeddedRender(e, t, n);

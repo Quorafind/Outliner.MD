@@ -7,6 +7,7 @@ import { SelectionAnnotation } from "./SelectionController";
 import { hideFrontMatterEffect, zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import OutlinerViewPlugin from "./OutlinerViewIndex";
+import { EditorState } from "@codemirror/state";
 
 export class EmbeddedEditor extends Component {
 	plugin: OutlinerViewPlugin;
@@ -587,6 +588,31 @@ export class EmbeddedEditor extends Component {
 		range.type === 'whole' && this.plugin.settings.hideFrontmatter && this.updateFrontMatterVisible(this.editor as Editor, this.file as TFile);
 
 		// range.type === 'while' && this.editor?.editorComponent.toggleFrontMatter();
+
+
+		const title = this.containerEl.getAttr('alt');
+		if (title) {
+			if (title === 'readonly' || title.contains('readonly')) {
+				this.editor?.cm.dispatch({
+					effects: embedEditor.readOnlyDepartment.reconfigure(EditorState.readOnly.of(true))
+				});
+
+				const button = this.containerEl.createEl('div', {
+					cls: 'lock-btn',
+				});
+
+				let locked = true;
+
+				const component = new ExtraButtonComponent(button).setIcon('lock').onClick(() => {
+					this.editor?.cm.dispatch({
+						effects: embedEditor.readOnlyDepartment.reconfigure(EditorState.readOnly.of(!locked))
+					});
+
+					locked = !locked;
+					component.setIcon(locked ? 'lock' : 'unlock');
+				});
+			}
+		}
 
 		if (range.type !== 'part') {
 			const button = this.containerEl.createEl('div', {
