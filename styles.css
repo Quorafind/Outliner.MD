@@ -198,7 +198,7 @@ span.cm-group-collapse-button {
   display: none;
 }
 .outliner-editor .inline-title {
-  color: #171717;
+  color: var(--text-muted);
   font-size: var(36px, 32px);
   font-weight: 500;
   margin-bottom: 21px;

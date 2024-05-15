@@ -1,4 +1,4 @@
-import { App, Component, debounce, Editor, ExtraButtonComponent, Notice, TFile } from "obsidian";
+import { App, Component, debounce, Editor, ExtraButtonComponent, TFile } from "obsidian";
 import { CalculateRangeForZooming } from "./calculateRangeForZooming";
 import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
 import { getIndent } from "./utils";

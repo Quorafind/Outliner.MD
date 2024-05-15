@@ -37,7 +37,7 @@ export class EmbeddedRender extends Component {
 		const targetFile = this.file;
 		targetFile && this.app.vault.read(targetFile).then((data) => {
 			this.data = data;
-			if(!targetFile) return;
+			if (!targetFile) return;
 
 			const targetRange = this.getRange(targetFile);
 
@@ -46,10 +46,10 @@ export class EmbeddedRender extends Component {
 
 		this.registerEvent(this.app.metadataCache.on('changed', (file) => {
 			this.childComponent && this.updateFile(file);
-		}))
+		}));
 	}
 
-	updateFile = debounce((file: TFile)=> {
+	updateFile = debounce((file: TFile) => {
 		if (file.path === this.file?.path) {
 			this.app.vault.read(file).then(async (data) => {
 				if (this.data === data) return;
@@ -59,7 +59,7 @@ export class EmbeddedRender extends Component {
 				this.range = {
 					from: targetRange.from,
 					to: targetRange.to
-				}
+				};
 
 				this.childComponent && await this.updateContent(data, this.containerEl, file.path, this.childComponent);
 				// this.createEmbed(this.containerEl, file.path, this.data || "", targetRange);
@@ -102,11 +102,11 @@ export class EmbeddedRender extends Component {
 		this.range = {
 			from: range.from,
 			to: range.to
-		}
+		};
 
 		const button = this.containerEl.createEl('div', {
 			cls: 'source-btn',
-		})
+		});
 
 		this.containerEl.toggleClass('embedded-part', true);
 
@@ -116,28 +116,28 @@ export class EmbeddedRender extends Component {
 				type: 'markdown',
 			});
 			this.file && await leaf.openFile(this.file);
-		})
+		});
 		return this.addChild(this.childComponent);
 	}
 
 	getRange(targetFile: TFile) {
 		const cache = this.app.metadataCache.getFileCache(targetFile);
 
-		if(this.sourcePath && !this.subpath) {
+		if (this.sourcePath && !this.subpath) {
 			const title = this.containerEl.getAttr('alt');
 
-			if(title) {
+			if (title) {
 				const content = this.data;
 				const targetBlockId = `%%${title}%%`;
 
 				// console.log('content', content, targetBlockId, title);
 
-				if(!content) {
+				if (!content) {
 					return {
 						from: 0,
 						to: 0,
 						type: 'whole'
-					}
+					};
 				}
 
 				const start = content.indexOf(targetBlockId);
@@ -145,12 +145,12 @@ export class EmbeddedRender extends Component {
 
 				console.log('start', start, end, targetBlockId, content, title);
 
-				if(start !== -1 && end !== -1) {
+				if (start !== -1 && end !== -1) {
 					return {
 						from: start + targetBlockId.length + 1,
 						to: end - 1,
 						type: 'part',
-					}
+					};
 				}
 			}
 		}
@@ -159,19 +159,19 @@ export class EmbeddedRender extends Component {
 			from: 0,
 			to: this.data?.length || 0,
 			type: 'whole',
-		}
-		if(cache && this.subpath) {
+		};
+		if (cache && this.subpath) {
 			if (/#\^/.test(this.subpath)) {
 				const id = this.subpath.slice(2);
 				const block = Object.values(cache?.blocks || {}).find((key) => {
 					return key.id === id;
-				})
+				});
 				if (block) {
 					targetRange = {
 						from: block.position?.start.offset,
 						to: block.position?.end.offset,
 						type: 'block'
-					}
+					};
 
 					// console.log('cache', cache, block);
 				}
@@ -189,7 +189,7 @@ export class EmbeddedRender extends Component {
 						from: headingBlock.position.start.offset,
 						to: headingBlock.position.end.offset,
 						type: 'heading'
-					}
+					};
 				}
 
 				return targetRange;

@@ -71,7 +71,7 @@ declare module "obsidian" {
 			getPlugin(name: string): any;
 		};
 		embedRegistry: {
-			constructor: ()=> void;
+			constructor: () => void;
 			embedByExtension: {
 				md: (...args: any[]) => MarkdownInfo;
 			};

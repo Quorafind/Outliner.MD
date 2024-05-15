@@ -7,7 +7,6 @@ import {
 	zoomStateField,
 	zoomWithHideIndentEffect
 } from "./checkVisible";
-import { editorEditorField, editorInfoField } from "obsidian";
 
 export const FoldAnnotation = Annotation.define<string>();
 

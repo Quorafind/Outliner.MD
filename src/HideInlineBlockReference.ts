@@ -70,5 +70,5 @@ export function hideInlineBlockReference() {
 		},
 
 		provide: (zoomStateField) => EditorView.decorations.from(zoomStateField),
-	})
+	});
 }
