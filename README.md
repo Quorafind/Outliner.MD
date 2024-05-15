@@ -3,7 +3,7 @@
   <img alt="Light mode" src="https://github.com/Quorafind/Outliner.md/blob/main/assets/outliner-md.png">
 </picture>
 
-<img alt="GitHub Release" src="https://img.shields.io/github/downloads/quorafind/outliner.md/total?color=%23d12828"> <img alt="GitHub Release" src="https://img.shields.io/github/v/release/quorafind/outliner.md?color=%23d12828">
+<img alt="GitHub Release" src="https://img.shields.io/github/downloads/quorafind/outliner.md/total?color=%23d12828"> <img alt="GitHub Release" src="https://img.shields.io/github/v/release/quorafind/outliner.md?color=%23d12828"> <img alt="Discord" src="https://img.shields.io/discord/1239780560050589707?logo=discord&label=Outliner.md&color=%23cc3434&link=https%3A%2F%2Fdiscord.gg%2FDhqa7YkEDs">
 
 </div>
 
