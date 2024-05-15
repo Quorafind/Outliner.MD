@@ -2,7 +2,6 @@
 <picture>
   <img alt="Light mode" src="https://github.com/Quorafind/Outliner.md/blob/main/assets/outliner-md.png">
 </picture>
-<p>Enhancing your Obsidian outliner experience.</p>
 
 <img alt="GitHub Release" src="https://img.shields.io/github/downloads/quorafind/outliner.md/total?color=%23d12828"> <img alt="GitHub Release" src="https://img.shields.io/github/v/release/quorafind/outliner.md?color=%23d12828">
 
