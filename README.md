@@ -34,5 +34,23 @@ Just open your note, scroll to the bottom, and you can edit the backlinks direct
 
 Click on the ribbon or right-click on the folder to create a new outliner note.
 
+## Installation
 
+### From Obsidian
 
+Not available yet.
+
+### From BRAT
+
+1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin in Obsidian plugin market.
+2. Open the settings of BRAT, click on the `Add beta plugin` button.
+3. Input `https://github.com/quorafind/outliner.md` in the input box.
+4. Click on the `Install` button.
+5. Done!
+
+### Manual Installation
+
+1. Download the latest release from the [release page](https://github.com/quorafind/outliner.md/releases/latest).
+2. Unzip it, copy the unzipped folder to the obsidian plugin folder(`YOUR_VAULT_NAME/.obsidian/plugins/outliner-md`), make sure there are `main.js`, `styles.css` and `manifest.json` files in the folder.
+3. Restart Obsidian.
+4. Enable the plugin in the community plugins settings.
