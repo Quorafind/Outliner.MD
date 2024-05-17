@@ -32,8 +32,6 @@ class BulletMenuMarkerWidget extends WidgetType {
 			const bulletMarker = currentLine.text.trimStart().match(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/)?.[0] || '-';
 			const bulletMarkerLength = currentLine.text.trimStart().match(/^(-|\*|(\d{1,}\.))(\s(\[.\]))?/)?.[0]?.length || 2;
 
-			console.log(bulletMarker, bulletMarkerLength, currentLine.text.trimStart());
-
 			menu.addItem((item) => {
 				// @ts-ignore
 				const subMenu = item.setIcon('corner-up-right').setTitle('Turn into').setSubmenu() as Menu;
@@ -238,7 +236,7 @@ class BulletMenuMarkerWidget extends WidgetType {
 							}
 						});
 						const result = editor && (editor.editorComponent as EmbeddableMarkdownEditor).options.onEnter(editor.editorComponent, false, true);
-						if (result === false) {
+						if (!result) {
 							editor?.transaction({
 								changes: [
 									{
@@ -386,7 +384,7 @@ class BulletMenuMarkerWidget extends WidgetType {
 				item.setIcon('calendar').setTitle('Add date').onClick(() => {
 					const currentDate = moment().format('YYYY-MM-DD');
 					const currentDateText = `📅 ${currentDate}`;
-					console.log(currentDateText);
+
 					editor?.transaction({
 						changes: [
 							{

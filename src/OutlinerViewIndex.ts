@@ -59,6 +59,10 @@ export default class OutlinerViewPlugin extends Plugin {
 
 		this.registerEditorExtension([createMarkRendererPlugin()]);
 		// this.patchInlinePreview();
+		this.app.workspace.onLayoutReady(() => {
+			document.body.toggleClass('outliner-paper-layout', this.settings.paperLayout);
+			// document.body.toggleClass('outliner-bold-text', this.settings.boldText);
+		});
 	}
 
 	onunload() {
@@ -172,7 +176,7 @@ export default class OutlinerViewPlugin extends Plugin {
 			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
 				return false;
 			}
-			if (!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')?.replace('readonly', '')))) {
+			if (!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')))) {
 				return false;
 			}
 			return new EmbeddedRender(e, t, n);
@@ -181,8 +185,6 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.register(around(mdFunction, {
 			md: (next) => {
 				return function (e: any, t: any, n: any) {
-
-					console.log(e, t, n);
 
 					if (e && e.displayMode === false && e.showInline) {
 						// console.log(this);
@@ -286,6 +288,15 @@ export default class OutlinerViewPlugin extends Plugin {
 						return next.apply(this);
 					};
 				},
+				// openLinkText(next) {
+				// 	return function (linktext: string, sourcePath: string, newLeaf?: boolean | PaneType | undefined, openViewState?: OpenViewState | undefined) {
+				// 		console.log('openLinkText', this, linktext, sourcePath, newLeaf, openViewState);
+				//
+				// 		return next.apply(this, [linktext, sourcePath, newLeaf, openViewState]);
+				// 	};
+				//
+				//
+				// },
 
 				setViewState(next) {
 					return function (state: ViewState, ...rest: any[]) {
@@ -444,8 +455,6 @@ export default class OutlinerViewPlugin extends Plugin {
 							to: this.end,
 						};
 
-						console.log('afterRange', this.currentRange, this);
-
 						return result;
 					};
 				},
@@ -465,7 +474,6 @@ export default class OutlinerViewPlugin extends Plugin {
 			this.register(resultUninstaller);
 
 			const parent = child.parent;
-			console.log('parent', parent);
 
 			const componentUninstaller = around(parent.constructor.prototype, {
 				renderContentMatches: (old) => {
@@ -508,7 +516,6 @@ export default class OutlinerViewPlugin extends Plugin {
 							if (child?.file && !child?.pathEl) {
 								if (child.vChildren._children[0]) {
 									patchSearchResultDom(plugin, child.vChildren._children[0]);
-									console.log('child', child.vChildren._children[0], this);
 									uninstaller();
 									setTimeout(() => {
 										// child.vChildren._children.forEach((child: any) => {
@@ -695,7 +702,6 @@ export default class OutlinerViewPlugin extends Plugin {
 							file: markdownView.file?.path,
 						});
 
-						console.log(markdownView.leaf);
 					}
 
 					// This command will only show up in Command Palette when the check function returns true
@@ -716,7 +722,6 @@ export default class OutlinerViewPlugin extends Plugin {
 						this.outlinerFileModes[outlinerView.leaf.id] = 'markdown';
 						this.setMarkdownView(outlinerView.leaf);
 
-						console.log(outlinerView.leaf);
 					}
 
 					// This command will only show up in Command Palette when the check function returns true

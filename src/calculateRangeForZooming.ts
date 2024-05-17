@@ -82,7 +82,6 @@ export class CalculateRangeForZooming {
 			}
 
 			if (inFoldRanges) {
-				console.log('inFoldRanges', inFoldRanges);
 				const startLine = view.state.doc.lineAt(containedRange.from);
 				// Get fold ranges that start from the startLine;
 				showedRanges.push({

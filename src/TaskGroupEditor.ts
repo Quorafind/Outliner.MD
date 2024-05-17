@@ -7,6 +7,7 @@ import { foldable } from "@codemirror/language";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { CalculateRangeForZooming } from "./calculateRangeForZooming";
 import { SelectionAnnotation } from "./SelectionController";
+import OutlinerViewPlugin from "./OutlinerViewIndex";
 
 
 export class TaskGroupEditor extends Component {
@@ -42,7 +43,6 @@ export class TaskGroupEditor extends Component {
 		this.registerEvent(
 			this.app.metadataCache.on("dataview:index-ready", () => {
 					this.initEditor();
-					console.log('index ready');
 					this.indexed = true;
 				}
 			));
@@ -71,7 +71,6 @@ export class TaskGroupEditor extends Component {
 	requestSave = debounce(async (path: string, data: string) => {
 		const file = this.app.vault.getFileByPath(path);
 		if (file) {
-			console.log('saving', path, data);
 			this.editing = false;
 			await this.app.vault.modify(file, data);
 		}
@@ -82,6 +81,7 @@ export class TaskGroupEditor extends Component {
 		from: number,
 		to: number
 	}[]) {
+
 		const embedEditor = new EmbeddableMarkdownEditor(this.app, container, {
 			// onEscape: (editor) => {
 			// 	new Notice(`Escaped the editor: (${editor.initial_value})`);
@@ -286,7 +286,6 @@ export class TaskGroupEditor extends Component {
 							const lineText = lineCursor.text;
 							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
 								const currentLine = (editor.editor as Editor).cm.state.doc.line(i);
-								console.log('currentLine', currentLine.text, currentLine.from, currentLine.to);
 								(editor.editor as Editor).cm.dispatch({
 									selection: {
 										head: currentLine.to,
@@ -383,7 +382,6 @@ export class TaskGroupEditor extends Component {
 					});
 					return true;
 				} else if (/^\s+$/g.test(lineText)) {
-					console.log('empty line', lineText);
 					(editor.editor as Editor).transaction({
 						changes: [
 							{
@@ -406,7 +404,6 @@ export class TaskGroupEditor extends Component {
 						const firstLineInRange = range.from.line;
 						const lastLineInRange = range.to.line;
 
-						console.log('range', range);
 						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
 						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
 						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
@@ -437,8 +434,6 @@ export class TaskGroupEditor extends Component {
 						return;
 					}
 
-					console.log('changed', "hello changed", update.state.doc.toString());
-
 					this.editing = true;
 					this.requestSave(path, update.state.doc.toString());
 				}
@@ -453,8 +448,6 @@ export class TaskGroupEditor extends Component {
 		embedEditor.editor.getValue = () => {
 			return data || "";
 		};
-
-		console.log(range);
 
 		this.updateVisibleRange(embedEditor.editor, range);
 
@@ -474,8 +467,6 @@ export class TaskGroupEditor extends Component {
 
 
 	updateVisibleRange(editor: Editor, range: { from: number, to: number } | { from: number, to: number }[]) {
-		console.log(range);
-
 		if (Array.isArray(range)) {
 			const wholeRanges = range.map((r) => {
 				return (this.calculateRangeForZooming.calculateRangeForZooming(editor.cm.state, r.from) || {
@@ -484,8 +475,6 @@ export class TaskGroupEditor extends Component {
 				});
 			});
 			this.KeepOnlyZoomedContentVisible.keepRangesVisible(editor.cm, wholeRanges);
-
-			console.log('update ranges', wholeRanges);
 
 			for (const r of wholeRanges) {
 				const firstLine = editor.cm.state.doc.lineAt(r.from);
@@ -541,8 +530,6 @@ FROM ""
 WHERE contains(text, "#now")
 GROUP BY file.path`);
 
-		console.log('result', result.successful, result.value.values);
-
 		if (!result.successful) return;
 		const values = result.value.values;
 
@@ -570,7 +557,8 @@ GROUP BY file.path`);
 				});
 			};
 
-			taskGroupContainer.hide();
+			const settings = ((this.app.plugins.getPlugin('outliner-md') || this.app.plugins.getPlugin('outliner-md-beta')) as OutlinerViewPlugin).settings;
+			settings.foldTaskGroup && taskGroupContainer.hide();
 			collapseButton.toggleClass('cm-task-container-collapsed', !taskGroupContainer.isShown());
 
 
@@ -602,7 +590,6 @@ GROUP BY file.path`);
 	}, 1000);
 
 	async updateEditor(file: TFile, oldPath?: string) {
-		console.log('is editing', this.editing);
 		if (this.editing) return;
 
 		const api = getAPI(this.app);
@@ -634,7 +621,6 @@ GROUP BY file.path`);
 
 					const lastContent = this.contentMap.get(targetFile.path);
 					if (lastContent !== data) {
-						console.log('changed', lastContent, data);
 
 						if (this.contentMap.has(targetFile.path)) {
 							this.contentMap.set(targetFile.path, data);

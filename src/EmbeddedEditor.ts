@@ -63,7 +63,6 @@ export class EmbeddedEditor extends Component {
 
 		if (this.initData && targetFile && this.targetRange) {
 			this.data = this.initData;
-			console.log('initdata', this.initData.slice(this.targetRange.from, this.targetRange.to));
 			// const targetRange = this.getRange(targetFile);
 			this.createEditor(this.containerEl, targetFile?.path, this.data || "", {
 				...this.targetRange,
@@ -109,8 +108,11 @@ export class EmbeddedEditor extends Component {
 
 
 			this.data = data;
-			const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
-			lastLine && this.editor?.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length});
+			// const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
+			this.editor?.replaceRange(data, {
+				line: 0,
+				ch: 0
+			}, this.editor.offsetToPos(this.editor.cm.state.doc.length));
 
 			const targetRange = this.getRange(file);
 			this.range = {
@@ -385,7 +387,7 @@ export class EmbeddedEditor extends Component {
 							const lineText = lineCursor.text;
 							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
 								const currentLine = (editor.editor as Editor).cm.state.doc.line(i);
-								console.log('currentLine', currentLine.text, currentLine.from, currentLine.to);
+
 								(editor.editor as Editor).cm.dispatch({
 									selection: {
 										head: currentLine.to,
@@ -482,7 +484,7 @@ export class EmbeddedEditor extends Component {
 					});
 					return true;
 				} else if (/^\s+$/g.test(lineText)) {
-					console.log('empty line', lineText);
+
 					(editor.editor as Editor).transaction({
 						changes: [
 							{
@@ -505,7 +507,6 @@ export class EmbeddedEditor extends Component {
 						const firstLineInRange = range.from.line;
 						const lastLineInRange = range.to.line;
 
-						console.log('range', range);
 						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
 						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
 						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
@@ -678,10 +679,7 @@ export class EmbeddedEditor extends Component {
 		} else {
 			// if(range.from === 0 && range.to === this.editor?.cm.state.doc.length) return;
 			if (type === 'part') {
-				console.log('range', range, this.targetRange, this.containerEl, this.data?.slice(
-					range.from,
-					range.to
-				));
+
 				editor.cm.dispatch({
 					effects: [zoomInEffect.of({
 						from: range.from,
@@ -746,7 +744,7 @@ export class EmbeddedEditor extends Component {
 		}
 
 		if (this.sourcePath && !this.subpath) {
-			const title = this.containerEl.getAttr('alt');
+			const title = this.containerEl.getAttr('alt')?.replace('readonly', '');
 
 			if (title) {
 				const content = this.data;
@@ -839,7 +837,6 @@ export class EmbeddedEditor extends Component {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const frontMatter = cache?.frontmatterPosition;
 
-		console.log('frontMatter', frontMatter);
 		if (frontMatter) {
 			editor.cm.dispatch({
 				effects: hideFrontMatterEffect.of({

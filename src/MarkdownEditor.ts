@@ -43,7 +43,6 @@ function resolveEditorPrototype(app: App) {
 	// Mark as editable to instantiate the editor
 	widgetEditorView.editable = true;
 	widgetEditorView.showEditor();
-	console.log(widgetEditorView, widgetEditorView.editMode);
 	const MarkdownEditor = Object.getPrototypeOf(Object.getPrototypeOf(widgetEditorView.editMode!));
 
 	// Unload to remove the temporary editor
@@ -200,9 +199,23 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 				getClickableTokenAt: (oldMethod: any) => {
 					return function (...args: any[]) {
 						const token = oldMethod.call(this, ...args);
+						// if (token && token.type === 'internal-link') {
+						// 	if (/^o-(.*)?/.test(token.displayText)) {
+						//
+						//
+						// 		return;
+						// 	}
+						// 	return token;
+						//
+						// }
 						if (token && token.type === 'tag') {
+							// console.log(this, self.app.workspace.activeLeaf?.view, self.app.workspace.activeLeaf?.view?.getViewType());
 							const activeView = self.app.workspace.activeEditor.editMode.view as OutlinerEditorView;
 							// console.log(activeView, token.text, this.activeCM);
+							if (activeView.getViewType() !== 'outliner-editor-view') {
+								return token;
+							}
+
 							activeView?.searchWithText(token.text);
 							return;
 						}
@@ -248,7 +261,11 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		if (this.options.foldByDefault) {
 			const allFoldedRanges = getAllFoldableRanges(this.editor.cm.state);
-			const effects = allFoldedRanges.map((r) => {
+
+			const effects = allFoldedRanges.filter((t) => {
+				t.from < t.to;
+			}).map((r) => {
+
 				return foldEffect.of({
 					from: r.from,
 					to: r.to,

@@ -124,7 +124,7 @@ export class EmbeddedRender extends Component {
 		const cache = this.app.metadataCache.getFileCache(targetFile);
 
 		if (this.sourcePath && !this.subpath) {
-			const title = this.containerEl.getAttr('alt');
+			const title = this.containerEl.getAttr('alt')?.replace('readonly', '');
 
 			if (title) {
 				const content = this.data;
@@ -142,8 +142,6 @@ export class EmbeddedRender extends Component {
 
 				const start = content.indexOf(targetBlockId);
 				const end = content.indexOf(targetBlockId, start + 1);
-
-				console.log('start', start, end, targetBlockId, content, title);
 
 				if (start !== -1 && end !== -1) {
 					return {

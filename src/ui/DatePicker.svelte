@@ -10,8 +10,6 @@
 
 	const dispatch = createEventDispatcher();
 
-	console.log('type', type);
-
 	function handleSelect(event: any) {
 		if (!event.detail.value) return;
 		dispatch('select', event.detail);
@@ -30,7 +28,9 @@
 	}}>{value}</button>
 	{#if openProp}
 		<div class="float-date-picker">
-			<SveltyPicker pickerOnly mode={type} autocommit={true} initialDate={type === 'date' ? moment(date, 'YYYY-MM-DD').toDate() : moment(date, 'HH:mm:ss').toDate()} format={type === 'time'? 'hh:ii:ss' : 'yyyy-mm-dd'} positionResolver={()=>{
+			<SveltyPicker pickerOnly mode={type} autocommit={true}
+						initialDate={type === 'date' ? moment(date, 'YYYY-MM-DD').toDate() : moment(date, 'HH:mm:ss').toDate()}
+						format={type === 'time'? 'hh:ii:ss' : 'yyyy-mm-dd'} positionResolver={()=>{
 					}} on:dateChange={handleSelect} on:blur={closeDatePicker} on:cancel={closeDatePicker}>
 				<svelte:fragment slot="action-row" let:i18n let:onToday
 				>

@@ -9,7 +9,6 @@ export const selectionController = () => {
 		const currentLine = tr.state.doc.lineAt(currentSelection.from);
 
 		if (tr.annotation(SelectionAnnotation) === 'arrow.up.selection') {
-			console.log('arrow.up.selection', currentSelection.from, currentSelection.to, currentLine.text);
 			return tr;
 		}
 

@@ -53,8 +53,6 @@ export class EditWidget extends WidgetType {
 				// @ts-ignore
 				const widget = embeddedContainer.cmView.widget;
 
-				console.log(widget);
-
 				(widget.editor as any).cm.focus();
 				(widget.editor as any).cm.dispatch({
 					selection: {
@@ -171,8 +169,6 @@ export const zoomStateField = StateField.define<DecorationSet>({
 				if (lastVisibleEnd < totalLength) {
 					hiddenRanges.push({from: lastVisibleEnd, to: totalLength});
 				}
-
-				console.log(hiddenRanges);
 
 				hiddenRanges.forEach((range) => {
 					value = value.update({

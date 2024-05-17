@@ -6,6 +6,9 @@ export interface OutlinerViewSettings {
 	livePreviewForBacklinks: boolean;
 	editableBlockEmbeds: boolean;
 	hideFrontmatter: boolean;
+	foldTaskGroup: boolean;
+	paperLayout: boolean;
+	// boldText: boolean;
 }
 
 export const DEFAULT_SETTINGS: OutlinerViewSettings = {
@@ -13,6 +16,9 @@ export const DEFAULT_SETTINGS: OutlinerViewSettings = {
 	livePreviewForBacklinks: false,
 	editableBlockEmbeds: true,
 	hideFrontmatter: false,
+	foldTaskGroup: true,
+	paperLayout: true,
+	// boldText: true,
 };
 
 
@@ -56,6 +62,8 @@ export class OutlinerViewSettingTab extends PluginSettingTab {
 
 		this.initBacklinkSettings(containerEl, settings);
 		this.initBlockEmbedSettings(containerEl, settings);
+		this.initTaskGroupSettings(containerEl, settings);
+		this.styleSettings(containerEl, settings);
 	}
 
 
@@ -113,5 +121,43 @@ export class OutlinerViewSettingTab extends PluginSettingTab {
 					hideFrontMatterSetting.settingEl.toggleClass('show-reload-button', true);
 				}));
 		}
+	}
+
+	initTaskGroupSettings(containerEl: HTMLElement, settings: OutlinerViewSettings) {
+		const taskGroupSetting = new Setting(containerEl)
+			.setName('Fold task group')
+			.addButton(button => button.setButtonText('Reload').onClick(() => {
+				window.location.reload();
+			}))
+			.addToggle(toggle => toggle.setValue(settings.foldTaskGroup).onChange(async (value) => {
+				settings.foldTaskGroup = value;
+				this.applySettingsUpdate();
+
+				taskGroupSetting.settingEl.toggleClass('show-reload-button', true);
+			}));
+	}
+
+	styleSettings(containerEl: HTMLElement, settings: OutlinerViewSettings) {
+		new Setting(containerEl).setHeading().setName('Style');
+
+		new Setting(containerEl)
+			.setName('Paper layout')
+			.addToggle(toggle => toggle.setValue(settings.paperLayout).onChange(async (value) => {
+				settings.paperLayout = value;
+				this.applySettingsUpdate();
+
+				document.body.toggleClass('outliner-paper-layout', value);
+				// styleSetting.settingEl.toggleClass('show-reload-button', true);
+			}));
+
+		// new Setting(containerEl)
+		// 	.setName('Bold text')
+		// 	.addToggle(toggle => toggle.setValue(settings.boldText).onChange(async (value) => {
+		// 		settings.boldText = value;
+		// 		this.applySettingsUpdate();
+		//
+		// 		document.body.toggleClass('outliner-bold-text', value);
+		// 		// styleSetting.settingEl.toggleClass('show-reload-button', true);
+		// 	}));
 	}
 }

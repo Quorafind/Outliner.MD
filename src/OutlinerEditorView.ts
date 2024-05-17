@@ -17,7 +17,7 @@ import { getIndent } from "./utils";
 import { hideRangesEffect } from "./checkVisible";
 import { EditorView } from "@codemirror/view";
 import { ClearSearchHighlightEffect } from "./SearchHighlight";
-import { foldable, unfoldAll } from "@codemirror/language";
+import { foldable } from "@codemirror/language";
 import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
 import { SelectionAnnotation } from "./SelectionController";
 
@@ -61,7 +61,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		super(leaf);
 
 		this.app = this.plugin.app;
-		this.scope = new Scope();
+		this.scope = new Scope(this.app.scope);
 	}
 
 	hoverPopover: any;
@@ -506,7 +506,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					});
 					return true;
 				} else if (/^\s+$/g.test(lineText)) {
-					console.log('empty line', lineText);
 					(editor.editor as Editor).transaction({
 						changes: [
 							{
@@ -537,7 +536,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						const firstLineInRange = range.from.line;
 						const lastLineInRange = range.to.line;
 
-						console.log('range', range);
 						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
 						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
 						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
@@ -600,7 +598,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 				return false;
 			},
 			onArrowDown: (editor, mod: boolean, shift: boolean) => {
-				console.log('arrow down', mod, shift);
 				return false;
 			},
 			getDisplayText: () => this.getDisplayText(),
@@ -719,8 +716,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			return;
 		}
 
-		console.log(unfoldAll(view));
-
 		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnSearch(
 			view,
 			this.editor?.getAllFoldableLines() || [],
@@ -733,8 +728,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	}
 
 	hideCompletedItems(view: EditorView) {
-		console.log(view);
-
 		if (this.hideCompleted) {
 			this.plugin.KeepOnlyZoomedContentVisible?.showAllContent(view);
 			this.hideCompleted = false;
@@ -846,8 +839,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	public searchWithText(text: string) {
 		if (!this.searchActionEl) return;
 		this.searchActionEl.click();
-
-		console.log(this, text);
 
 		const searchInput = document.body.find('.search-menu input') as HTMLInputElement;
 		searchInput?.focus();
