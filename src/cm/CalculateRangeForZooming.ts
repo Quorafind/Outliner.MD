@@ -1,7 +1,7 @@
 import { EditorState } from "@codemirror/state";
 import { foldable } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
-import { getSearchRanges } from "./utils";
+import { getSearchRanges } from "../utils/utils";
 
 export class CalculateRangeForZooming {
 	public calculateRangeForZooming(state: EditorState, pos: number) {

@@ -1,7 +1,7 @@
 import { Decoration, DecorationSet, EditorView } from "@codemirror/view";
 import { RangeSetBuilder, StateField } from "@codemirror/state";
 
-const blankBulletLine = Decoration.mark({
+const bulletLineWithNoContent = Decoration.mark({
 	attributes: {class: 'cm-blank-bullet-line'},
 	// class: 'cm-blank-bullet-line',
 });
@@ -16,7 +16,7 @@ export const blankBulletLineWidget = StateField.define<DecorationSet>({
 		for (let i = 1; i <= tr.state.doc.lines; i++) {
 			const line = tr.state.doc.line(i);
 			if (/^(-|\*|(\d{1,}\.))(\s(\[.\]))?$/g.test(line.text.trim())) {
-				builder.add(line.from, line.to, blankBulletLine);
+				builder.add(line.from, line.to, bulletLineWithNoContent);
 			}
 		}
 
@@ -26,3 +26,4 @@ export const blankBulletLineWidget = StateField.define<DecorationSet>({
 	},
 	provide: (f) => EditorView.decorations.from(f),
 });
+

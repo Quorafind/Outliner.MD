@@ -12,26 +12,26 @@
  */
 
 import { App, type Constructor, Scope, TFile, WorkspaceLeaf } from "obsidian";
-import { Compartment, EditorSelection, type Extension, Prec, EditorState } from "@codemirror/state";
+import { Compartment, EditorSelection, EditorState, type Extension, Prec } from "@codemirror/state";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
-import type { ScrollableMarkdownEditor } from "./obsidian-ex";
-import { AddNewLineBtn } from "./AddNewLine";
+import type { ScrollableMarkdownEditor } from "../types/obsidian-ex";
+import { AddNewLineBtn } from "../components/AddNewLine";
 // import { zoomStateField } from "./checkVisible";
-import { placeholder } from "./Placeholder";
-import { OutlinerEditorView } from "./OutlinerEditorView";
-import { SearchHighlight } from "./SearchHighlight";
-import { BulletMenu } from "./BulletMenu";
-import { TaskGroupComponent } from "./TaskGroupComponent";
-import { blankBulletLineWidget } from "./BlankBulletLine";
-import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
-import { selectionController } from "./SelectionController";
-import { createDateRendererPlugin } from "./DateRender";
-import { FoldAnnotation, FoldingExtension, getAllFoldableRanges } from "./BulletDescAutoCollpase";
+import { placeholder } from "../cm/Placeholder";
+import { OutlinerEditorView } from "../OutlinerEditorView";
+import { SearchHighlight } from "../cm/SearchHighlight";
+import { BulletMenu } from "../components/BulletMenu";
+import { TaskGroupComponent } from "../components/task-group/TaskGroupComponent";
+import { blankBulletLineWidget } from "../cm/BulletLineWithNoContent";
+import { KeepRangeVisible } from "../cm/KeepRangeVisible";
+import { selectionController } from "../cm/SelectionController";
+import { createDateRendererPlugin } from "../cm/DateRender";
+import { FoldAnnotation, FoldingExtension, getAllFoldableRanges } from "../cm/BulletDescAutoCollpase";
 import { foldEffect } from "@codemirror/language";
 
 
-function resolveEditorPrototype(app: App) {
+export function resolveEditorPrototype(app: App) {
 	// Create a temporary editor to resolve the prototype of ScrollableMarkdownEditor
 	const widgetEditorView = app.embedRegistry.embedByExtension.md(
 		{app, containerEl: document.createElement('div')},
@@ -124,7 +124,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	view: OutlinerEditorView;
 
 	readOnlyDepartment = new Compartment();
-	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
+	KeepOnlyZoomedContentVisible: KeepRangeVisible = new KeepRangeVisible();
 
 	/**
 	 * Construct the editor
@@ -199,15 +199,6 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 				getClickableTokenAt: (oldMethod: any) => {
 					return function (...args: any[]) {
 						const token = oldMethod.call(this, ...args);
-						// if (token && token.type === 'internal-link') {
-						// 	if (/^o-(.*)?/.test(token.displayText)) {
-						//
-						//
-						// 		return;
-						// 	}
-						// 	return token;
-						//
-						// }
 						if (token && token.type === 'tag') {
 							// console.log(this, self.app.workspace.activeLeaf?.view, self.app.workspace.activeLeaf?.view?.getViewType());
 							const activeView = self.app.workspace.activeEditor.editMode.view as OutlinerEditorView;

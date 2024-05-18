@@ -12,14 +12,14 @@ import {
 	WorkspaceLeaf
 } from "obsidian";
 import OutlinerViewPlugin from "./OutlinerViewIndex";
-import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
-import { getIndent } from "./utils";
-import { hideRangesEffect } from "./checkVisible";
+import { EmbeddableMarkdownEditor } from "./editor-components/MarkdownEditor";
+import { getIndent } from "./utils/utils";
+import { hideRangesEffect } from "./cm/VisibleRangeController";
 import { EditorView } from "@codemirror/view";
-import { ClearSearchHighlightEffect } from "./SearchHighlight";
+import { ClearSearchHighlightEffect } from "./cm/SearchHighlight";
 import { foldable } from "@codemirror/language";
-import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
-import { SelectionAnnotation } from "./SelectionController";
+import { KeepRangeVisible } from "./cm/KeepRangeVisible";
+import { SelectionAnnotation } from "./cm/SelectionController";
 
 export function isEmebeddedLeaf(leaf: WorkspaceLeaf) {
 	// Work around missing enhance.js API by checking match condition instead of looking up parent
@@ -38,7 +38,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	filteredValue: string = "";
 
-	KeepOnlyZoomedContentVisible: KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
+	KeepOnlyZoomedContentVisible: KeepRangeVisible = new KeepRangeVisible();
 
 	searchActionEl: HTMLElement | undefined;
 	clearFilterBtn: HTMLElement | undefined;

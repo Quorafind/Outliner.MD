@@ -10,7 +10,7 @@ import {
 	WidgetType
 } from "@codemirror/view";
 import { editorLivePreviewField } from "obsidian";
-import DatePicker from "./ui/DatePicker.svelte";
+import DatePicker from "../ui/DatePicker.svelte";
 
 interface DecoSpec {
 	widget?: DateRenderWidget;
@@ -28,7 +28,7 @@ class DateRenderWidget extends WidgetType {
 		public readonly type: 'date' | 'time'
 	) {
 		super();
-
+  
 	}
 
 	eq(widget: WidgetType): boolean {

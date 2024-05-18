@@ -1,7 +1,7 @@
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { App, editorInfoField, ExtraButtonComponent, Menu, MenuItem, moment, Notice } from "obsidian";
-import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
+import { EmbeddableMarkdownEditor } from "../editor-components/MarkdownEditor";
 
 class BulletMenuMarkerWidget extends WidgetType {
 	bulletSpanEl: HTMLSpanElement | undefined;

@@ -1,12 +1,12 @@
 import { App, Component, debounce, Editor, ExtraButtonComponent, TFile } from "obsidian";
-import { CalculateRangeForZooming } from "./calculateRangeForZooming";
-import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
-import { getIndent } from "./utils";
+import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
+import { EmbeddableMarkdownEditor } from "../../editor-components/MarkdownEditor";
+import { getIndent } from "../../utils/utils";
 import { foldable } from "@codemirror/language";
-import { SelectionAnnotation } from "./SelectionController";
-import { hideFrontMatterEffect, zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
-import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
-import OutlinerViewPlugin from "./OutlinerViewIndex";
+import { SelectionAnnotation } from "../../cm/SelectionController";
+import { hideFrontMatterEffect, zoomInEffect, zoomWithHideIndentEffect } from "../../cm/VisibleRangeController";
+import { KeepRangeVisible } from "../../cm/KeepRangeVisible";
+import OutlinerViewPlugin from "../../OutlinerViewIndex";
 import { EditorState } from "@codemirror/state";
 
 export class EmbeddedEditor extends Component {
@@ -26,7 +26,7 @@ export class EmbeddedEditor extends Component {
 	range: { from: number; to: number; } | { from: number; to: number; }[] | undefined;
 
 	calculateRangeForZooming = new CalculateRangeForZooming();
-	KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
+	KeepOnlyZoomedContentVisible = new KeepRangeVisible();
 
 	constructor(plugin: OutlinerViewPlugin, e: {
 		sourcePath: string;
@@ -121,6 +121,9 @@ export class EmbeddedEditor extends Component {
 			};
 			targetRange.type !== 'whole' && this.updateVisibleRange(this.editor as Editor, this.range, targetRange.type as 'part' | 'block' | 'heading');
 			targetRange.type === 'whole' && this.plugin.settings.hideFrontmatter && this.updateFrontMatterVisible(this.editor as Editor, this.file as TFile);
+
+
+			console.log('file changed', file.path, this.file?.path, this.data, targetRange, this.range);
 		}
 	}, 800);
 
@@ -138,37 +141,6 @@ export class EmbeddedEditor extends Component {
 
 	requestSave = debounce(async (file: TFile, data: string) => {
 		if (file) {
-			// let targetData = data;
-			//
-			// const currentVisible = this.editor?.cm.visibleRanges;
-			// console.log('currentVisible', currentVisible);
-			//
-			// if (currentVisible && currentVisible[0]) {
-			// 	console.log(currentVisible);
-			// 	const currentData = this.editor?.cm.state.doc.toString().slice(
-			// 		currentVisible[0].from,
-			// 		currentVisible[0].to
-			// 	);
-			// 	if (this.range && !Array.isArray(this.range)) {
-			// 		const fileData = await this.app.vault.read(file);
-			//
-			// 		const originData = this.data?.slice(
-			// 			this.range?.from - 1,
-			// 			this.range?.to + 1
-			// 		);
-			//
-			// 		console.log('originData', originData, currentData, currentData !== originData);
-			//
-			// 		if (currentData && originData && currentData !== originData) {
-			// 			targetData = fileData.replace(originData, currentData);
-			// 		}
-			// 	}
-			// }
-			//
-			//
-			// this.data = targetData;
-			// await this.app.vault.modify(file, targetData);
-
 			this.data = data;
 			await this.app.vault.modify(file, data);
 		}
@@ -189,6 +161,8 @@ export class EmbeddedEditor extends Component {
 			// 	this.removeChild(editor);
 			// },
 			onEnter: (editor, mod: boolean, shift: boolean) => {
+				if (!editor.view) return false;
+
 				if (!shift) {
 					const {line, ch} = (editor.editor as Editor).getCursor();
 					const lineText = editor.editor.getLine(line);
@@ -447,6 +421,7 @@ export class EmbeddedEditor extends Component {
 				return false;
 			},
 			onDelete: (editor) => {
+				if (!editor.view) return false;
 				const {line, ch} = (editor.editor as Editor).getCursor();
 				const lineText = editor.editor.getLine(line);
 				// const from = editor.editor.posToOffset({line, ch});
@@ -500,6 +475,7 @@ export class EmbeddedEditor extends Component {
 				return false;
 			},
 			onIndent: (editor, mod: boolean, shift: boolean) => {
+				if (!editor.view) return false;
 				if (shift) {
 					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
 
@@ -575,15 +551,7 @@ export class EmbeddedEditor extends Component {
 			// console.log('targetRange', this.targetRange);
 			this.editor?.editorComponent.toggleSource();
 
-			// this.containerEl.onclick = (e) => {
-			// 	e.stopPropagation();
-			// 	// e.preventDefault();
-			// 	new Notice('Click to toggle source mode');
-			// };
-
 		}
-
-		// console.log('editor', this.editor);
 
 		range.type !== 'whole' && this.updateVisibleRange(embedEditor.editor, range, range.type as 'part' | 'block' | 'heading');
 		range.type === 'whole' && this.plugin.settings.hideFrontmatter && this.updateFrontMatterVisible(this.editor as Editor, this.file as TFile);

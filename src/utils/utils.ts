@@ -1,8 +1,8 @@
 import { RangeSet, RangeValue } from "@codemirror/state";
-import { App } from "obsidian";
+import { App, Editor, MarkdownView, Notice } from "obsidian";
 import { RegExpCursor } from "./regexp-cursor";
 import { EditorView } from "@codemirror/view";
-import { SearchHighlightEffect } from "./SearchHighlight";
+import { SearchHighlightEffect } from "../cm/SearchHighlight";
 
 export function rangeSetToArray<T extends RangeValue>(
 	rs: RangeSet<T>
@@ -79,4 +79,29 @@ export function randomId(e: number): string {
 	let n = 0;
 	for (; n < e; n++) t.push(((16 * Math.random()) | 0).toString(16));
 	return t.join('');
+}
+
+
+export function copyLink(editor: Editor, view: MarkdownView, type: 'embed' | 'link') {
+	const id = `o-${randomId(4)}`;
+	const mark = `%%${id}%%`;
+	const selection = editor.getSelection();
+	if (!selection) return;
+
+	let newLine = false;
+	if (selection.split('\n').length > 1) {
+		const startCursor = editor.getCursor('from');
+
+		if (startCursor.ch === 0) {
+			newLine = true;
+		}
+	}
+
+	editor.replaceSelection(`${mark + (newLine ? '\n' : '')}${selection}${mark}`);
+
+	if (!view.file) return;
+	const markdownLink = (type === 'embed' ? '!' : '') + view.app.fileManager.generateMarkdownLink(view.file, view.file.path, '', `${id}`);
+	navigator.clipboard.writeText(markdownLink).then(() => {
+		new Notice('Copied to clipboard');
+	});
 }

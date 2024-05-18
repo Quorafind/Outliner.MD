@@ -2,7 +2,7 @@ import 'obsidian';
 // import type { View, WorkspaceParent } from "obsidian";
 import { TFile, WorkspaceItem } from "obsidian";
 import { EditorView } from "@codemirror/view";
-import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
+import { EmbeddableMarkdownEditor } from "../editor-components/MarkdownEditor";
 
 type ScrollableMarkdownEditor = any;
 

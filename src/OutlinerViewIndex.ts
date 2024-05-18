@@ -1,6 +1,6 @@
 import {
 	Editor,
-	ItemView,
+	ItemView, MarkdownEditView,
 	MarkdownFileInfo,
 	MarkdownView,
 	Menu,
@@ -17,14 +17,15 @@ import {
 import { around } from "monkey-around";
 import { isEmebeddedLeaf, OUTLINER_EDITOR_VIEW_ID, OutlinerEditorView } from "./OutlinerEditorView";
 
-import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
-import { CalculateRangeForZooming } from "./calculateRangeForZooming";
+import { KeepRangeVisible } from "./cm/KeepRangeVisible";
+import { CalculateRangeForZooming } from "./cm/CalculateRangeForZooming";
 import "./less/global.less";
-import { EmbeddedEditor } from "./EmbeddedEditor";
-import { randomId } from "./utils";
-import { EmbeddedRender } from "./EmbeddedRender";
-import { createMarkRendererPlugin } from "./InlineMarker";
+import { EmbeddedEditor } from "./components/embed/EmbeddedEditor";
+import { copyLink, randomId } from "./utils/utils";
+import { EmbeddedRender } from "./components/embed/EmbeddedRender";
+import { createMarkRendererPlugin } from "./cm/TextFragmentStartEndMarker";
 import { DEFAULT_SETTINGS, OutlinerViewSettings, OutlinerViewSettingTab } from "./OutlinerViewSettings";
+import { resolveEditorPrototype } from "./editor-components/MarkdownEditor";
 
 
 const FRONT_MATTER_KEY = 'outliner';
@@ -34,7 +35,7 @@ export default class OutlinerViewPlugin extends Plugin {
 	settings: OutlinerViewSettings = DEFAULT_SETTINGS;
 
 	calculateRangeForZooming = new CalculateRangeForZooming();
-	KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
+	KeepOnlyZoomedContentVisible = new KeepRangeVisible();
 
 	// backlinkComponent: any;
 
@@ -51,7 +52,7 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.patchEmbedView();
 		this.patchWorkspaceLeaf();
 		this.patchItemView();
-		this.patchVchildren();
+		this.patchBacklinks();
 		this.initOutlinerView();
 
 		this.registerMenu();
@@ -155,6 +156,76 @@ export default class OutlinerViewPlugin extends Plugin {
 					return result;
 				},
 		});
+
+
+		const patchEditor = (plugin: OutlinerViewPlugin) => {
+			const widgetEditorView = plugin.app.embedRegistry.embedByExtension.md(
+				{app: plugin.app, containerEl: document.createElement('div')},
+				null as unknown as TFile,
+				'',
+				// @ts-expect-error - This is a private method
+			) as WidgetEditorView;
+
+			widgetEditorView.editable = true;
+			widgetEditorView.showEditor();
+
+			const MarkdownEditor = Object.getPrototypeOf(Object.getPrototypeOf(widgetEditorView.editMode!));
+
+			const uninstaller = around(MarkdownEditor.constructor.prototype, {
+				triggerClickableToken: (next: any) => {
+					return async function (...args: any[]) {
+						if (args[0].type === 'internal-link') {
+							if (args[0].displayText && /^o-(.*)?/g.test(args[0].displayText) && !args[0].text.includes('#')) {
+								const targetString = args[0].displayText.replace('readonly', '');
+								const file = plugin.app.metadataCache.getFirstLinkpathDest(args[0].text, '');
+
+								if (file) {
+									const content = await plugin.app.vault.read(file);
+									const blockID = `%%${targetString}%%`;
+
+									new Notice(blockID);
+									const firstMatch = content.indexOf(blockID);
+									const nextMatch = content.indexOf(blockID, firstMatch + 1);
+
+									if (firstMatch === -1 || nextMatch === -1) return next.apply(this, args);
+
+									const range = [firstMatch, nextMatch + blockID.length + 1];
+
+									try {
+										setTimeout(async () => {
+											await plugin.app.workspace.getLeaf(args[1]).openFile(file, {
+												eState: {
+													match: {
+														content: content,
+														matches: [range],
+													}
+												}
+											});
+
+											return;
+										}, 100);
+									} catch (e) {
+										console.error(e);
+										return next.apply(this, args);
+									}
+								}
+
+								return next.apply(this, args);
+							}
+							return next.apply(this, args);
+						}
+						return next.apply(this, args);
+					};
+				}
+			});
+
+			this.register(uninstaller);
+
+			widgetEditorView.unload();
+		};
+
+		patchEditor(this);
+
 	}
 
 	patchEmbedView() {
@@ -210,23 +281,6 @@ export default class OutlinerViewPlugin extends Plugin {
 				};
 			}
 		}));
-
-		// const embedRegistry = this.app.embedRegistry;
-		// const originalFunction = this.app.embedRegistry.embedByExtension.md;
-		//
-		// this.app.embedRegistry.embedByExtension.md = function(e: any, t: any, n: any) {
-		// 	// 记录传入的参数
-		// 	console.log("Received arguments:", e, t, n);
-		//
-		// 	// 调用原始函数，并保留原始的this上下文和传递所有接收到的参数
-		// 	const result = originalFunction.apply(this,[ e, t, n]);
-		//
-		// 	// 这里可以插入你想在原函数执行后执行的代码
-		// 	console.log("After executing the original function");
-		//
-		// 	// 返回原函数的返回值
-		// 	return result;
-		// };
 	}
 
 	// private patchInlinePreview() {
@@ -242,19 +296,20 @@ export default class OutlinerViewPlugin extends Plugin {
 	// 		});
 	//
 	// 		plugin.register(uninstaller);
-	// 	}
+	// 	};
 	//
 	// 	const patchDecoration = (plugin: OutlinerViewPlugin) => {
 	// 		const uninstaller = around(Decoration, {
 	// 			set(old) {
 	// 				return function (a: any, sort?: boolean) {
-	// 					if(Array.isArray(a)) {
-	// 						for(const item of a) {
-	// 							if(item.value.widget && item.value.widget.depth !== undefined) {
-	// 								patchWidget(plugin, item.value.widget);
-	// 								console.log(item.value.widget);
-	// 								uninstaller();
-	// 							}
+	// 					if (Array.isArray(a)) {
+	// 						for (const item of a) {
+	// 							console.log(item.value.widget, item.value);
+	// 							// if(item.value.widget && item.value.widget.depth !== undefined) {
+	// 							// 	patchWidget(plugin, item.value.widget);
+	// 							// 	console.log(item.value.widget);
+	// 							// 	uninstaller();
+	// 							// }
 	// 						}
 	// 					}
 	// 					return old.call(this, a, sort);
@@ -383,19 +438,16 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.register(uninstaller);
 	}
 
-	patchVchildren() {
+	patchBacklinks() {
 		if (!this.settings.editableBacklinks) return;
 
-		const patchSearchResultDom = (plugin: OutlinerViewPlugin, child: any) => {
+		const patchBacklinkResultDom = (plugin: OutlinerViewPlugin, child: any) => {
 			const resultUninstaller = around(child.constructor.prototype, {
 				render: (old) => {
 					return function (
 						e: any, b: any
 					) {
 
-						// if (!this.parent?.isBacklink && !this.parentDom?.isBacklink) {
-						// 	return old.call(this, e, b);
-						// }
 						const containerEl = this.parentDom.parentDom.el.closest(".mod-global-search");
 						this.isBacklink = !!containerEl;
 						if (this.isBacklink) {
@@ -405,6 +457,7 @@ export default class OutlinerViewPlugin extends Plugin {
 						if (this.embeddedEditor) {
 							const firstChild = this.embeddedEditor;
 							if (firstChild) {
+								console.log(this.currentRange, this.start, this.end, this.content);
 								(firstChild as EmbeddedEditor).updateRange(
 									this.currentRange || {
 										from: this.start,
@@ -515,7 +568,7 @@ export default class OutlinerViewPlugin extends Plugin {
 						this?.vChildren?.children?.forEach((child: any) => {
 							if (child?.file && !child?.pathEl) {
 								if (child.vChildren._children[0]) {
-									patchSearchResultDom(plugin, child.vChildren._children[0]);
+									patchBacklinkResultDom(plugin, child.vChildren._children[0]);
 									uninstaller();
 									setTimeout(() => {
 										// child.vChildren._children.forEach((child: any) => {
@@ -579,29 +632,16 @@ export default class OutlinerViewPlugin extends Plugin {
 					item
 						.setSection('selection-link')
 						.setIcon('list')
-						.setTitle('Copy inline embed')
+						.setTitle('Copy link to embed text fragment')
 						.onClick(() => {
-							const id = `o-${randomId(4)}`;
-							const mark = `%%${id}%%`;
-							const selection = editor.getSelection();
-							if (!selection) return;
-
-							let newLine = false;
-							if (selection.split('\n').length > 1) {
-								const startCursor = editor.getCursor('from');
-
-								if (startCursor.ch === 0) {
-									newLine = true;
-								}
-							}
-
-							editor.replaceSelection(`${mark + (newLine ? '\n' : '')}${selection}${mark}`);
-
-							const markdownLink = this.app.fileManager.generateMarkdownLink(info?.file as TFile, info.file?.path || '', '', `${id}`);
-
-							navigator.clipboard.writeText('!' + markdownLink).then(() => {
-								new Notice('Copied to clipboard');
-							});
+							copyLink(editor, info as MarkdownView, 'embed');
+						});
+				}).addItem((item) => {
+					item.setSection('selection-link')
+						.setIcon('list')
+						.setTitle('Copy link to text fragment')
+						.onClick(() => {
+							copyLink(editor, info as MarkdownView, 'link');
 						});
 				});
 			})
@@ -731,31 +771,18 @@ export default class OutlinerViewPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'create-inline-embed',
-			name: 'Create inline embed',
+			id: 'copy-link-to-embed-text-fragment',
+			name: 'Copy link to embed text fragment',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				const id = `o-${randomId(4)}`;
-				const mark = `%%${id}%%`;
-				const selection = editor.getSelection();
-				if (!selection) return;
+				copyLink(editor, view, 'embed');
+			}
+		});
 
-				let newLine = false;
-				if (selection.split('\n').length > 1) {
-					const startCursor = editor.getCursor('from');
-
-					if (startCursor.ch === 0) {
-						newLine = true;
-					}
-				}
-
-				editor.replaceSelection(`${mark + (newLine ? '\n' : '')}${selection}${mark}`);
-
-				if (!view.file) return;
-				const markdownLink = this.app.fileManager.generateMarkdownLink(view.file, view.file.path, '', `${id}`);
-
-				navigator.clipboard.writeText('!' + markdownLink).then(() => {
-					new Notice('Copied to clipboard');
-				});
+		this.addCommand({
+			id: 'copy-link-to-text-fragment',
+			name: 'Copy link to text fragment',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				copyLink(editor, view, 'link');
 			}
 		});
 	}

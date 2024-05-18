@@ -83,7 +83,10 @@ export const zoomStateField = StateField.define<DecorationSet>({
 	update: (value, tr) => {
 		value = value.map(tr.changes);
 
+
 		for (const e of tr.effects) {
+
+
 			if (e.is(zoomInEffect)) {
 				value = value.update({filter: () => false});
 
@@ -93,6 +96,7 @@ export const zoomStateField = StateField.define<DecorationSet>({
 				// 		add: [Decoration.mark({class: 'zoom-in-range'}).range(e.value.from - 1, e.value.to + 1)]
 				// 	})
 				// }
+
 
 				if (e.value.type === 'part' && e.value.container) {
 					value = value.update({
@@ -193,6 +197,7 @@ export const zoomStateField = StateField.define<DecorationSet>({
 			}
 
 			if (e.is(hideFrontMatterEffect)) {
+				value = value.update({filter: () => false});
 				const {range} = e.value;
 				value = value.update({
 					add: [zoomMarkHidden.range(range.from, range.to)]

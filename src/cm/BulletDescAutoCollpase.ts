@@ -6,7 +6,7 @@ import {
 	zoomOutEffect,
 	zoomStateField,
 	zoomWithHideIndentEffect
-} from "./checkVisible";
+} from "./VisibleRangeController";
 
 export const FoldAnnotation = Annotation.define<string>();
 

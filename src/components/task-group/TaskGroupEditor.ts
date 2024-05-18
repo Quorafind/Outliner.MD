@@ -1,13 +1,13 @@
 import { App, Component, debounce, Editor, setIcon, TFile } from "obsidian";
-import { EmbeddableMarkdownEditor } from "./MarkdownEditor";
-import { getIndent } from "./utils";
-import { zoomInEffect, zoomWithHideIndentEffect } from "./checkVisible";
+import { EmbeddableMarkdownEditor } from "../../editor-components/MarkdownEditor";
+import { getIndent } from "../../utils/utils";
+import { zoomInEffect, zoomWithHideIndentEffect } from "../../cm/VisibleRangeController";
 import { getAPI } from "obsidian-dataview";
 import { foldable } from "@codemirror/language";
-import { KeepOnlyZoomedContentVisible } from "./keepOnlyZoomedContentVisible";
-import { CalculateRangeForZooming } from "./calculateRangeForZooming";
-import { SelectionAnnotation } from "./SelectionController";
-import OutlinerViewPlugin from "./OutlinerViewIndex";
+import { KeepRangeVisible } from "../../cm/KeepRangeVisible";
+import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
+import { SelectionAnnotation } from "../../cm/SelectionController";
+import OutlinerViewPlugin from "../../OutlinerViewIndex";
 
 
 export class TaskGroupEditor extends Component {
@@ -20,7 +20,7 @@ export class TaskGroupEditor extends Component {
 	range: { from: number; to: number; } | undefined;
 
 	calculateRangeForZooming = new CalculateRangeForZooming();
-	KeepOnlyZoomedContentVisible = new KeepOnlyZoomedContentVisible();
+	KeepOnlyZoomedContentVisible = new KeepRangeVisible();
 
 	contentMap: Map<string, string> = new Map();
 	editorMap: Map<string, Editor> = new Map();
