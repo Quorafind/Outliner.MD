@@ -29,6 +29,8 @@ import { selectionController } from "../cm/SelectionController";
 import { createDateRendererPlugin } from "../cm/DateRender";
 import { FoldAnnotation, FoldingExtension, getAllFoldableRanges } from "../cm/BulletDescAutoCollpase";
 import { foldEffect } from "@codemirror/language";
+import { createBlockIdRender } from "../cm/RenderBlockID";
+import { disableToDeleteBlockID } from "../cm/TransFilter";
 
 
 export function resolveEditorPrototype(app: App) {
@@ -358,10 +360,14 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		extensions.push([this.readOnlyDepartment.of(
 			EditorState.readOnly.of(false)
-		), placeholder, blankBulletLineWidget, this.KeepOnlyZoomedContentVisible?.getExtension(), selectionController(), createDateRendererPlugin(), FoldingExtension]);
+		), placeholder, blankBulletLineWidget, Prec.highest(this.KeepOnlyZoomedContentVisible?.getExtension()), selectionController(), createDateRendererPlugin(), FoldingExtension]);
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);
+		}
+
+		if (this.options.type === 'embed') {
+			extensions.push([Prec.default(createBlockIdRender()), disableToDeleteBlockID()]);
 		}
 
 

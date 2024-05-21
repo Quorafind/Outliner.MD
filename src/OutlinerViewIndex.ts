@@ -1,6 +1,6 @@
 import {
 	Editor,
-	ItemView, MarkdownEditView,
+	ItemView,
 	MarkdownFileInfo,
 	MarkdownView,
 	Menu,
@@ -21,11 +21,10 @@ import { KeepRangeVisible } from "./cm/KeepRangeVisible";
 import { CalculateRangeForZooming } from "./cm/CalculateRangeForZooming";
 import "./less/global.less";
 import { EmbeddedEditor } from "./components/embed/EmbeddedEditor";
-import { copyLink, randomId } from "./utils/utils";
+import { copyLink } from "./utils/utils";
 import { EmbeddedRender } from "./components/embed/EmbeddedRender";
 import { createMarkRendererPlugin } from "./cm/TextFragmentStartEndMarker";
 import { DEFAULT_SETTINGS, OutlinerViewSettings, OutlinerViewSettingTab } from "./OutlinerViewSettings";
-import { resolveEditorPrototype } from "./editor-components/MarkdownEditor";
 
 
 const FRONT_MATTER_KEY = 'outliner';
@@ -158,6 +157,53 @@ export default class OutlinerViewPlugin extends Plugin {
 		});
 
 
+		// const patchLivePreviewPlugin = (livePreviewPlugins: any, plugin: OutlinerViewPlugin) => {
+		// 	const target = livePreviewPlugins.find(i => i.provides);
+		// 	if (!target) return;
+		//
+		//
+		// 	console.log(target);
+		// 	// const original = target.updateF;
+		// 	//
+		// 	// target.updateF = (a: any, b: any) => {
+		// 	// 	const result = original.call(this, a, b);
+		// 	// 	console.log(this, result);
+		// 	// 	return result;
+		// 	// };
+		// 	//
+		// 	// console.log(target.updateF, original);
+		// 	//
+		// 	// this.app.workspace.activeEditor?.editor?.editorComponent.toggleSource();
+		// 	//
+		// 	// this.app.workspace.activeEditor?.editor?.editorComponent.toggleSource();
+		//
+		// 	const uninstaller = around(target.constructor.prototype.constructor, {
+		// 		define: (old: any) => {
+		// 			return function (...args: any[]) {
+		// 				const result = old.apply(this, args);
+		// 				const original = this.updateF;
+		// 				console.log(this, result);
+		// 				this.updateF = (a: any, b: any) => {
+		// 					const result = original.call(this, a, b);
+		// 					console.log(this, result);
+		// 					return result;
+		// 				};
+		// 				return result;
+		// 			};
+		// 		}
+		// 	});
+		//
+		//
+		// 	// original.update = (a: any, b: any) => {
+		// 	// 	const result = original.update(a, b);
+		// 	// 	console.log(this, result);
+		// 	// 	return result;
+		// 	// };
+		//
+		// 	this.register(uninstaller);
+		// };
+
+
 		const patchEditor = (plugin: OutlinerViewPlugin) => {
 			const widgetEditorView = plugin.app.embedRegistry.embedByExtension.md(
 				{app: plugin.app, containerEl: document.createElement('div')},
@@ -168,6 +214,12 @@ export default class OutlinerViewPlugin extends Plugin {
 
 			widgetEditorView.editable = true;
 			widgetEditorView.showEditor();
+
+			// const editorComponent = widgetEditorView.editor.editorComponent;
+			//
+			// const livePreviewPlugin = editorComponent.livePreviewPlugin;
+			//
+			// patchLivePreviewPlugin(livePreviewPlugin, plugin);
 
 			const MarkdownEditor = Object.getPrototypeOf(Object.getPrototypeOf(widgetEditorView.editMode!));
 
@@ -183,7 +235,6 @@ export default class OutlinerViewPlugin extends Plugin {
 									const content = await plugin.app.vault.read(file);
 									const blockID = `%%${targetString}%%`;
 
-									new Notice(blockID);
 									const firstMatch = content.indexOf(blockID);
 									const nextMatch = content.indexOf(blockID, firstMatch + 1);
 
@@ -201,9 +252,8 @@ export default class OutlinerViewPlugin extends Plugin {
 													}
 												}
 											});
-
-											return;
 										}, 100);
+										return;
 									} catch (e) {
 										console.error(e);
 										return next.apply(this, args);
@@ -238,7 +288,12 @@ export default class OutlinerViewPlugin extends Plugin {
 			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
 				return false;
 			}
-			return new EmbeddedEditor(this, e, t, n);
+			console.log(e, t, n);
+
+			return new EmbeddedEditor(this, {
+				...e,
+				sourcePath: t.path,
+			}, t, n);
 		};
 
 
@@ -448,6 +503,8 @@ export default class OutlinerViewPlugin extends Plugin {
 						e: any, b: any
 					) {
 
+						console.log(this);
+
 						const containerEl = this.parentDom.parentDom.el.closest(".mod-global-search");
 						this.isBacklink = !!containerEl;
 						if (this.isBacklink) {
@@ -493,7 +550,7 @@ export default class OutlinerViewPlugin extends Plugin {
 				onResultClick: (old) => {
 					return function (e: any) {
 						// console.log(this, e);
-						if (this.embeddedEditor) {
+						if (this.embeddedEditor && !e.target.closest('.backlink-btn')) {
 							// this.embeddedEditor.editor.focus();
 							return;
 						}

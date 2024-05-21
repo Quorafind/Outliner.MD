@@ -9,13 +9,13 @@ import {
 	ViewUpdate,
 	WidgetType
 } from "@codemirror/view";
-import { editorInfoField, editorLivePreviewField, Menu, setIcon } from "obsidian";
+import { editorLivePreviewField, Menu, setIcon } from "obsidian";
 
 interface DecoSpec {
-	widget?: MarkRenderWidget;
+	widget?: BlockIdRenderWidget;
 }
 
-class MarkRenderWidget extends WidgetType {
+class BlockIdRenderWidget extends WidgetType {
 	error: boolean = false;
 
 	constructor(
@@ -28,7 +28,7 @@ class MarkRenderWidget extends WidgetType {
 	}
 
 	eq(widget: WidgetType): boolean {
-		return (widget as MarkRenderWidget).from === this.from && (widget as MarkRenderWidget).to === this.to;
+		return (widget as BlockIdRenderWidget).from === this.from && (widget as BlockIdRenderWidget).to === this.to;
 	}
 
 	toDOM(): HTMLElement {
@@ -36,19 +36,19 @@ class MarkRenderWidget extends WidgetType {
 			cls: 'cm-date-button-container',
 		});
 
-		setIcon(el, 'book-dashed');
+		setIcon(el, 'fingerprint');
 
 		el.onclick = (ev) => {
 			const menu = new Menu();
 			menu.addItem((item) => {
 				item.setIcon('copy').setTitle('Copy').onClick(async () => {
-					const file = this.view.state.field(editorInfoField);
+					// const file = this.view.state.field(editorInfoField);
 
 					const text = this.view.state.doc.sliceString(this.from, this.to).replace(/%%/g, '');
-					if (!file || !file.file) return;
-
-					const link = file.app.fileManager.generateMarkdownLink(file.file, file.file?.path || '', '', text);
-					await navigator.clipboard.writeText('!' + link);
+					// if (!file || !file.file) return;
+					//
+					// const link = file.app.fileManager.generateMarkdownLink(file.file, file.file?.path || '', '', text);
+					await navigator.clipboard.writeText(text);
 				});
 			});
 
@@ -59,11 +59,11 @@ class MarkRenderWidget extends WidgetType {
 	}
 }
 
-export function createMarkRendererPlugin() {
+export function createBlockIdRender() {
 	class InlineViewPluginValue implements PluginValue {
 		public readonly view: EditorView;
 		private readonly match = new MatchDecorator({
-			regexp: /%%(o-([^%]*))%%/g,
+			regexp: /\^[a-zA-Z0-9-]{1,}$/g,
 			decorate: (add, from: number, to: number, match: RegExpExecArray, view: EditorView) => {
 				const shouldRender = this.shouldRender(view, from, to);
 				try {
@@ -72,8 +72,8 @@ export function createMarkRendererPlugin() {
 							from,
 							to,
 							Decoration.replace({
-								widget: new MarkRenderWidget(view, from, to),
-								inclusiveEnd: true,
+								widget: new BlockIdRenderWidget(view, from, to),
+								inclusive: true,
 							}),
 						);
 					}

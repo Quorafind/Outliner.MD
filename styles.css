@@ -27,13 +27,13 @@ If your plugin does not need CSS, delete this file.
 body.is-mobile .workspace-leaf-content[data-type="outliner-editor-view"] .view-content {
   --file-line-width: unset;
 }
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
   color: var(--outliner-text-color);
 }
-body.outliner-paper-layout .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
+body.outliner-paper-layout .outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
   font-weight: bold;
 }
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet {
   color: var(--color-faint);
   font-weight: var(--font-light);
 }
@@ -159,10 +159,10 @@ span.cm-group-collapse-button {
 .outliner-editor .markdown-source-view.mod-cm6 .cm-line:hover .clickable-icon {
   opacity: 1;
 }
-/*.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
+/*.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
 /*	padding-inline-end: 0;*/
 /*}*/
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-bullet-menu-marker .clickable-icon {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-bullet-menu-marker .clickable-icon {
   margin-inline-end: 18px;
 }
 .outliner-editor .cm-task-group:has(.markdown-source-view) {
@@ -250,26 +250,26 @@ span.cm-task-group-title {
   color: var(--text-faint);
   padding-top: 0;
 }
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
   transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding) * 0.8));
   padding-inline-end: var(--list-bullet-end-padding);
 }
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-gutters {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-gutters {
   display: none;
 }
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon {
   opacity: 0;
 }
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet:hover .collapse-indicator.collapse-icon {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet:hover .collapse-indicator.collapse-icon {
   opacity: 1;
 }
-.outliner-editor .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon:hover {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line.HyperMD-list-line-nobullet .collapse-indicator.collapse-icon:hover {
   opacity: 1;
 }
 .outliner-editor .markdown-source-view.mod-cm6 .cm-line.lc-list-callout.HyperMD-list-line {
   padding-right: 0.4em;
 }
-.internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event.is-live-preview .cm-editor {
+.internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event .cm-editor {
   height: 100%;
   /* min-height: 100%; */
   min-height: fit-content;
@@ -279,7 +279,7 @@ span.cm-task-group-title {
   /* min-height: 100%; */
   min-height: fit-content;
 }
-.internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event.is-live-preview .cm-editor .cm-content {
+.internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event .cm-editor .cm-content {
   padding-bottom: 0 !important;
 }
 .outliner-editor .internal-embed + img.cm-widgetBuffer {
@@ -329,14 +329,14 @@ span.cm-task-group-title {
 }
 .internal-embed.is-loaded .source-btn {
   position: absolute;
-  right: 0;
+  right: var(--size-4-4);
   top: 0;
   background: #ffffff1a;
   opacity: 0;
 }
 .internal-embed.is-loaded .lock-btn {
   position: absolute;
-  right: 36px;
+  right: 46px;
   top: 0;
   background: #ffffff1a;
   opacity: 0;
@@ -386,4 +386,9 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 }
 .outliner-view-setting-container .setting-item:not(.show-reload-button) button {
   display: none;
+}
+.backlink-btn {
+  position: absolute;
+  top: var(--size-4-2);
+  right: var(--size-4-6);
 }

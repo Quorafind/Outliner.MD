@@ -1,4 +1,4 @@
-import type { EditorState, Extension } from "@codemirror/state";
+import { EditorState, Extension } from "@codemirror/state";
 import { rangeSetToArray } from "../utils/utils";
 import { EditorView } from "@codemirror/view";
 import {

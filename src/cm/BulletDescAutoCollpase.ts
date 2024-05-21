@@ -210,7 +210,7 @@ export const unfoldWhenSelect = () => {
 				effects: [unfoldEffect.of(range)],
 				annotations: [FoldAnnotation.of('outliner.unfold')],
 			}];
-		} else if (!tr.docChanged && tr.newSelection) {
+		} else if (!tr.docChanged && tr.newSelection && tr.startState.selection !== tr.newSelection) {
 			const allFoldedRanges = getAllFoldableRanges(tr.state);
 			const effects = allFoldedRanges.map((r) => {
 				return foldEffect.of({

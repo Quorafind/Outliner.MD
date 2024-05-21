@@ -550,7 +550,14 @@ export class EmbeddedEditor extends Component {
 		if (this.targetRange && !this.plugin.settings.livePreviewForBacklinks) {
 			// console.log('targetRange', this.targetRange);
 			this.editor?.editorComponent.toggleSource();
+		}
 
+		if (this.targetRange) {
+			const backlinkBtn = this.containerEl.createEl('div', {
+				cls: 'backlink-btn',
+			});
+
+			new ExtraButtonComponent(backlinkBtn).setIcon('file-symlink');
 		}
 
 		range.type !== 'whole' && this.updateVisibleRange(embedEditor.editor, range, range.type as 'part' | 'block' | 'heading');
@@ -563,8 +570,10 @@ export class EmbeddedEditor extends Component {
 		if (title) {
 			if (title === 'readonly' || title.contains('readonly')) {
 				this.editor?.cm.dispatch({
-					effects: embedEditor.readOnlyDepartment.reconfigure(EditorState.readOnly.of(true))
+					effects: [embedEditor.readOnlyDepartment.reconfigure(EditorState.readOnly.of(true))]
 				});
+
+				this.containerEl.toggleClass('readonly', true);
 
 				const button = this.containerEl.createEl('div', {
 					cls: 'lock-btn',
@@ -579,6 +588,7 @@ export class EmbeddedEditor extends Component {
 
 					locked = !locked;
 					component.setIcon(locked ? 'lock' : 'unlock');
+					this.containerEl.toggleClass('readonly', locked);
 				});
 			}
 		}
@@ -648,6 +658,16 @@ export class EmbeddedEditor extends Component {
 			// if(range.from === 0 && range.to === this.editor?.cm.state.doc.length) return;
 			if (type === 'part') {
 
+				const cache = this.app.metadataCache.getFileCache(this.file as TFile);
+
+				const blockCache = cache?.sections?.find((key) => {
+					return key.type === 'table' && key.position.start.offset < range.from && key.position.end.offset > range.to;
+				});
+
+				if (blockCache) {
+					this.editor?.editorComponent.toggleSource();
+				}
+
 				editor.cm.dispatch({
 					effects: [zoomInEffect.of({
 						from: range.from,
@@ -656,6 +676,8 @@ export class EmbeddedEditor extends Component {
 						container: this.targetRange ? undefined : this.containerEl,
 					})]
 				});
+
+				// this.editor?.editorComponent.toggleSource();
 				// this.updateIndentVisible(
 				// 	editor,
 				// 	range
@@ -703,7 +725,7 @@ export class EmbeddedEditor extends Component {
 	getRange(targetFile: TFile) {
 		const cache = this.app.metadataCache.getFileCache(targetFile);
 
-		if (this.sourcePath && !this.subpath && this.targetRange) {
+		if (!this.subpath && this.targetRange) {
 			return {
 				from: this.targetRange.from,
 				to: this.targetRange.to,
@@ -711,7 +733,11 @@ export class EmbeddedEditor extends Component {
 			};
 		}
 
-		if (this.sourcePath && !this.subpath) {
+		console.log('getRange', this.sourcePath, this.subpath, this.targetRange, cache, targetFile.path, this.data, this.file?.path);
+
+		if (!this.subpath) {
+
+
 			const title = this.containerEl.getAttr('alt')?.replace('readonly', '');
 
 			if (title) {
@@ -730,6 +756,7 @@ export class EmbeddedEditor extends Component {
 
 				const start = content.indexOf(targetBlockId);
 				const end = content.indexOf(targetBlockId, start + 1);
+
 
 				if (start !== -1 && end !== -1) {
 					return {

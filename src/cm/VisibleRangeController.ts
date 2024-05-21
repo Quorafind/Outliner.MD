@@ -81,6 +81,12 @@ export const zoomStateField = StateField.define<DecorationSet>({
 	},
 
 	update: (value, tr) => {
+		// for (let i = 0; i < value.size; i++) {
+		// 	const decoration = value.iter().value;
+		// 	console.log(decoration);
+		// }
+
+
 		value = value.map(tr.changes);
 
 
@@ -114,7 +120,7 @@ export const zoomStateField = StateField.define<DecorationSet>({
 					value = value.update({
 						add: [e.value.type === 'part' ? Decoration.replace({
 							block: true,
-							inclusiveEnd: false
+							inclusiveEnd: false,
 						}).range(0, e.value.from - 1) : zoomMarkHidden.range(0, e.value.from - 1)],
 					});
 				}
@@ -123,10 +129,12 @@ export const zoomStateField = StateField.define<DecorationSet>({
 					value = value.update({
 						add: [e.value.type === 'part' ? Decoration.replace({
 							block: true,
-							inclusiveStart: false
+							inclusiveStart: false,
 						}).range(e.value.to + 1, tr.newDoc.length) : zoomMarkHidden.range(e.value.to + 1, tr.newDoc.length)],
 					});
 				}
+
+				console.log(value);
 
 
 			}
