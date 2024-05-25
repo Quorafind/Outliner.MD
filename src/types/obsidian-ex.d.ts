@@ -2,7 +2,6 @@ import 'obsidian';
 // import type { View, WorkspaceParent } from "obsidian";
 import { TFile, WorkspaceItem } from "obsidian";
 import { EditorView } from "@codemirror/view";
-import { EmbeddableMarkdownEditor } from "../editor-components/MarkdownEditor";
 
 type ScrollableMarkdownEditor = any;
 
@@ -143,5 +142,15 @@ declare module "obsidian" {
 		showEditor: () => void;
 		editMode: any;
 		editable: boolean;
+	}
+
+	interface EmbeddableMarkdownEditor {
+		toggleSource(): void;
+
+		options: any;
+		sizerEl: HTMLElement;
+		editor: {
+			cm: EditorView;
+		};
 	}
 }

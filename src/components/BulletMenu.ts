@@ -235,7 +235,7 @@ class BulletMenuMarkerWidget extends WidgetType {
 								}
 							}
 						});
-						const result = editor && (editor.editorComponent as EmbeddableMarkdownEditor).options.onEnter(editor.editorComponent, false, true);
+						const result = editor && (editor.editorComponent as any as EmbeddableMarkdownEditor).options.onEnter((editor.editorComponent as any as EmbeddableMarkdownEditor), false, true);
 						if (!result) {
 							editor?.transaction({
 								changes: [

@@ -11,7 +11,7 @@
  * Make sure to also check out the original source code here: https://github.com/mgmeyers/obsidian-kanban/blob/main/src/components/Editor/MarkdownEditor.tsx
  */
 
-import { App, type Constructor, Scope, TFile, WorkspaceLeaf } from "obsidian";
+import { App, type Constructor, Editor, Scope, TFile, WorkspaceLeaf } from "obsidian";
 import { Compartment, EditorSelection, EditorState, type Extension, Prec } from "@codemirror/state";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
@@ -124,6 +124,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	initial_value: string;
 	scope: Scope;
 	view: OutlinerEditorView;
+	editor: Editor;
 
 	readOnlyDepartment = new Compartment();
 	KeepOnlyZoomedContentVisible: KeepRangeVisible = new KeepRangeVisible();
@@ -360,7 +361,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		extensions.push([this.readOnlyDepartment.of(
 			EditorState.readOnly.of(false)
-		), placeholder, blankBulletLineWidget, Prec.highest(this.KeepOnlyZoomedContentVisible?.getExtension()), selectionController(), createDateRendererPlugin(), FoldingExtension]);
+		), blankBulletLineWidget, Prec.highest(this.KeepOnlyZoomedContentVisible?.getExtension()), selectionController(), createDateRendererPlugin(), FoldingExtension]);
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);

@@ -225,7 +225,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					if (range) {
 						const firstLineInRange = range.from.line;
 						const lastLineInRange = range.to.line;
-						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
+						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0] || '';
 						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
 
 						const cursor = editor.editor.getCursor();
@@ -234,7 +234,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						if (/^((-|\*|\d+\.)(\s\[.\])?)/g.test(lineText.trim())) {
 							const currentLine = cursor.line;
 							const currentLineText = editor.editor.getLine(currentLine);
-							const spaceOnCurrentLine = currentLineText.match(/^\s*/)?.[0];
+							const spaceOnCurrentLine = currentLineText.match(/^\s*/)?.[0] || '';
 
 							editor.editor.transaction({
 								changes: [
@@ -291,6 +291,112 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					const prevLine = line > 0 ? editor.editor.getLine(line - 1) : "";
 
 					if (lineText.startsWith("- ")) {
+						const currentItemisFoldable = foldable(editor.editor.cm.state, editor.editor.posToOffset({
+							line,
+							ch: 0
+						}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+
+						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
+
+						if (ch !== lineText.length) {
+
+							return false;
+						}
+
+						// Check until next line contains -
+						if (currentItemisFoldable) {
+							const currentLineEnd = editor.editor.cm.state.doc.line(line + 1).to;
+							const foldRangeTo = currentItemisFoldable.to;
+							// const folaRangeFrom = currentItemisFoldable.from;
+
+							console.log(foldRangeTo);
+
+							const lineAtFoldRangeTo = (editor.editor.cm as EditorView).state.doc.lineAt(foldRangeTo);
+							// const lineAtFoldRangeFrom = (editor.editor.cm as EditorView).state.doc.lineAt(folaRangeFrom);
+							let hasChildNodes = false;
+							for (let i = editor.editor.cm.state.doc.lineAt(currentLineEnd + 1).number; i <= lineAtFoldRangeTo.number; i++) {
+								const rangeLineText = editor.editor.cm.state.doc.line(i).text;
+
+								console.log(i, rangeLineText, lineAtFoldRangeTo);
+								if (rangeLineText.trimStart().startsWith("- ")) {
+									console.log('has child nodes');
+									hasChildNodes = true;
+									break;
+								}
+							}
+
+							let realEndPos = currentLineEnd;
+
+							for (let i = editor.editor.cm.state.doc.lineAt(currentLineEnd + 1).number; i <= lineAtFoldRangeTo.number; i++) {
+								const rangeLineText = editor.editor.cm.state.doc.line(i).text;
+								console.log(currentLineEnd, editor.editor.cm.state.doc.lineAt(currentLineEnd + 1), rangeLineText, lineAtFoldRangeTo, currentLineEnd + 1);
+								// if (rangeLineText === undefined) continue;
+								if (rangeLineText.trimStart().startsWith('- ')) {
+									realEndPos = editor.editor.cm.state.doc.line(i).from - 1;
+									console.log('realEndPos', realEndPos, rangeLineText);
+									break;
+								}
+							}
+
+							console.log("hasChildNodes", hasChildNodes, realEndPos, foldRangeTo, lineAtFoldRangeTo);
+
+
+							if (hasChildNodes) {
+								const newLineText = `\n${spaceBeforeStartLine}${hasChildNodes ? indentNewLine : ''}- `;
+								const finalFrom = realEndPos;
+								console.log('finalFrom', finalFrom);
+								// const finalSelection = newLineText.length - 2;
+								const finalLine = editor.editor.cm.state.doc.lineAt(finalFrom);
+
+								(editor.editor as Editor).transaction({
+									changes: [
+										{
+											text: newLineText,
+											from: {line: finalLine.number - 1, ch: finalLine.text.length},
+										}
+									],
+								});
+								setTimeout(() => {
+									(editor.editor as Editor).transaction({
+										selection: {
+											from: {line: finalLine.number, ch: 2},
+											to: {line: finalLine.number, ch: 2},
+										}
+										// annotations: SelectionAnnotation.of('arrow.down.selection'),
+									});
+								}, 20);
+
+							} else {
+								const lineAtFoldRangeTo = editor.editor.cm.state.doc.lineAt(foldRangeTo);
+
+								console.log('lineat fold range', lineAtFoldRangeTo);
+								(editor.editor as Editor).transaction({
+									changes: [
+										{
+											text: `\n${spaceBeforeStartLine}- `,
+											from: {
+												line: lineAtFoldRangeTo.number - 1,
+												ch: lineAtFoldRangeTo.text.length
+											},
+										}
+									],
+
+								});
+
+								setTimeout(() => {
+									(editor.editor as Editor).transaction({
+										selection: {
+											from: {line: lineAtFoldRangeTo.number, ch: 0},
+											to: {line: lineAtFoldRangeTo.number, ch: 0},
+										}
+										// annotations: SelectionAnnotation.of('arrow.down.selection'),
+									});
+								}, 20);
+							}
+							return true;
+						}
+
+
 						(editor.editor as Editor).transaction({
 							changes: [
 								{
@@ -319,7 +425,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						});
 						return true;
 					} else if (/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
-						const currentIndent = lineText.match(/^\s+/)?.[0];
+						const currentIndent = lineText.match(/^\s+/)?.[0] || "";
 
 						(editor.editor as Editor).transaction({
 							changes: [

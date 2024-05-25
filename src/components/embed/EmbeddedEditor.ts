@@ -174,7 +174,7 @@ export class EmbeddedEditor extends Component {
 					if (range) {
 						const firstLineInRange = range.from.line;
 						const lastLineInRange = range.to.line;
-						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
+						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0] || '';
 						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
 
 						const cursor = editor.editor.getCursor();
@@ -183,7 +183,7 @@ export class EmbeddedEditor extends Component {
 						if (/^((-|\*|\d+\.)(\s\[.\])?)/g.test(lineText.trim())) {
 							const currentLine = cursor.line;
 							const currentLineText = editor.editor.getLine(currentLine);
-							const spaceOnCurrentLine = currentLineText.match(/^\s*/)?.[0];
+							const spaceOnCurrentLine = currentLineText.match(/^\s*/)?.[0] || '';
 
 							editor.editor.transaction({
 								changes: [
@@ -268,7 +268,7 @@ export class EmbeddedEditor extends Component {
 						});
 						return true;
 					} else if (/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
-						const currentIndent = lineText.match(/^\s+/)?.[0];
+						const currentIndent = lineText.match(/^\s+/)?.[0] || '';
 
 						(editor.editor as Editor).transaction({
 							changes: [
