@@ -2,14 +2,23 @@
 
 ## Shinny new things
 
-- feat: when list item has mark content, for example:
+- feat: when list item has mark content, for example (And if you press enter at the end of the line, the new bullet line
+  should be added after the mark content.
+  ):
 
 ```markdown
 - Here is a bullet line
   Mark: this is a mark content
 ```
 
-And if you press enter at the end of the line, the new bullet line should be added after the mark content.
+- feat: support copy link to text fragment. Resolves #34
+
+## Fixes
+
+- fix: conflict with `Obsidian Banner` plugin, cause paper-layout not working well. Resolves #41
+- fix: height issue of Popout window. Resolves #39
+- fix: conflict with `Obsidian Paste image rename` plugin. Resolves #43
+- fix: when markdown link is embedded, the link should be rendered as a link. Resolves #49
 
 # 0.1.3
 
