@@ -26,3 +26,4 @@ data.json
 scripts
 package.json
 .release-it.cjs
+pnpm-lock.yaml
