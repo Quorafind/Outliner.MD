@@ -22,3 +22,7 @@ main.js.map
 
 data.json
 .env
+
+scripts
+package.json
+.release-it.cjs
