@@ -1,7 +1,7 @@
 {
   "id": "outliner-md",
   "name": "Outliner.md",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "minAppVersion": "0.15.0",
   "description": "Powerful outliner (editor) view for Obsidian.",
   "author": "Boninall",
