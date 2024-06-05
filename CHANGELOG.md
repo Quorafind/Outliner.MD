@@ -1,3 +1,14 @@
+# 0.1.5
+
+## Shinny new things
+
+- feat: support custom query string for task group. You can set the query string in the settings.
+
+## Fixes
+
+- fix: when press enter in task list item with indent, should not create a new list item with no indent. 
+- fix: global search hotkey could not be triggered when the editor is focused. Resolves #51
+
 # 0.1.4
 
 ## Shinny new things
