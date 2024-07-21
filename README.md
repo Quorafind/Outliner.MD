@@ -25,9 +25,10 @@ Embed anything and then edit it there.
 
 Just open your note, scroll to the bottom, and you can edit the backlinks directly.
 
-### 📝 Quick note creation
+### 📝 Note as notebook
 
-Click on the ribbon or right-click on the folder to create a new outliner note.
+You can use the note as a notebook, and manage sections in it.
+
 
 ## Installation
 
