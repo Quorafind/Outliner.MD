@@ -1,15 +1,15 @@
 {
-	"id": "outliner-md",
-	"name": "Outliner.md",
-	"version": "0.1.6",
-	"minAppVersion": "0.15.0",
-	"description": "Powerful outliner (editor) view for Obsidian.",
-	"author": "Boninall",
-	"authorUrl": "https://github.com/Quorafind",
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://www.buymeacoffee.com/boninall",
-		"爱发电": "https://afdian.net/a/boninall",
-		"支付宝": "https://cdn.jsdelivr.net/gh/Quorafind/.github@main/IMAGE/%E6%94%AF%E4%BB%98%E5%AE%9D%E4%BB%98%E6%AC%BE%E7%A0%81.jpg"
-	},
-	"isDesktopOnly": false
+  "id": "outliner-md",
+  "name": "Outliner.md",
+  "version": "0.1.7",
+  "minAppVersion": "0.15.0",
+  "description": "Powerful outliner (editor) view for Obsidian.",
+  "author": "Boninall",
+  "authorUrl": "https://github.com/Quorafind",
+  "fundingUrl": {
+    "Buy Me a Coffee": "https://www.buymeacoffee.com/boninall",
+    "爱发电": "https://afdian.net/a/boninall",
+    "支付宝": "https://cdn.jsdelivr.net/gh/Quorafind/.github@main/IMAGE/%E6%94%AF%E4%BB%98%E5%AE%9D%E4%BB%98%E6%AC%BE%E7%A0%81.jpg"
+  },
+  "isDesktopOnly": false
 }
