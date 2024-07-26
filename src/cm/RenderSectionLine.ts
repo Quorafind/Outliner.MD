@@ -9,75 +9,65 @@ import {
 	ViewUpdate,
 	WidgetType
 } from "@codemirror/view";
-import { editorInfoField, editorLivePreviewField, Menu, setIcon } from "obsidian";
+import { editorInfoField, editorLivePreviewField, Keymap } from "obsidian";
 
 interface DecoSpec {
-	widget?: MarkRenderWidget;
+	widget?: SectionLine;
 }
 
-
-async function copyLink(view: EditorView, pos: {
-	from: number;
-	to: number;
-}, type: 'embed' | 'link') {
-	const file = view.state.field(editorInfoField);
-
-	const text = view.state.doc.sliceString(pos.from, pos.to).replace(/%%/g, '');
-	if (!file || !file.file) return;
-
-	const link = file.app.fileManager.generateMarkdownLink(file.file, file.file?.path || '', '', text);
-	await navigator.clipboard.writeText((type === 'embed' ? '!' : '') + link);
-}
-
-class MarkRenderWidget extends WidgetType {
+class SectionLine extends WidgetType {
 	error: boolean = false;
 
 	constructor(
 		public readonly view: EditorView,
 		public readonly from: number,
 		public readonly to: number,
+		public readonly name: string
 	) {
 		super();
 
 	}
 
 	eq(widget: WidgetType): boolean {
-		return (widget as MarkRenderWidget).from === this.from && (widget as MarkRenderWidget).to === this.to;
+		return (widget as SectionLine).from === this.from && (widget as SectionLine).to === this.to;
 	}
 
 	toDOM(): HTMLElement {
-		const el = createEl("span", {
-			cls: 'cm-date-button-container',
+		const lineEl = createEl("div", {
+			cls: "omd-section-line",
+			text: this.name,
+			attr: {
+				dir: "ltr",
+			}
+		}, (el) => {
+
+			el.createEl("hr", {
+				attr: {
+					'aria-label': 'Section ' + this.name,
+				}
+			});
 		});
 
-		setIcon(el, 'book-dashed');
-
-		el.onclick = (ev) => {
-			const menu = new Menu();
-			menu.addItem((item) => {
-				item.setIcon('copy').setTitle('Copy link to embed text fragment').onClick(async () => {
-					copyLink(this.view, {from: this.from, to: this.to}, 'embed');
-				});
-			});
-
-			menu.addItem((item) => {
-				item.setIcon('copy').setTitle('Copy link to text fragment').onClick(async () => {
-					copyLink(this.view, {from: this.from, to: this.to}, 'link');
-				});
-			});
-
-			menu.showAtMouseEvent(ev);
+		lineEl.onclick = (e) => {
+			if (Keymap.isModEvent(e)) {
+				e.preventDefault();
+				const app = this.view.state.field(editorInfoField).app;
+				if (app) {
+					app.workspace.trigger("zoom-into-section", this.view, this.to + 1);
+					return;
+				}
+			}
 		};
 
-		return el;
+		return lineEl;
 	}
 }
 
-export function createMarkRendererPlugin() {
+export function createSectionLineRender() {
 	class InlineViewPluginValue implements PluginValue {
 		public readonly view: EditorView;
 		private readonly match = new MatchDecorator({
-			regexp: /%%(o-([^%]*))%%/g,
+			regexp: /^%%SECTION{([^}]+)}%%$|^<!--section: ([^-]+)-->$/g,
 			decorate: (add, from: number, to: number, match: RegExpExecArray, view: EditorView) => {
 				const shouldRender = this.shouldRender(view, from, to);
 				try {
@@ -86,8 +76,8 @@ export function createMarkRendererPlugin() {
 							from,
 							to,
 							Decoration.replace({
-								widget: new MarkRenderWidget(view, from, to),
-								inclusiveEnd: true,
+								widget: new SectionLine(view, from, to, match[1] || match[2]),
+								// block: true,
 							}),
 						);
 					}

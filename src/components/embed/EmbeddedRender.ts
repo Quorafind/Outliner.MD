@@ -105,18 +105,34 @@ export class EmbeddedRender extends Component {
 		};
 
 		const button = this.containerEl.createEl('div', {
-			cls: 'source-btn',
+			cls: 'source-btn embedded-rendered-btn',
 		});
 
 		this.containerEl.toggleClass('embedded-part', true);
 
-		new ExtraButtonComponent(button).setIcon('link').onClick(async () => {
+		const extraButton = new ExtraButtonComponent(button).setIcon('link').onClick(async () => {
 			const leaf = this.app.workspace.getLeaf();
 			await leaf.setViewState({
 				type: 'markdown',
 			});
 			this.file && await leaf.openFile(this.file);
 		});
+
+		this.registerDomEvent(extraButton.extraSettingsEl, 'mouseover', (e) => {
+			if (!this.file) return;
+
+			// console.log("hovering", file.path, state);
+
+			this.app.workspace.trigger("hover-link", {
+				event: e,
+				source: "outliner-md",
+				hoverParent: this.containerEl,
+				targetEl: extraButton.extraSettingsEl,
+				linktext: this.file.path,
+			});
+		});
+
+
 		return this.addChild(this.childComponent);
 	}
 
@@ -145,7 +161,7 @@ export class EmbeddedRender extends Component {
 
 				if (start !== -1 && end !== -1) {
 					return {
-						from: start + targetBlockId.length + 1,
+						from: start + targetBlockId.length,
 						to: end - 1,
 						type: 'part',
 					};

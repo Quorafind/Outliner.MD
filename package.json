@@ -7,12 +7,14 @@
 		"lint": "npx eslint --fix --ext .ts,.svelte .",
 		"dev": "npm run lint && vite build --watch --mode development",
 		"build": "npx svelte-check && vite build --mode production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"build:release": "vite build --mode production-obsidian",
+		"release:obsidian": "cd Outliner.MD && pnpm run release"
 	},
 	"keywords": [],
 	"author": "",
-	"license": "MIT",
 	"devDependencies": {
+		"@codemirror/language": "^6.10.1",
 		"@codemirror/state": "^6.4.1",
 		"@codemirror/view": "^6.26.3",
 		"@rollup/plugin-node-resolve": "^15.2.3",
@@ -42,8 +44,5 @@
 		"tslib": "2.4.0",
 		"typescript": "5.3.3",
 		"vite": "^5.2.10"
-	},
-	"dependencies": {
-		"@codemirror/language": "^6.10.1"
 	}
 }

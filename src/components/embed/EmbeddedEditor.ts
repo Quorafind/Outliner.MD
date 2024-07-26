@@ -123,7 +123,6 @@ export class EmbeddedEditor extends Component {
 			targetRange.type === 'whole' && this.plugin.settings.hideFrontmatter && this.updateFrontMatterVisible(this.editor as Editor, this.file as TFile);
 
 
-			console.log('file changed', file.path, this.file?.path, this.data, targetRange, this.range);
 		}
 	}, 800);
 
@@ -533,7 +532,8 @@ export class EmbeddedEditor extends Component {
 			},
 			type: 'embed',
 			value: data || "",
-			path: this.file?.path
+			path: this.file?.path,
+			disableTimeFormat: this.plugin.settings.disableTimeFormat,
 		});
 
 		// embedEditor.editor.getValue = () => {
@@ -557,7 +557,28 @@ export class EmbeddedEditor extends Component {
 				cls: 'backlink-btn',
 			});
 
-			new ExtraButtonComponent(backlinkBtn).setIcon('file-symlink');
+			const extraButton = new ExtraButtonComponent(backlinkBtn).setIcon('file-symlink');
+
+			this.registerDomEvent(extraButton.extraSettingsEl, 'mouseover', (e) => {
+				if (!this.file || !this.targetRange) return;
+				const line = this.editor?.cm.state.doc.lineAt(this.targetRange.from + 1);
+
+				if (!line) return;
+				const state = {
+					scroll: line.number
+				};
+
+				// console.log("hovering", file.path, state);
+
+				this.app.workspace.trigger("hover-link", {
+					event: e,
+					source: "outliner-md",
+					hoverParent: this.containerEl,
+					targetEl: extraButton.extraSettingsEl,
+					linktext: this.file.path,
+					state: state
+				});
+			});
 		}
 
 		range.type !== 'whole' && this.updateVisibleRange(embedEditor.editor, range, range.type as 'part' | 'block' | 'heading');
@@ -595,10 +616,23 @@ export class EmbeddedEditor extends Component {
 
 		if (range.type !== 'part') {
 			const button = this.containerEl.createEl('div', {
-				cls: 'source-btn',
+				cls: 'source-btn embedded-editor-btn',
 			});
 
-			new ExtraButtonComponent(button).setIcon('link');
+			const extraButton = new ExtraButtonComponent(button).setIcon('link');
+
+			this.registerDomEvent(extraButton.extraSettingsEl, 'mouseover', (e) => {
+				if (!this.file) return;
+				// console.log("hovering", file.path, state);
+
+				this.app.workspace.trigger("hover-link", {
+					event: e,
+					source: "outliner-md",
+					hoverParent: this.containerEl,
+					targetEl: extraButton.extraSettingsEl,
+					linktext: this.file.path,
+				});
+			});
 		}
 
 		// @ts-expect-error - This is a private method
@@ -732,8 +766,6 @@ export class EmbeddedEditor extends Component {
 				type: 'part'
 			};
 		}
-
-		console.log('getRange', this.sourcePath, this.subpath, this.targetRange, cache, targetFile.path, this.data, this.file?.path);
 
 		if (!this.subpath) {
 

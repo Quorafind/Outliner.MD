@@ -13,12 +13,12 @@
 
 import { App, type Constructor, Editor, Scope, TFile, WorkspaceLeaf } from "obsidian";
 import { Compartment, EditorSelection, EditorState, type Extension, Prec } from "@codemirror/state";
-import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
+import { keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
 import type { ScrollableMarkdownEditor } from "../types/obsidian-ex";
 import { AddNewLineBtn } from "../components/AddNewLine";
 // import { zoomStateField } from "./checkVisible";
-import { placeholder } from "../cm/Placeholder";
+// import { placeholder } from "../cm/Placeholder";
 import { OutlinerEditorView } from "../OutlinerEditorView";
 import { SearchHighlight } from "../cm/SearchHighlight";
 import { BulletMenu } from "../components/BulletMenu";
@@ -61,6 +61,7 @@ interface MarkdownEditorProps {
 	view?: OutlinerEditorView;
 	type: 'embed' | 'outliner';
 	foldByDefault?: boolean;
+	disableTimeFormat?: boolean;
 
 	path?: string;
 
@@ -90,6 +91,8 @@ const defaultProperties: MarkdownEditorProps = {
 	view: undefined,
 	type: 'embed',
 	foldByDefault: true,
+
+	disableTimeFormat: false,
 
 	path: '',
 
@@ -289,11 +292,11 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		// if (this.options.placeholder) extensions.push(placeholder(this.options.placeholder));
 
 		/* Editor extension for handling specific user inputs */
-		extensions.push(EditorView.domEventHandlers({
-			paste: (event) => {
-				this.options.onPaste(event, this);
-			}
-		}));
+		// extensions.push(EditorView.domEventHandlers({
+		// 	paste: (event) => {
+		// 		this.options.onPaste(event, this);
+		// 	}
+		// }));
 		extensions.push(Prec.highest(keymap.of([
 			{
 				key: 'Enter',
@@ -361,7 +364,11 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		extensions.push([this.readOnlyDepartment.of(
 			EditorState.readOnly.of(false)
-		), blankBulletLineWidget, Prec.highest(this.KeepOnlyZoomedContentVisible?.getExtension()), selectionController(), createDateRendererPlugin(), FoldingExtension]);
+		), blankBulletLineWidget, Prec.highest(this.KeepOnlyZoomedContentVisible?.getExtension()), selectionController(), FoldingExtension]);
+
+		if (!this.options.disableTimeFormat) {
+			extensions.push([createDateRendererPlugin()]);
+		}
 
 		if (this.options.type === 'outliner') {
 			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);

@@ -22,7 +22,6 @@
 			"obsidian-typings"
 		]
 	},
-//	"extends": "@tsconfig/svelte/tsconfig.json",
 	"include": [
 		"**/globals.d.ts",
 		"**/*.js",

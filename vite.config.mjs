@@ -54,8 +54,8 @@ export default defineConfig(({mode}) => {
 				],
 				output: {
 					// Overwrite default Vite output fileName
-					entryFileNames: 'main.js',
-					assetFileNames: 'styles.css',
+					entryFileNames: mode === 'production' ? 'Outliner.MD/dist/main.js' : 'main.js',
+					assetFileNames: mode === 'production' ? 'Outliner.MD/dist/styles.css' : 'styles.css',
 				},
 				external: [
 					'obsidian',

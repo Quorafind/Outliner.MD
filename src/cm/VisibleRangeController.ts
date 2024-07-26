@@ -134,8 +134,6 @@ export const zoomStateField = StateField.define<DecorationSet>({
 					});
 				}
 
-				console.log(value);
-
 
 			}
 

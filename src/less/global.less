@@ -1,9 +1,32 @@
-/*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
+// Below is the content of the file
+/* @settings
+name: Outliner.md
+id: outliner-md-settings
+settings:
+    -
+        id: omd-section-line-font-size
+        title: Section line font size
+        type: variable-number-slider
+        default: 16
+        min: 12
+        max: 44
+        step: 1
+        format: px
+	-
+		id: omd-section-line-text-align
+		title: Section line text align
+		type: variable-select
+        default: left
+        options:
+            -
+                label: Left
+                value: left
+            -
+                label: Center
+                value: center
+            -
+                label: Right
+                value: right
 
 */
 
@@ -113,12 +136,18 @@ body.outliner-paper-layout .outliner-editor .markdown-source-view.mod-cm6 .cm-li
 	background: var(--outliner-highlight-color);
 }
 
+.outliner-editor .markdown-source-view.mod-cm6 .cm-sizer {
+	min-height: fit-content;
+}
+
+.outliner-editor .markdown-source-view.mod-cm6 .cm-sizer .cm-content {
+	padding-bottom: 0;
+}
+
 /*.outliner-editor {*/
 /*	padding-top: var(--size-4-6);*/
 /*	padding-left: var(--size-4-4);*/
 /*}*/
-
-
 .outliner-editor .markdown-source-view.mod-cm6 .cm-sizer {
 	max-width: var(--file-line-width);
 	margin-left: auto;
@@ -507,7 +536,7 @@ body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-c
 //	min-height: fit-content;
 //}
 
-.search-result-file-match.embedded-part .markdown-source-view .cm-editor {
+.search-result-file-match.embedded-part > .markdown-source-view .cm-editor {
 	height: 100%;
 	/* min-height: 100%; */
 	min-height: fit-content;
@@ -517,8 +546,22 @@ body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-c
 	display: none;
 }
 
-.outliner-view-setting-container .setting-item:not(.show-reload-button) button {
+.outliner-view-setting-container .setting-item:has(.checkbox-container):not(.show-reload-button) button {
 	display: none;
+}
+
+.outliner-view-setting-container .setting-item .setting-item-name:has(svg) {
+	display: flex;
+	gap: var(--size-4-2);
+
+	align-items: center;
+
+	--icon-size: var(--size-4-4);
+
+	span:has(> svg) {
+		display: flex;
+		align-items: center;
+	}
 }
 
 .backlink-btn {
@@ -531,3 +574,16 @@ body:not(.outliner-plugin-dragging) .outliner-editor .markdown-source-view.mod-c
 //.internal-embed.readonly .cm-cursorLayer {
 //	display: none;
 //}
+
+
+.is-popout-window .internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6 {
+	max-height: fit-content;
+	height: fit-content;
+}
+
+
+.omd-section-line {
+	cursor: pointer;
+	font-size: var(--omd-section-line-font-size);
+	text-align: var(--omd-section-line-text-align);
+}

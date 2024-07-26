@@ -1,0 +1,87 @@
+.drag-handler-button {
+	border-radius: 4px;
+	cursor: grab;
+	position: absolute;
+
+	left: 0;
+	top: 0;
+}
+
+.drag-target-line {
+	left: 0;
+	top: 0;
+	height: 4px;
+	pointer-events: none;
+	background: var(--color-accent);
+	position: absolute;
+}
+
+.drag-ghost-element {
+	left: 0;
+	top: 0;
+
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	padding: var(--size-2-2);
+
+	cursor: grabbing;
+
+	pointer-events: none;
+
+	height: max-content;
+	width: max-content;
+	position: absolute;
+	min-width: 200px;
+	min-height: fit-content;
+}
+
+.drag-ghost-element ul {
+	margin: unset;
+	margin-block-start: 0;
+	margin-block-end: 0;
+	padding-inline-start: 30px;
+}
+
+.markdown-source-view.mod-cm6 {
+	.cm-drag-handler-container {
+		/*display: inline-block;*/
+		position: relative;
+		z-index: 1;
+
+		.clickable-icon {
+			position: absolute;
+			top: 0;
+			inset-inline-end: 0;
+			height: 100%;
+
+			padding: var(--size-2-2);
+
+			--icon-size: 14px;
+			--icon-stroke: 2px;
+
+			opacity: 0;
+
+		}
+
+		&:hover .clickable-icon {
+			opacity: 1;
+		}
+	}
+
+	.cm-line {
+		&:hover {
+			.clickable-icon {
+				opacity: 1;
+			}
+		}
+	}
+
+}
+
+/*.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
+/*	padding-inline-end: 0;*/
+/*}*/
+
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-drag-handler-container .clickable-icon {
+	inset-inline-end: 18px;
+}

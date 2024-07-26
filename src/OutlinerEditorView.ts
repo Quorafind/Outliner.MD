@@ -110,6 +110,10 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	}
 
+	getSelection() {
+		return this.editor?.getSelection();
+	}
+
 	onLoadFile(file: TFile): Promise<void> {
 		// this.inl;
 
@@ -135,6 +139,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	}
 
 	async onRename(file: TFile): Promise<void> {
+		if (!(file?.extension === 'md')) return super.onRename(file);
+
 		this.filePath = file.path;
 		this.file = file;
 
@@ -290,7 +296,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 					const prevLine = line > 0 ? editor.editor.getLine(line - 1) : "";
 
-					if (lineText.startsWith("- ")) {
+					if (lineText.trimStart().startsWith("- ")) {
 						const currentItemisFoldable = foldable(editor.editor.cm.state, editor.editor.posToOffset({
 							line,
 							ch: 0
@@ -303,13 +309,17 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							return false;
 						}
 
+						if (!currentItemisFoldable) {
+							return false;
+						}
+
 						// Check until next line contains -
 						if (currentItemisFoldable) {
 							const currentLineEnd = editor.editor.cm.state.doc.line(line + 1).to;
 							const foldRangeTo = currentItemisFoldable.to;
 							// const folaRangeFrom = currentItemisFoldable.from;
 
-							console.log(foldRangeTo);
+							// console.log(foldRangeTo);
 
 							const lineAtFoldRangeTo = (editor.editor.cm as EditorView).state.doc.lineAt(foldRangeTo);
 							// const lineAtFoldRangeFrom = (editor.editor.cm as EditorView).state.doc.lineAt(folaRangeFrom);
@@ -317,9 +327,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							for (let i = editor.editor.cm.state.doc.lineAt(currentLineEnd + 1).number; i <= lineAtFoldRangeTo.number; i++) {
 								const rangeLineText = editor.editor.cm.state.doc.line(i).text;
 
-								console.log(i, rangeLineText, lineAtFoldRangeTo);
 								if (rangeLineText.trimStart().startsWith("- ")) {
-									console.log('has child nodes');
 									hasChildNodes = true;
 									break;
 								}
@@ -329,22 +337,21 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 							for (let i = editor.editor.cm.state.doc.lineAt(currentLineEnd + 1).number; i <= lineAtFoldRangeTo.number; i++) {
 								const rangeLineText = editor.editor.cm.state.doc.line(i).text;
-								console.log(currentLineEnd, editor.editor.cm.state.doc.lineAt(currentLineEnd + 1), rangeLineText, lineAtFoldRangeTo, currentLineEnd + 1);
+								// console.log(currentLineEnd, editor.editor.cm.state.doc.lineAt(currentLineEnd + 1), rangeLineText, lineAtFoldRangeTo, currentLineEnd + 1);
 								// if (rangeLineText === undefined) continue;
 								if (rangeLineText.trimStart().startsWith('- ')) {
 									realEndPos = editor.editor.cm.state.doc.line(i).from - 1;
-									console.log('realEndPos', realEndPos, rangeLineText);
 									break;
 								}
 							}
 
-							console.log("hasChildNodes", hasChildNodes, realEndPos, foldRangeTo, lineAtFoldRangeTo);
+							// console.log("hasChildNodes", hasChildNodes, realEndPos, foldRangeTo, lineAtFoldRangeTo);
 
 
 							if (hasChildNodes) {
 								const newLineText = `\n${spaceBeforeStartLine}${hasChildNodes ? indentNewLine : ''}- `;
 								const finalFrom = realEndPos;
-								console.log('finalFrom', finalFrom);
+								// console.log('finalFrom', finalFrom);
 								// const finalSelection = newLineText.length - 2;
 								const finalLine = editor.editor.cm.state.doc.lineAt(finalFrom);
 
@@ -369,7 +376,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							} else {
 								const lineAtFoldRangeTo = editor.editor.cm.state.doc.lineAt(foldRangeTo);
 
-								console.log('lineat fold range', lineAtFoldRangeTo);
 								(editor.editor as Editor).transaction({
 									changes: [
 										{
@@ -720,6 +726,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			view: this,
 			type: 'outliner',
 			foldByDefault: true,
+			disableTimeFormat: this.plugin.settings.disableTimeFormat,
 		});
 
 

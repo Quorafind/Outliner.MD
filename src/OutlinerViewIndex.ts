@@ -25,6 +25,12 @@ import { copyLink } from "./utils/utils";
 import { EmbeddedRender } from "./components/embed/EmbeddedRender";
 import { createMarkRendererPlugin } from "./cm/TextFragmentStartEndMarker";
 import { DEFAULT_SETTINGS, OutlinerViewSettings, OutlinerViewSettingTab } from "./OutlinerViewSettings";
+import { RenderNavigationHeader } from "./cm/SplitAsNotebook";
+import { getAllSectionsRangeAndName } from "./cm/utils/getRangeBetweenNextMark";
+import { zoomStateField } from "./cm/VisibleRangeController";
+import { initSectionFeature } from "./utils/sectionFeature";
+import { createSectionLineRender } from "./cm/RenderSectionLine";
+import { DragDropManager } from "./components/drag-n-drop/dragDropManager";
 
 
 const FRONT_MATTER_KEY = 'outliner';
@@ -36,18 +42,27 @@ export default class OutlinerViewPlugin extends Plugin {
 	calculateRangeForZooming = new CalculateRangeForZooming();
 	KeepOnlyZoomedContentVisible = new KeepRangeVisible();
 
+	sectionTabsNavigation = new RenderNavigationHeader(this);
+	dragDropManager = new DragDropManager(this);
+
 	// backlinkComponent: any;
 
 	async onload() {
 
 		await this.loadSettings();
+		this.sectionTabsNavigation.onload();
+		this.dragDropManager.onload();
 		this.addSettingTab(new OutlinerViewSettingTab(this.app, this));
 
 		this.registerView(OUTLINER_EDITOR_VIEW_ID, (leaf) => new OutlinerEditorView(leaf, this) as View);
+		this.registerEditorExtension([createMarkRendererPlugin()]);
+
 
 		this.registerRibbons();
 
-		this.patchMarkdownView();
+		this.patchMarkdownView(this);
+		this.noteAsNotebook();
+
 		this.patchEmbedView();
 		this.patchWorkspaceLeaf();
 		this.patchItemView();
@@ -57,7 +72,7 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.registerMenu();
 		this.registerCommands();
 
-		this.registerEditorExtension([createMarkRendererPlugin()]);
+
 		// this.patchInlinePreview();
 		this.app.workspace.onLayoutReady(() => {
 			document.body.toggleClass('outliner-paper-layout', this.settings.paperLayout);
@@ -66,6 +81,12 @@ export default class OutlinerViewPlugin extends Plugin {
 	}
 
 	onunload() {
+		this.dragDropManager.unload();
+		this.settings.noteAsNotebook && document.body.findAll('.hide-sections-tabs').forEach((el) => el.toggleClass('hide-sections-tabs', false));
+		document.body.toggleClass('omd-change-section-btns-order', false);
+		document.body.toggleClass('outliner-paper-layout', false);
+		document.body.toggleClass('omd-hide-empty-section-header', false);
+
 		Promise.all(
 			this.app.workspace.getLeavesOfType(OUTLINER_EDITOR_VIEW_ID).map((leaf) => {
 				this.outlinerFileModes[(leaf as any).id] = 'markdown';
@@ -74,6 +95,19 @@ export default class OutlinerViewPlugin extends Plugin {
 		).then(() => {
 			super.unload();
 		});
+	}
+
+	noteAsNotebook() {
+		if (!this.settings.noteAsNotebook) return;
+		initSectionFeature(this);
+		this.registerEditorExtension([this.sectionTabsNavigation.getExtension(), zoomStateField, createSectionLineRender()]);
+		this.registerHoverLinkSource('outliner-md', {
+			display: 'Section tab preview', defaultMod: true
+		});
+
+		document.body.toggleClass('omd-change-section-btns-order', this.settings.showFullBtnAtLeftSide);
+		document.body.toggleClass('omd-hide-empty-section-header', this.settings.autoHideEmptySectionHeader);
+		this.initAllMarkdownView();
 	}
 
 	registerRibbons() {
@@ -138,8 +172,8 @@ export default class OutlinerViewPlugin extends Plugin {
 		} as ViewState);
 	}
 
-	patchMarkdownView() {
-		around(Workspace.prototype, {
+	patchMarkdownView(plugin: OutlinerViewPlugin) {
+		const markdownViewUninstaller = around(Workspace.prototype, {
 			getActiveViewOfType: (next: any) =>
 				function (t: any) {
 
@@ -155,53 +189,7 @@ export default class OutlinerViewPlugin extends Plugin {
 					return result;
 				},
 		});
-
-
-		// const patchLivePreviewPlugin = (livePreviewPlugins: any, plugin: OutlinerViewPlugin) => {
-		// 	const target = livePreviewPlugins.find(i => i.provides);
-		// 	if (!target) return;
-		//
-		//
-		// 	console.log(target);
-		// 	// const original = target.updateF;
-		// 	//
-		// 	// target.updateF = (a: any, b: any) => {
-		// 	// 	const result = original.call(this, a, b);
-		// 	// 	console.log(this, result);
-		// 	// 	return result;
-		// 	// };
-		// 	//
-		// 	// console.log(target.updateF, original);
-		// 	//
-		// 	// this.app.workspace.activeEditor?.editor?.editorComponent.toggleSource();
-		// 	//
-		// 	// this.app.workspace.activeEditor?.editor?.editorComponent.toggleSource();
-		//
-		// 	const uninstaller = around(target.constructor.prototype.constructor, {
-		// 		define: (old: any) => {
-		// 			return function (...args: any[]) {
-		// 				const result = old.apply(this, args);
-		// 				const original = this.updateF;
-		// 				console.log(this, result);
-		// 				this.updateF = (a: any, b: any) => {
-		// 					const result = original.call(this, a, b);
-		// 					console.log(this, result);
-		// 					return result;
-		// 				};
-		// 				return result;
-		// 			};
-		// 		}
-		// 	});
-		//
-		//
-		// 	// original.update = (a: any, b: any) => {
-		// 	// 	const result = original.update(a, b);
-		// 	// 	console.log(this, result);
-		// 	// 	return result;
-		// 	// };
-		//
-		// 	this.register(uninstaller);
-		// };
+		this.register(markdownViewUninstaller);
 
 
 		const patchEditor = (plugin: OutlinerViewPlugin) => {
@@ -278,6 +266,17 @@ export default class OutlinerViewPlugin extends Plugin {
 
 	}
 
+	initAllMarkdownView() {
+		const fileLeaves = this.app.workspace.getLeavesOfType('markdown');
+		for (const leaf of fileLeaves) {
+			const view = (leaf.view as any).editMode.editor.cm;
+			const sections = getAllSectionsRangeAndName({
+				state: view.state,
+			});
+			this.sectionTabsNavigation.showSectionTabs(view, sections);
+		}
+	}
+
 	patchEmbedView() {
 		if (!this.settings.editableBlockEmbeds) return;
 
@@ -288,7 +287,6 @@ export default class OutlinerViewPlugin extends Plugin {
 			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
 				return false;
 			}
-			console.log(e, t, n);
 
 			return new EmbeddedEditor(this, {
 				...e,
@@ -421,6 +419,7 @@ export default class OutlinerViewPlugin extends Plugin {
 							self.outlinerFileModes[this.id || state.state.file] !== 'markdown'
 						) {
 							// Then check for the kanban frontMatterKey
+
 							const cache = self.app.metadataCache.getCache(state.state.file);
 
 							if (cache?.frontmatter && cache.frontmatter[FRONT_MATTER_KEY]) {
@@ -503,8 +502,6 @@ export default class OutlinerViewPlugin extends Plugin {
 						e: any, b: any
 					) {
 
-						console.log(this);
-
 						const containerEl = this.parentDom.parentDom.el.closest(".mod-global-search");
 						this.isBacklink = !!containerEl;
 						if (this.isBacklink) {
@@ -514,7 +511,6 @@ export default class OutlinerViewPlugin extends Plugin {
 						if (this.embeddedEditor) {
 							const firstChild = this.embeddedEditor;
 							if (firstChild) {
-								console.log(this.currentRange, this.start, this.end, this.content);
 								(firstChild as EmbeddedEditor).updateRange(
 									this.currentRange || {
 										from: this.start,

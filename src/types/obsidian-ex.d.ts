@@ -153,4 +153,8 @@ declare module "obsidian" {
 			cm: EditorView;
 		};
 	}
+
+	interface Workspace {
+		on(event: "zoom-into-section", callback: (view: EditorView, pos: number) => void): EventRef;
+	}
 }

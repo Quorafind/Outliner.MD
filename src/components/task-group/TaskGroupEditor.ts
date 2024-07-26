@@ -8,6 +8,7 @@ import { KeepRangeVisible } from "../../cm/KeepRangeVisible";
 import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
 import { SelectionAnnotation } from "../../cm/SelectionController";
 import OutlinerViewPlugin from "../../OutlinerViewIndex";
+import { OutlinerViewSettings } from "../../OutlinerViewSettings";
 
 
 export class TaskGroupEditor extends Component {
@@ -31,6 +32,8 @@ export class TaskGroupEditor extends Component {
 
 	editing: boolean = false;
 
+	settings: OutlinerViewSettings;
+
 	constructor(app: App, readonly containerEl: HTMLElement) {
 		super();
 		this.app = app;
@@ -38,8 +41,14 @@ export class TaskGroupEditor extends Component {
 
 	async onload() {
 		super.onload();
-		this.initEditor();
 
+		try {
+			this.settings = ((this.app.plugins.getPlugin('outliner-md') || this.app.plugins.getPlugin('outliner-md-beta')) as OutlinerViewPlugin).settings;
+		} catch (e) {
+			console.error(e);
+		}
+
+		this.initEditor();
 		this.registerEvent(
 			this.app.metadataCache.on("dataview:index-ready", () => {
 					this.initEditor();
@@ -442,6 +451,7 @@ export class TaskGroupEditor extends Component {
 			value: data || "",
 			path: path,
 			foldByDefault: true,
+			disableTimeFormat: this.settings.disableTimeFormat,
 		});
 
 		this.editorMap.set(path, embedEditor.editor);
@@ -524,10 +534,14 @@ export class TaskGroupEditor extends Component {
 	}
 
 	async initEditor() {
+
 		const api = getAPI(this.app);
+
+		if (!api) return;
+
 		const result = await api.query(`TASK  
 FROM ""  
-WHERE contains(text, "#now")
+WHERE contains(text, "${this.settings.taskGroupQuery}")
 GROUP BY file.path`);
 
 		if (!result.successful) return;
@@ -557,8 +571,7 @@ GROUP BY file.path`);
 				});
 			};
 
-			const settings = ((this.app.plugins.getPlugin('outliner-md') || this.app.plugins.getPlugin('outliner-md-beta')) as OutlinerViewPlugin).settings;
-			settings.foldTaskGroup && taskGroupContainer.hide();
+			this.settings.foldTaskGroup && taskGroupContainer.hide();
 			collapseButton.toggleClass('cm-task-container-collapsed', !taskGroupContainer.isShown());
 
 
@@ -594,9 +607,11 @@ GROUP BY file.path`);
 
 		const api = getAPI(this.app);
 
+		if (!api) return;
+
 		const result = await api.query(`TASK  
 FROM ""  
-WHERE contains(text, "#now")
+WHERE contains(text, "${this.settings.taskGroupQuery}")
 GROUP BY file.path`);
 
 		if (!result.successful) return;
