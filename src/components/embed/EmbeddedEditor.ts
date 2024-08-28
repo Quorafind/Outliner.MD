@@ -533,7 +533,7 @@ export class EmbeddedEditor extends Component {
 			type: 'embed',
 			value: data || "",
 			path: this.file?.path,
-			disableTimeFormat: this.plugin.settings.disableTimeFormat,
+			disableTimeFormat: !this.plugin.settings.timeFormatWidget,
 		});
 
 		// embedEditor.editor.getValue = () => {

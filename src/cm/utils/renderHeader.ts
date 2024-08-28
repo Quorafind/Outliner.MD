@@ -206,12 +206,20 @@ class RenameModal extends Modal {
 		this.contentEl.toggleClass('omd-section-rename', true);
 
 		const frag = document.createDocumentFragment();
-		const input = frag.createEl("textarea", {
+		const input = frag.createEl("input", {
 			cls: "rename-textarea",
-			attr: {
-				rows: "1",
-			}
 		});
+
+		input.onkeydown = (e) => {
+			if (e.key === 'Enter') {
+				const value = input.value;
+				if (value) {
+					this.cb(value);
+					this.close();
+				}
+			}
+		};
+
 		frag.createEl("div", "modal-button-container", (el) => {
 			const button = new ButtonComponent(el).setCta().setButtonText("Rename");
 			button.onClick(() => {

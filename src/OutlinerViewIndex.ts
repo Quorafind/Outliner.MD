@@ -31,6 +31,7 @@ import { zoomStateField } from "./cm/VisibleRangeController";
 import { initSectionFeature } from "./utils/sectionFeature";
 import { createSectionLineRender } from "./cm/RenderSectionLine";
 import { DragDropManager } from "./components/drag-n-drop/dragDropManager";
+import { pluginInfoField } from "./cm/pluginInfo";
 
 
 const FRONT_MATTER_KEY = 'outliner';
@@ -51,11 +52,11 @@ export default class OutlinerViewPlugin extends Plugin {
 
 		await this.loadSettings();
 		this.sectionTabsNavigation.onload();
-		this.dragDropManager.onload();
+		this.settings.dragAndDrop && this.dragDropManager.onload();
 		this.addSettingTab(new OutlinerViewSettingTab(this.app, this));
 
 		this.registerView(OUTLINER_EDITOR_VIEW_ID, (leaf) => new OutlinerEditorView(leaf, this) as View);
-		this.registerEditorExtension([createMarkRendererPlugin()]);
+		this.registerEditorExtension([createMarkRendererPlugin(), pluginInfoField.init((state) => ({plugin: this}))]);
 
 
 		this.registerRibbons();
@@ -71,7 +72,6 @@ export default class OutlinerViewPlugin extends Plugin {
 
 		this.registerMenu();
 		this.registerCommands();
-
 
 		// this.patchInlinePreview();
 		this.app.workspace.onLayoutReady(() => {

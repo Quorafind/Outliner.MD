@@ -726,7 +726,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			view: this,
 			type: 'outliner',
 			foldByDefault: true,
-			disableTimeFormat: this.plugin.settings.disableTimeFormat,
+			disableTimeFormat: !this.plugin.settings.timeFormatWidget,
 		});
 
 

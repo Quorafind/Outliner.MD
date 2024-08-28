@@ -6,7 +6,8 @@ export interface OutlinerViewSettings {
 	livePreviewForBacklinks: boolean;
 	editableBlockEmbeds: boolean;
 	hideFrontmatter: boolean;
-	disableTimeFormat: boolean;
+	timeFormatWidget: boolean;
+	dragAndDrop: boolean;
 
 	noteAsNotebook: boolean;
 	markForSplitSections: string;
@@ -15,6 +16,7 @@ export interface OutlinerViewSettings {
 
 	alwaysShowSectionHeader: boolean;
 	autoHideEmptySectionHeader: boolean;
+	showSectionTitle: boolean;
 
 	markForSplitPages: string;
 
@@ -29,13 +31,15 @@ export const DEFAULT_SETTINGS: OutlinerViewSettings = {
 	livePreviewForBacklinks: false,
 	editableBlockEmbeds: true,
 	hideFrontmatter: false,
-	disableTimeFormat: false,
+	timeFormatWidget: true,
+	dragAndDrop: true,
 
 	noteAsNotebook: false,
 	markForSplitSections: "%%SECTION{NAME}%%",
 
 	showFullBtnAtLeftSide: false,
 	alwaysShowSectionHeader: true,
+	showSectionTitle: true,
 
 	autoHideEmptySectionHeader: false,
 
@@ -110,15 +114,27 @@ export class OutlinerViewSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setHeading().setName(editorSettingName).setDesc(editorSettingDesc);
 
 		const disableTimeFormatSetting = new Setting(containerEl)
-			.setName('Disable time picker')
+			.setName('Time picker')
 			.addButton(button => button.setButtonText('Reload').onClick(() => {
 				window.location.reload();
 			}))
-			.addToggle(toggle => toggle.setValue(settings.disableTimeFormat).onChange(async (value) => {
-				settings.disableTimeFormat = value;
+			.addToggle(toggle => toggle.setValue(settings.timeFormatWidget).onChange(async (value) => {
+				settings.timeFormatWidget = value;
 				this.applySettingsUpdate();
 
 				disableTimeFormatSetting.settingEl.toggleClass('show-reload-button', true);
+			}));
+
+		const dragNdrop = new Setting(containerEl)
+			.setName('Drag and drop [Experimental]')
+			.addButton(button => button.setButtonText('Reload').onClick(() => {
+				window.location.reload();
+			}))
+			.addToggle(toggle => toggle.setValue(settings.dragAndDrop).onChange(async (value) => {
+				settings.dragAndDrop = value;
+				this.applySettingsUpdate();
+
+				dragNdrop.settingEl.toggleClass('show-reload-button', true);
 			}));
 	}
 
@@ -296,6 +312,15 @@ export class OutlinerViewSettingTab extends PluginSettingTab {
 					this.applySettingsUpdate();
 
 					document.body.toggleClass('omd-hide-empty-section-header', value);
+				}));
+
+			new Setting(containerEl)
+				.setName('Show section title')
+				.addToggle(toggle => toggle.setValue(settings.showSectionTitle).onChange(async (value) => {
+					settings.showSectionTitle = value;
+					this.applySettingsUpdate();
+
+					document.body.toggleClass('omd-show-section-title', value);
 				}));
 
 		}

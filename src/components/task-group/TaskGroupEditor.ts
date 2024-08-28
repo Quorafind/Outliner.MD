@@ -451,7 +451,7 @@ export class TaskGroupEditor extends Component {
 			value: data || "",
 			path: path,
 			foldByDefault: true,
-			disableTimeFormat: this.settings.disableTimeFormat,
+			disableTimeFormat: !this.settings.timeFormatWidget,
 		});
 
 		this.editorMap.set(path, embedEditor.editor);

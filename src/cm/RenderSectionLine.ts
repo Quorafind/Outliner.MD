@@ -10,6 +10,7 @@ import {
 	WidgetType
 } from "@codemirror/view";
 import { editorInfoField, editorLivePreviewField, Keymap } from "obsidian";
+import { pluginInfoField } from "./pluginInfo";
 
 interface DecoSpec {
 	widget?: SectionLine;
@@ -32,7 +33,8 @@ class SectionLine extends WidgetType {
 		return (widget as SectionLine).from === this.from && (widget as SectionLine).to === this.to;
 	}
 
-	toDOM(): HTMLElement {
+
+	createTitleEl() {
 		const lineEl = createEl("div", {
 			cls: "omd-section-line",
 			text: this.name,
@@ -60,6 +62,40 @@ class SectionLine extends WidgetType {
 		};
 
 		return lineEl;
+	}
+
+
+	createNoTitleEl() {
+		const lineEl = createEl("hr", {
+			attr: {
+				'aria-label': 'Section ' + this.name,
+			}
+		});
+
+		lineEl.onclick = (e) => {
+			if (Keymap.isModEvent(e)) {
+				e.preventDefault();
+				const app = this.view.state.field(editorInfoField).app;
+				if (app) {
+					app.workspace.trigger("zoom-into-section", this.view, this.to + 1);
+					return;
+				}
+			}
+		};
+
+		return lineEl;
+	}
+
+	toDOM(): HTMLElement {
+		const pluginState = this.view.state.field(pluginInfoField);
+
+		if (!pluginState) {
+			this.error = true;
+			return this.createTitleEl();
+		} else {
+			const settings = pluginState.plugin.settings;
+			return settings.showSectionTitle ? this.createTitleEl() : this.createNoTitleEl();
+		}
 	}
 }
 

@@ -560,6 +560,9 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 .drag-ghost-element {
   left: 0;
   top: 0;
+  display: flex;
+  flex-direction: row;
+  gap: var(--size-2-2);
   background: var(--background-primary);
   box-shadow: var(--shadow-s);
   padding: var(--size-2-2);
@@ -570,6 +573,14 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
   position: absolute;
   min-width: 200px;
   min-height: fit-content;
+  max-height: 600px;
+  overflow-y: auto;
+}
+.drag-ghost-element .drag-ghost-icon {
+  width: max-content;
+}
+.drag-ghost-element .drag-ghost-content {
+  width: 100%;
 }
 .drag-ghost-element ul {
   margin: unset;
@@ -581,26 +592,41 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
   /*display: inline-block;*/
   position: relative;
   z-index: 1;
+  width: min-content;
+  height: min-content;
 }
 .markdown-source-view.mod-cm6 .cm-drag-handler-container .clickable-icon {
   position: absolute;
   top: 0;
-  inset-inline-end: 0;
-  height: 100%;
+  inset-inline-end: 2px;
+  height: 22px;
   padding: var(--size-2-2);
   --icon-size: 14px;
   --icon-stroke: 2px;
   opacity: 0;
 }
 .markdown-source-view.mod-cm6 .cm-drag-handler-container:hover .clickable-icon {
+  opacity: 1 !important;
+}
+.markdown-source-view.mod-cm6 .cm-line:has( + :is(.cm-callout, .math)):hover .cm-drag-handler-container .clickable-icon {
+  opacity: 0;
+}
+.markdown-source-view.mod-cm6 .cm-line:hover .cm-drag-handler-container .clickable-icon {
   opacity: 1;
 }
-.markdown-source-view.mod-cm6 .cm-line:hover .clickable-icon {
-  opacity: 1;
+.markdown-source-view.mod-cm6 .cm-line:has( + :is(.cm-callout, .math)) .cm-drag-handler-container {
+  top: 24px;
+  transition: opacity 2s ease-in-out;
+}
+.markdown-source-view.mod-cm6 .cm-line:has( + :is(.cm-callout, .math):hover) .cm-drag-handler-container .clickable-icon {
+  opacity: 1 !important;
+}
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock .cm-drag-handler-container .clickable-icon {
+  inset-inline-end: 16px;
 }
 /*.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
 /*	padding-inline-end: 0;*/
 /*}*/
-.markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-drag-handler-container .clickable-icon {
+.markdown-source-view.mod-cm6 .cm-line:has(.cm-fold-indicator) span.cm-drag-handler-container .clickable-icon {
   inset-inline-end: 18px;
 }

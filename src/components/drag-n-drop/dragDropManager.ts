@@ -1,19 +1,19 @@
 import {
 	App,
-	Component, editorEditorField,
+	Component,
+	Editor,
+	editorEditorField,
 	editorInfoField,
-	EditorPosition, ExtraButtonComponent,
-	MarkdownRenderer, Menu, MenuItem, moment, Notice,
+	EditorPosition,
+	MarkdownRenderer,
 	requireApiVersion,
 	setIcon
 } from "obsidian";
 import OutlinerViewPlugin from "../../OutlinerViewIndex";
 import { Decoration, type DecorationSet, EditorView, Rect, WidgetType } from "@codemirror/view";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { foldable } from "@codemirror/language";
+import { foldable, syntaxTree, tokenClassNodeProp } from "@codemirror/language";
 import "../../less/drag-n-drop.less";
-import { BulletMenu } from "../BulletMenu";
-import { EmbeddableMarkdownEditor } from "../../editor-components/MarkdownEditor";
 import { pluginInfoField, setPluginEffect } from "../../cm/pluginInfo";
 
 interface FoldRange {
@@ -51,75 +51,102 @@ export class DragDropManager extends Component {
 
 	onload() {
 		super.onload();
-		this.plugin.registerEditorExtension([DragNDropHandler, pluginInfoField.init((state) => ({plugin: this.plugin}))]);
+		this.plugin.registerEditorExtension([DragNDropHandler]);
 		this.createTargetLine();
 		this.registerDragEvents();
-
-		this.plugin.registerEditorExtension(
-			EditorView.domEventHandlers({
-				mouseenter: (e: MouseEvent, editorView: EditorView) => {
-					this.currentEditorView = editorView;
-				},
-				mouseleave: (e: MouseEvent, editorView: EditorView) => {
-					this.hideTargetLine();
-				},
-				dragover: (e: DragEvent, editorView: EditorView) => {
-					if (!this.isDragging) return;
-					this.currentEditorView = editorView;
-					this.firstLineRect = this.currentEditorView.coordsAtPos(0, 1);
-					this.lastLineRect = this.currentEditorView.coordsAtPos(this.currentEditorView.state.doc.length, -1);
-
-					const currentPos = this.currentEditorView.posAtCoords({x: e.clientX, y: e.clientY});
-					if (!currentPos) return;
-					const newLine = this.currentEditorView.state.doc.lineAt(currentPos).number;
-					if (this.focusLine === newLine) return;
-
-					this.focusLine = newLine;
-
-					if (this.firstLineRect && e.clientY < this.firstLineRect?.top) {
-						this.moveTargetLine(this.currentEditorView.coordsAtPos(1, undefined), this.currentEditorView.contentDOM.innerWidth, false);
-						return;
-					}
-
-					if (this.lastLineRect && e.clientY > this.lastLineRect.bottom) {
-						this.moveTargetLine(this.lastLineRect, this.currentEditorView.contentDOM.innerWidth, true);
-						return;
-					}
-
-					// Calculate the current position of the mouse
-					// If targetline is inside the selection range, hide it
-					// Otherwise move the targetline to the nearest position
-					const linePos = this.currentEditorView.posAtCoords({x: e.clientX, y: e.clientY});
-					if (!linePos) return;
-					const lineStart = this.currentEditorView.state.doc.lineAt(linePos).from;
-
-					if (!linePos) return;
-					if (linePos && linePos > this.prevFrom && linePos < this.prevTo) return;
-
-					this.moveTargetLine(this.currentEditorView.coordsAtPos(lineStart, undefined), this.currentEditorView.contentDOM.innerWidth, false);
-				},
-				dragenter: (e: DragEvent, editorView: EditorView) => {
-					console.log("drag enter");
-					if (!this.isDragging) return;
-					this.currentEditorView = editorView;
-					this.isInsideEditor = true;
-					this.targetLineEl?.show();
-				},
-				drop: (e: DragEvent, editorView: EditorView) => {
-					if (!this.isDragging) return;
-
-					this.currentEditorView = editorView;
-					this.handleDrop(e);
-					this.cleanupDrag();
-				}
-			})
-		);
+		this.registerEditorEvents();
 	}
 
 	private registerDragEvents() {
 		this.registerDomEvent(window, 'dragover', this.onDragOver.bind(this));
 		this.registerDomEvent(window, 'dragend', this.onDragEnd.bind(this));
 	}
+
+	private registerEditorEvents() {
+		this.plugin.registerEditorExtension(
+			EditorView.domEventHandlers({
+				mouseenter: this.handleEditorMouseEnter.bind(this),
+				mouseleave: this.handleEditorMouseLeave.bind(this),
+				dragover: this.handleEditorDragOver.bind(this),
+				dragenter: this.handleEditorDragEnter.bind(this),
+				drop: this.handleEditorDrop.bind(this)
+			})
+		);
+	}
+
+	private handleEditorMouseEnter(e: MouseEvent, editorView: EditorView) {
+		this.currentEditorView = editorView;
+	}
+
+	private handleEditorMouseLeave(e: MouseEvent, editorView: EditorView) {
+		this.hideTargetLine();
+	}
+
+	private handleEditorDragOver(e: DragEvent, editorView: EditorView) {
+		if (!this.isDragging) return;
+
+		this.currentEditorView = editorView;
+		this.updateLineRects();
+
+		const currentPos = this.currentEditorView.posAtCoords({x: e.clientX, y: e.clientY});
+		if (!currentPos) return;
+
+		const newLine = this.currentEditorView.state.doc.lineAt(currentPos).number;
+		if (this.focusLine === newLine) return;
+
+		this.focusLine = newLine;
+
+		this.handleDragOverBoundaries(e);
+		this.handleDragOverContent(e);
+	}
+
+	private updateLineRects() {
+		if (!this.currentEditorView) return;
+		this.firstLineRect = this.currentEditorView.coordsAtPos(0, 1);
+		this.lastLineRect = this.currentEditorView.coordsAtPos(this.currentEditorView.state.doc.length, -1);
+	}
+
+	private handleDragOverBoundaries(e: DragEvent) {
+		if (!this.currentEditorView) return;
+
+		if (this.firstLineRect && e.clientY < this.firstLineRect.top) {
+			this.moveTargetLine(this.currentEditorView.coordsAtPos(1, undefined), this.currentEditorView.contentDOM.innerWidth, false);
+			return;
+		}
+
+		if (this.lastLineRect && e.clientY > this.lastLineRect.bottom) {
+			this.moveTargetLine(this.lastLineRect, this.currentEditorView.contentDOM.innerWidth, true);
+			return;
+		}
+	}
+
+	private handleDragOverContent(e: DragEvent) {
+		if (!this.currentEditorView) return;
+
+		const linePos = this.currentEditorView.posAtCoords({x: e.clientX, y: e.clientY});
+		if (!linePos) return;
+
+		const lineStart = this.currentEditorView.state.doc.lineAt(linePos).from;
+
+		if (linePos > this.prevFrom && linePos < this.prevTo) return;
+
+		this.moveTargetLine(this.currentEditorView.coordsAtPos(lineStart, undefined), this.currentEditorView.contentDOM.innerWidth, false);
+	}
+
+	private handleEditorDragEnter(e: DragEvent, editorView: EditorView) {
+		if (!this.isDragging) return;
+		this.currentEditorView = editorView;
+		this.isInsideEditor = true;
+		this.targetLineEl?.show();
+	}
+
+	private handleEditorDrop(e: DragEvent, editorView: EditorView) {
+		if (!this.isDragging) return;
+		this.currentEditorView = editorView;
+		this.handleDrop(e);
+		this.cleanupDrag();
+	}
+
 
 	async handleDragStart(event: DragEvent, from: number, to: number, view: EditorState) {
 		this.isDragging = true;
@@ -130,7 +157,7 @@ export class DragDropManager extends Component {
 
 		this.currentEditorView.focus();
 
-		await this.createGhostElement(event, view, from);
+		await this.createGhostElement(event, view, from, to);
 
 		if (event.dataTransfer) {
 			const emptyImage = document.createElement('div');
@@ -206,7 +233,7 @@ export class DragDropManager extends Component {
 		this.targetLineEl.hide();
 	}
 
-	async createGhostElement(event: DragEvent, view: EditorState, from: number) {
+	async createGhostElement(event: DragEvent, view: EditorState, from: number, to: number) {
 		if (this.ghostEl) this.ghostEl.detach();
 
 		const foldRange = this.calculateRangeForTransform(view, from);
@@ -214,7 +241,7 @@ export class DragDropManager extends Component {
 
 		if (!foldRange) {
 			this.prevFrom = line.from;
-			this.prevTo = line.to === view.doc.length ? line.to : line.to + 1;
+			this.prevTo = line.to === view.doc.length ? line.to : (line.to < to ? to + 1 : line.to + 1);
 		} else {
 			this.prevFrom = foldRange.from;
 			this.prevTo = foldRange.to === view.doc.length ? foldRange.to : foldRange.to + 1;
@@ -229,7 +256,7 @@ export class DragDropManager extends Component {
 		setIcon(iconEl, "grip-vertical");
 		iconEl.style.float = "left";
 
-		const contentEl = this.ghostEl.createEl("div", {cls: "drag-ghost-content"});
+		const contentEl = this.ghostEl.createEl("div", {cls: ["drag-ghost-content", "markdown-rendered"]});
 		contentEl.style.float = "right";
 
 		await MarkdownRenderer.render(this.plugin.app, this.initContent.trim(), contentEl, "", this);
@@ -265,7 +292,6 @@ export class DragDropManager extends Component {
 
 		if (!editor) return;
 
-		const dropLineText = this.currentEditorView.state.doc.lineAt(dropLinePos);
 		let dropPos: EditorPosition = editor.offsetToPos(dropLinePos - 1);
 
 		// If the drop position is near the selection range, do nothing.
@@ -286,13 +312,24 @@ export class DragDropManager extends Component {
 			targetLineNum = dropPos.line;
 		}
 
-		const bulletLineRegex = new RegExp("[\\t|\\s]+([-*+]|\\d+\\.)\\s");
-		let adjustedText = this.initContent;
 
-		if (bulletLineRegex.test(this.initContent)) adjustedText = this.adjustIndentation(this.initContent, editor.getLine(targetLineNum));
-		// Move the lines to the drop position
+		this.handleNormalDrop(editor, dropLinePos, targetLineNum, !notSameEditor);
+		this.cleanupDrag();
+	}
 
-		if (notSameEditor) {
+	handleCtrlDrop(editor: Editor, dropLinePos: number, targetLineNum: number, isSameEditor: boolean) {
+
+	}
+
+	handleAltDrop(editor: Editor, dropLinePos: number, targetLineNum: number, isSameEditor: boolean) {
+
+	}
+
+	handleNormalDrop(editor: Editor, dropLinePos: number, targetLineNum: number, isSameEditor: boolean) {
+		if (!this.currentEditorView) return;
+		const adjustedText = this.adjustIndentation(this.initContent, editor.getLine(targetLineNum));
+
+		if (!isSameEditor) {
 			this.currentEditorView.dispatch({
 				changes: {
 					from: dropLinePos,
@@ -324,9 +361,6 @@ export class DragDropManager extends Component {
 				}]
 			});
 		}
-
-
-		this.cleanupDrag();
 	}
 
 	shouldReplaceToken(text: string): string | undefined {
@@ -338,54 +372,63 @@ export class DragDropManager extends Component {
 		return text.match(/^\s*/g)?.[0];
 	}
 
-	adjustIndentation(foldText: string, parentLine: string) {
-		const textArray = foldText.split('\n');
-		const tabSize = this.plugin.app.vault.getConfig("tabSize");
-		let level: number;
-		let isBullet: boolean = false;
+	adjustIndentation(foldText: string, parentLine: string): string {
+		const lines = foldText.split('\n');
+		const tabSize = this.plugin.app.vault.getConfig("tabSize") as number;
+		const useTab = this.plugin.app.vault.getConfig("useTab") as boolean;
 
-		const bulletLineRegex = new RegExp("^([\\t|\\s]+)?([-*+]|\\d+\\.)\\s");
-		if (!bulletLineRegex.test(parentLine)) level = 0;
-		else {
-			isBullet = true;
-			const indent = parentLine.match(/^\s*/g)?.[0];
-			if (!indent) level = 0;
-			else if (!indent.length) level = 0;
-			else level = indent.length / tabSize;
-		}
+		const getIndentLevel = (line: string): number => {
+			const spaceMatch = line.match(/^ */)?.[0] ?? '';
+			const tabMatch = line.match(/^\t*/)?.[0] ?? '';
 
-		const firstLine = textArray[0];
-		if (!firstLine) return foldText;
-		const firstLineIndent = this.shouldReplaceToken(firstLine);
-		if (!firstLineIndent) return foldText;
-		const firstLineIndentLevel = firstLineIndent.length / tabSize;
-
-		let indentRegex;
-		let adjustedText: string = "";
-		if (firstLineIndentLevel <= level) {
-			return foldText;
-		}
-
-		if (level === 0) {
-			indentRegex = isBullet ? new RegExp(`^[\\t|\\s]{${(firstLineIndentLevel - 1) * tabSize}}`) : new RegExp(`^[\\t|\\s]{${firstLineIndentLevel * tabSize}}`);
-			for (let i = 0; i < textArray.length; i++) {
-				if (i === textArray.length - 1) adjustedText += textArray[i].replace(indentRegex, "");
-				else adjustedText += textArray[i].replace(indentRegex, "") + "\n";
+			if (tabMatch.length > 0) {
+				return tabMatch.length;
+			} else {
+				return Math.floor(spaceMatch.length / tabSize);
 			}
-			return adjustedText;
-		} else {
-			let levelDiff = firstLineIndentLevel - level;
-			if ((firstLineIndentLevel - level) >= 1 && isBullet) {
-				levelDiff = levelDiff - 1;
+		};
+
+		const createIndent = (level: number): string => {
+			if (useTab) {
+				return '\t'.repeat(Math.max(0, level));
+			} else {
+				return ' '.repeat(Math.max(0, level * tabSize));
+			}
+		};
+
+		const isMarkdownListItem = (line: string): boolean => {
+			const trimmedLine = line.trim();
+			return /^(\d+\.|-|\*)\s/.test(trimmedLine);
+		};
+
+		const parentIndentLevel = getIndentLevel(parentLine);
+		const firstLineIndentLevel = getIndentLevel(lines[0]);
+
+		const shouldIndent = parentLine.trim() !== "" &&
+			(parentIndentLevel > 0 || isMarkdownListItem(parentLine.trim()));
+
+		const targetIndentLevel = shouldIndent ? (parentIndentLevel + 1) : 0;
+
+		const adjustLine = (line: string, index: number): string => {
+			// 处理最后一个空行
+			if (line.trim() === "" && (index === lines.length - 1)) {
+				return line;
 			}
 
-			indentRegex = new RegExp(`^[\\t|\\s]{${(levelDiff) * tabSize}}`);
-			for (let i = 0; i < textArray.length; i++) {
-				if (i === textArray.length - 1) adjustedText += textArray[i].replace(indentRegex, "");
-				else adjustedText += textArray[i].replace(indentRegex, "") + "\n";
+			const currentIndentLevel = getIndentLevel(line);
+			let newIndentLevel: number;
+
+			if (index === 0) {
+				newIndentLevel = targetIndentLevel;
+			} else {
+				const relativeIndentLevel = currentIndentLevel - firstLineIndentLevel;
+				newIndentLevel = Math.max(0, targetIndentLevel + relativeIndentLevel);
 			}
-			return adjustedText;
-		}
+
+			return createIndent(newIndentLevel) + line;
+		};
+
+		return lines.map(adjustLine).join('\n');
 	}
 
 	moveTargetLine(domRect: any, width: number, bottom?: boolean) {
@@ -456,7 +499,6 @@ class DragNDropHandlerWidget extends WidgetType {
 				draggable: 'true'
 			}
 		});
-
 		this.dragHandlerContainerEl.createEl('span', {
 			cls: 'clickable-icon',
 		}, (o) => {
@@ -476,37 +518,105 @@ class DragNDropHandlerWidget extends WidgetType {
 	}
 }
 
+const AVAILABLE_CLASS_LIST = ['hmd-callout', 'math', 'hmd-codeblock', 'quote'];
+
 export const DragNDropHandler = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
 	},
 	update(value, tr) {
 		const builder = new RangeSetBuilder<Decoration>();
-
 		const field = tr.state.field(editorInfoField);
+
+		let inSpecialBlock = false;
+		let previousLineEnd = 0;
+		let specialBlockStartLine = 0;
+		let currentType: string[] = [];
+
+		let isSpecialBlockStart = false;
 
 		for (let i = 1; i <= tr.state.doc.lines; i++) {
 			const line = tr.state.doc.line(i);
-			// if (!(/^(-|\*|\d+\.)(\s(\[.\]))?/g.test(line.text.trimStart()))) continue;
-			if (!line.text.trim()) continue;
-			const spacesLength = line.text.match(/^\s*/)![0].length; // 使用 \s* 匹配所有空白字符，包括空格和制表符
+			const syntaxNode = syntaxTree(tr.state).resolveInner(line.from + 1);
+			const nodeProps = syntaxNode.type.prop(tokenClassNodeProp)?.split(' ') ?? [];
 
-			if (spacesLength > 0) {
-				// 如果存在空格或缩进，将 widget 添加在这些空格之后
-				builder.add(line.from + spacesLength, line.from + spacesLength, Decoration.widget({
-					widget: new DragNDropHandlerWidget(field.app, tr.state, line.from + spacesLength, line.from + spacesLength),
-					side: -1
-				}));
-			} else {
-				// 如果没有空格或缩进，将 widget 添加在行的开始
-				builder.add(line.from, line.from, Decoration.widget({
-					widget: new DragNDropHandlerWidget(field.app, tr.state, line.from, line.from),
-					side: -1
-				}));
+			if (nodeProps.includes('hmd-frontmatter')) continue;
+			if (isSpecialBlockStart) {
+				isSpecialBlockStart = false;
 			}
+
+			if ((nodeProps.length === 0 || (currentType !== nodeProps && currentType.includes('hmd-codeblock') && !nodeProps.includes('hmd-codeblock')) || i === tr.state.doc.lines) && currentType.length > 0) {
+
+				if (inSpecialBlock) {
+					const blockStart = tr.state.doc.line(specialBlockStartLine).from;
+					const widgetPosition = (currentType.includes('quote') || currentType.includes('hmd-codeblock')) && !currentType.includes('hmd-callout') ? blockStart : blockStart - 1;
+
+					inSpecialBlock = false;
+
+					builder.add(
+						widgetPosition,
+						widgetPosition,
+						Decoration.widget({
+							widget: new DragNDropHandlerWidget(field.app, tr.state, blockStart, line.to),
+							side: -1,
+							inlineOrder: true,
+						})
+					);
+				}
+
+				currentType = [];
+			}
+
+			if (!line.text.trim()) {
+				previousLineEnd = line.to;
+				continue;
+			}
+
+			const spacesLength = line.text.match(/^\s*/)![0].length;
+
+			// 检查是否进入或离开特殊区块
+			isSpecialBlockStart = AVAILABLE_CLASS_LIST.some(cls => nodeProps.includes(cls)) && !inSpecialBlock;
+
+			console.log(isSpecialBlockStart, nodeProps);
+			if (isSpecialBlockStart) {
+				inSpecialBlock = true;
+			} else if (inSpecialBlock && (!AVAILABLE_CLASS_LIST.some(cls => nodeProps.includes(cls)))) {
+				inSpecialBlock = false;
+			}
+
+			if (inSpecialBlock && AVAILABLE_CLASS_LIST.some(cls => nodeProps.includes(cls)) && !isSpecialBlockStart) continue;
+
+			let widgetPosition, side;
+
+			if (isSpecialBlockStart) {
+				specialBlockStartLine = i;
+				// 对于特殊区块的第一行，使用前一行的结束位置
+				widgetPosition = (currentType.includes('quote') || currentType.includes('hmd-codeblock')) ? line.from : previousLineEnd;
+				side = -1;
+			} else {
+				widgetPosition = line.from + spacesLength;
+				side = -1;
+			}
+
+			if (inSpecialBlock) {
+				currentType = nodeProps;
+				continue;
+			}
+
+			builder.add(
+				widgetPosition,
+				widgetPosition,
+				Decoration.widget({
+					widget: new DragNDropHandlerWidget(field.app, tr.state, widgetPosition, line.to),
+					side: side,
+					inlineOrder: true,
+				})
+			);
+
+			previousLineEnd = line.to;
 		}
-		const dec = builder.finish();
-		return dec;
+
+		return builder.finish();
 	},
 	provide: (f) => EditorView.decorations.from(f),
 });
