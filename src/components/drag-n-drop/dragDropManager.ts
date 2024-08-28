@@ -608,7 +608,7 @@ class DragNDropHandlerWidget extends WidgetType {
 	}
 }
 
-const AVAILABLE_CLASS_LIST = ['hmd-callout', 'math', 'hmd-codeblock', 'quote'];
+const AVAILABLE_CLASS_LIST = ['hmd-callout', 'math-block', 'hmd-codeblock', 'quote'];
 
 export const DragNDropHandler = StateField.define<DecorationSet>({
 	create() {

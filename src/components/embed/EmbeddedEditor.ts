@@ -79,33 +79,6 @@ export class EmbeddedEditor extends Component {
 		if (file.path === this.file?.path) {
 			const data = await this.app.vault.read(file);
 			if (this.data === data) return;
-			//
-			// const targetData = data;
-			//
-			// if (this.range && !Array.isArray(this.range)) {
-			// 	const dataInRange = this.editor?.cm.state.doc.toString()?.slice(this.range.from, this.range.to);
-			// 	const originData = this.data?.slice(this.range.from, this.range.to);
-			//
-			// 	if (dataInRange && originData && dataInRange !== originData) {
-			// 		targetData.replace(originData, dataInRange);
-			// 	}
-			// }
-			//
-			// this.data = targetData;
-			//
-			// const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
-			// lastLine && this.editor?.replaceRange(targetData, {line: 0, ch: 0}, {
-			// 	line: lastLine.number,
-			// 	ch: lastLine.length - 1
-			// });
-			//
-			// const targetRange = this.getRange(file);
-			// this.range = {
-			// 	from: targetRange.from,
-			// 	to: targetRange.to
-			// };
-			// targetRange.type !== 'whole' && this.updateVisibleRange(this.editor as Editor, this.range, targetRange.type as 'part' | 'block' | 'heading');
-
 
 			this.data = data;
 			// const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
@@ -155,10 +128,6 @@ export class EmbeddedEditor extends Component {
 		type: string
 	}) {
 		const embedEditor = new EmbeddableMarkdownEditor(this.app, container, {
-			// onEscape: (editor) => {
-			// 	new Notice(`Escaped the editor: (${editor.initial_value})`);
-			// 	this.removeChild(editor);
-			// },
 			onEnter: (editor, mod: boolean, shift: boolean) => {
 				if (!editor.view) return false;
 
