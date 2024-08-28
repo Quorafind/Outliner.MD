@@ -51,27 +51,24 @@ export class DragDropManager extends Component {
 
 	onload() {
 		super.onload();
-		this.plugin.registerEditorExtension([DragNDropHandler]);
+		this.plugin.registerEditorExtension([DragNDropHandler, this.registerEditorEvents()]);
 		this.createTargetLine();
 		this.registerDragEvents();
-		this.registerEditorEvents();
 	}
 
 	private registerDragEvents() {
-		this.registerDomEvent(window, 'dragover', this.onDragOver.bind(this));
-		this.registerDomEvent(window, 'dragend', this.onDragEnd.bind(this));
+		this.plugin.registerDomEvent(window, 'dragover', this.onDragOver.bind(this));
+		this.plugin.registerDomEvent(window, 'dragend', this.onDragEnd.bind(this));
 	}
 
 	private registerEditorEvents() {
-		this.plugin.registerEditorExtension(
-			EditorView.domEventHandlers({
-				mouseenter: this.handleEditorMouseEnter.bind(this),
-				mouseleave: this.handleEditorMouseLeave.bind(this),
-				dragover: this.handleEditorDragOver.bind(this),
-				dragenter: this.handleEditorDragEnter.bind(this),
-				drop: this.handleEditorDrop.bind(this)
-			})
-		);
+		return EditorView.domEventHandlers({
+			mouseenter: this.handleEditorMouseEnter.bind(this),
+			mouseleave: this.handleEditorMouseLeave.bind(this),
+			dragover: this.handleEditorDragOver.bind(this),
+			dragenter: this.handleEditorDragEnter.bind(this),
+			drop: this.handleEditorDrop.bind(this)
+		});
 	}
 
 	private handleEditorMouseEnter(e: MouseEvent, editorView: EditorView) {
@@ -544,9 +541,12 @@ export class DragDropManager extends Component {
 		return {from: line.from, to: foldRange.to};
 	}
 
-	onunload() {
+	unload() {
+		super.unload();
+		console.log('unloading drag drop manager');
 		if (this.dragHandlerEl) this.dragHandlerEl.detach();
 		if (this.targetLineEl) this.targetLineEl.detach();
+
 	}
 }
 
@@ -554,8 +554,6 @@ export class DragDropManager extends Component {
 class DragNDropHandlerWidget extends WidgetType {
 	dragHandlerContainerEl: HTMLSpanElement | undefined;
 	plugin: OutlinerViewPlugin | undefined;
-
-	dragManager: DragDropManager;
 
 	constructor(
 		readonly app: App,
@@ -571,10 +569,6 @@ class DragNDropHandlerWidget extends WidgetType {
 	}
 
 	toDOM() {
-		if (this.view.field(pluginInfoField)?.plugin) {
-			this.plugin = this.view.field(pluginInfoField)?.plugin;
-		}
-
 		this.dragHandlerContainerEl = createEl('span', {
 			cls: 'cm-drag-handler-container',
 			attr: {
@@ -587,16 +581,30 @@ class DragNDropHandlerWidget extends WidgetType {
 			setIcon(o, 'grip-vertical');
 		});
 
-		// const button = new ExtraButtonComponent(this.dragHandlerContainerEl).setIcon('grip-vertical');
-		if (!this.plugin) return this.dragHandlerContainerEl;
+		// Safely check if the plugin exists
+		this.plugin = this.getPlugin();
 
-		this.plugin.registerDomEvent(this.dragHandlerContainerEl, 'dragstart', (e: DragEvent) => {
-			if (this.plugin && this.plugin.dragDropManager) {
-				this.plugin.dragDropManager.handleDragStart(e, this.from, this.to, this.view);
-			}
-		});
+		if (this.plugin && this.plugin.dragDropManager) {
+			const {plugin} = this;
+			this.plugin.registerDomEvent(this.dragHandlerContainerEl, 'dragstart', (e: DragEvent) => {
+				if (plugin.dragDropManager) {
+					plugin.dragDropManager.handleDragStart(e, this.from, this.to, this.view);
+				}
+			});
+
+
+		}
 
 		return this.dragHandlerContainerEl;
+	}
+
+	private getPlugin(): OutlinerViewPlugin | undefined {
+		try {
+			return this.view.field(pluginInfoField)?.plugin;
+		} catch (error) {
+			console.warn('pluginInfoField is not present in the state', error);
+			return undefined;
+		}
 	}
 }
 
@@ -628,6 +636,7 @@ export const DragNDropHandler = StateField.define<DecorationSet>({
 			}
 
 			if ((nodeProps.length === 0 || (currentType !== nodeProps && currentType.includes('hmd-codeblock') && !nodeProps.includes('hmd-codeblock')) || i === tr.state.doc.lines) && currentType.length > 0) {
+
 
 				if (inSpecialBlock) {
 					const blockStart = tr.state.doc.line(specialBlockStartLine).from;
@@ -681,6 +690,23 @@ export const DragNDropHandler = StateField.define<DecorationSet>({
 
 			if (inSpecialBlock) {
 				currentType = nodeProps;
+
+				if (i === tr.state.doc.lines) {
+					const blockStart = tr.state.doc.line(specialBlockStartLine).from;
+					const widgetPosition = (currentType.includes('quote') || currentType.includes('hmd-codeblock')) && !currentType.includes('hmd-callout') ? blockStart : blockStart - 1;
+
+					inSpecialBlock = false;
+
+					builder.add(
+						widgetPosition,
+						widgetPosition,
+						Decoration.widget({
+							widget: new DragNDropHandlerWidget(field.app, tr.state, blockStart, line.to),
+							side: -1,
+							inlineOrder: true,
+						})
+					);
+				}
 				continue;
 			}
 

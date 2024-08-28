@@ -3,7 +3,6 @@ import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
 import { EmbeddableMarkdownEditor } from "../../editor-components/MarkdownEditor";
 import { getIndent } from "../../utils/utils";
 import { foldable } from "@codemirror/language";
-import { SelectionAnnotation } from "../../cm/SelectionController";
 import { hideFrontMatterEffect, zoomInEffect, zoomWithHideIndentEffect } from "../../cm/VisibleRangeController";
 import { KeepRangeVisible } from "../../cm/KeepRangeVisible";
 import OutlinerViewPlugin from "../../OutlinerViewIndex";
