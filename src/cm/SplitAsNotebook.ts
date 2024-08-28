@@ -97,7 +97,6 @@ export class RenderNavigationHeader extends Component {
 
 		this.registerEvent(this.plugin.app.workspace.on("zoom-into-section", (view: EditorView, pos: number) => {
 			const sections = getAllSectionsRangeAndName({state: view.state});
-			console.log(sections);
 
 			const section = sections.find(section => section.start <= pos && pos <= section.end);
 			if (section) {
@@ -261,9 +260,14 @@ export class RenderNavigationHeader extends Component {
 			id: "show-whole-document",
 			name: "Show whole document",
 			editorCallback: (editor) => {
-				this.onClick(editor.cm, null);
+				this.showFullDocument(editor.cm);
 			},
 		});
+	}
+
+	public showFullDocument(view: EditorView) {
+		this.onClick(view, null);
+		this.showTitle(view);
 	}
 
 	private selectNextSection(view: EditorView) {
@@ -373,6 +377,7 @@ export class RenderNavigationHeader extends Component {
 
 	private createSection = (view: EditorView, position: 'before' | 'after' | 'end' | 'start' = 'end') => {
 		const sections = getAllSectionsRangeAndName({state: view.state});
+		console.log(sections, this.index, position);
 		const selected = view.state.field(tabState)?.selected;
 		if (selected !== undefined) {
 			this.index = selected;

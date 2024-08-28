@@ -120,11 +120,15 @@
 
 	}
 
-	&:has(.cm-sizer:not(.hide-sections-tabs)) {
+	&:has(.cm-sizer.hide-sections-tabs) {
 		.cm-scroller {
 			.inline-title {
 				display: none;
 			}
+		}
+
+		.metadata-container {
+			display: none;
 		}
 	}
 }

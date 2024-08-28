@@ -1,5 +1,5 @@
 import {
-	Editor,
+	Editor, ExtraButtonComponent,
 	ItemView,
 	MarkdownFileInfo,
 	MarkdownView,
@@ -300,7 +300,7 @@ export default class OutlinerViewPlugin extends Plugin {
 			if (fileCache?.frontmatter && fileCache.frontmatter['excalidraw-plugin']) {
 				return false;
 			}
-			console.log(e.containerEl, e.containerEl.getAttribute('alt'));
+
 			if (!e.containerEl.getAttribute('alt') || !(/o-(.*)?/g.test(e.containerEl.getAttribute('alt')))) {
 				return false;
 			}
@@ -499,16 +499,41 @@ export default class OutlinerViewPlugin extends Plugin {
 		const patchBacklinkResultDom = (plugin: OutlinerViewPlugin, child: any) => {
 			const resultUninstaller = around(child.constructor.prototype, {
 				render: (old) => {
-					return function (
-						e: any, b: any
-					) {
-
-						const containerEl = this.parentDom.parentDom.el.closest(".mod-global-search");
+					return function (e: any, b: any) {
+						const result = old.call(this, e, b);
+						const containerEl = this.parentDom.parentDom.el.closest(".mod-global-search") || this.parentDom.parentDom.el.closest(".internal-query");
 						this.isBacklink = !!containerEl;
 						if (this.isBacklink) {
-							return old.call(this, e, b);
+							// Create a new button only if embeddedEditor doesn't exist
+							if (!this.embeddedEditor) {
+								if (this.btnEl || this.editBtn) return;
+								this.btnEl = this.el.createEl('div', {cls: 'create-embedded-editor-btn'}, (el) => {
+									this.editBtn = new ExtraButtonComponent(el)
+										.setIcon("pencil")
+										.setTooltip("Edit this block");
+
+									el.onclick = (e) => {
+										console.log('click', el);
+										e.preventDefault();
+										e.stopPropagation();
+										el.detach();
+										// Create and load the embeddedEditor
+										this.embeddedEditor = new EmbeddedEditor(plugin, {
+											sourcePath: this.parentDom.file.path,
+											app: this.parentDom.app,
+											containerEl: this.el,
+										}, this.parentDom.file, '', {
+											from: this.start,
+											to: this.end,
+										}, this.content);
+
+										this.embeddedEditor.load();
+									};
+								});
+							}
+							return result;
 						}
-						// new Notice(this.isBacklink.toString());
+
 						if (this.embeddedEditor) {
 							const firstChild = this.embeddedEditor;
 							if (firstChild) {
@@ -518,37 +543,32 @@ export default class OutlinerViewPlugin extends Plugin {
 										to: this.end,
 									}
 								);
-								return;
+								return result;
 							}
-						} else {
-							// new Notice('No embedded editor');
-							if (this.parentDom.file) {
-								this.embeddedEditor = new EmbeddedEditor(plugin, {
-									sourcePath: this.parentDom.file.path,
-									app: this.parentDom.app,
-									containerEl: this.el,
-								}, this.parentDom.file, '', {
-									from: this.start,
-									to: this.end,
-								}, this.content);
+						} else if (this.parentDom.file) {
+							// Defer creation of EmbeddedEditor
+							requestIdleCallback(() => {
+								if (!this.embeddedEditor) {
+									this.embeddedEditor = new EmbeddedEditor(plugin, {
+										sourcePath: this.parentDom.file.path,
+										app: this.parentDom.app,
+										containerEl: this.el,
+									}, this.parentDom.file, '', {
+										from: this.start,
+										to: this.end,
+									}, this.content);
 
-								this.embeddedEditor.load();
-								// this.parent?.vChildren.addChild(this.embeddedEditor);
-								return;
-							}
-							// this.addChild(children);
+									this.embeddedEditor.load();
+								}
+							}, {timeout: 2000});
 						}
-
-						const result = old.call(this, e, b);
 
 						return result;
 					};
 				},
 				onResultClick: (old) => {
 					return function (e: any) {
-						// console.log(this, e);
 						if (this.embeddedEditor && !e.target.closest('.backlink-btn')) {
-							// this.embeddedEditor.editor.focus();
 							return;
 						}
 						return old.call(this, e);
@@ -561,7 +581,6 @@ export default class OutlinerViewPlugin extends Plugin {
 							from: this.start,
 							to: this.end,
 						};
-
 						return result;
 					};
 				},
@@ -572,11 +591,9 @@ export default class OutlinerViewPlugin extends Plugin {
 							from: this.start,
 							to: this.end,
 						};
-
 						return result;
 					};
 				},
-
 			});
 			this.register(resultUninstaller);
 
@@ -585,24 +602,16 @@ export default class OutlinerViewPlugin extends Plugin {
 			const componentUninstaller = around(parent.constructor.prototype, {
 				renderContentMatches: (old) => {
 					return function () {
-						// new Notice('renderContentMatches');
-						// console.log(this);
-						this.vChildren._children.forEach((child: any) => {
+						const children = this.vChildren._children;
+						for (let i = 0; i < children.length; i++) {
+							const child = children[i];
 							if (child?.embeddedEditor) {
-								child?.embeddedEditor.unload();
+								child.embeddedEditor.unload();
 							}
-						});
-						// const backlink = this.el.closest('.backlink-pane');
-						// this.isBacklink = !!backlink;
+						}
 						return old.call(this);
 					};
 				},
-				// onResultClick: (old) => {
-				// 	return function (e: any) {
-				// 		new Notice('onResultClick');
-				// 		return old.call(this, e);
-				// 	};
-				// }
 			});
 
 			this.register(componentUninstaller);
@@ -618,40 +627,36 @@ export default class OutlinerViewPlugin extends Plugin {
 				stopLoader(old) {
 					return function () {
 						old.call(this);
-						// console.log(this?.vChildren?.children);
+
 						this?.vChildren?.children?.forEach((child: any) => {
 							if (child?.file && !child?.pathEl) {
 								if (child.vChildren._children[0]) {
 									patchBacklinkResultDom(plugin, child.vChildren._children[0]);
 									uninstaller();
 									setTimeout(() => {
-										// child.vChildren._children.forEach((child: any) => {
-										// 	child.render(true, true);
-										// });
 										child.vChildren.owner.renderContentMatches();
 									}, 800);
 								}
 							}
 						});
-
 					};
 				}
 			});
 
-			this.register(
-				uninstaller
-			);
+			this.register(uninstaller);
 			return true;
 		};
+
 		this.app.workspace.onLayoutReady(() => {
 			if (!patchSearchDom(this)) {
 				const evt = this.app.workspace.on("layout-change", () => {
-					patchSearchDom(this) && this.app.workspace.offref(evt);
+					if (patchSearchDom(this)) {
+						this.app.workspace.offref(evt);
+					}
 				});
 				this.registerEvent(evt);
 			}
 		});
-
 	}
 
 	registerMenu() {

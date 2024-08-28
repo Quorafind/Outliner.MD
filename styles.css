@@ -439,6 +439,16 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
   font-size: var(--omd-section-line-font-size);
   text-align: var(--omd-section-line-text-align);
 }
+.create-embedded-editor-btn {
+  display: inline-block;
+  --icon-size: var(--size-4-4);
+  /* padding: 0; */
+  margin-left: var(--size-4-2);
+}
+.create-embedded-editor-btn .clickable-icon {
+  padding: var(--size-2-1);
+  margin-bottom: -2px;
+}
 .cm-editor .omd-container.cm-panel {
   display: flex;
   flex-direction: row;
@@ -512,7 +522,10 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 .cm-editor:has(.cm-sizer.hide-sections-tabs) .omd-section-tab.omd-section-tab-active button::after {
   display: none;
 }
-.cm-editor:has(.cm-sizer:not(.hide-sections-tabs)) .cm-scroller .inline-title {
+.cm-editor:has(.cm-sizer.hide-sections-tabs) .cm-scroller .inline-title {
+  display: none;
+}
+.cm-editor:has(.cm-sizer.hide-sections-tabs) .metadata-container {
   display: none;
 }
 .omd-section-rename .rename-textarea {

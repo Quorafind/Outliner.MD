@@ -139,12 +139,8 @@ export class EmbeddedRender extends Component {
 	getRange(targetFile: TFile) {
 		const cache = this.app.metadataCache.getFileCache(targetFile);
 
-		console.log('cache', this.sourcePath, this.subpath, cache);
-
 		if (this.sourcePath && !this.subpath) {
 			const title = this.containerEl.getAttr('alt')?.replace('readonly', '');
-
-			console.log('title', title);
 
 			if (title) {
 				const content = this.data;
