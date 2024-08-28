@@ -1,4 +1,4 @@
-import { App, Component, debounce, Editor, ExtraButtonComponent, TFile } from "obsidian";
+import { App, Component, debounce, Editor, ExtraButtonComponent, Keymap, TFile } from "obsidian";
 import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
 import { EmbeddableMarkdownEditor } from "../../editor-components/MarkdownEditor";
 import { getIndent } from "../../utils/utils";
@@ -110,6 +110,20 @@ export class EmbeddedEditor extends Component {
 	loadFile(file: TFile, subpath: string) {
 
 	}
+
+
+	debounceHover = debounce((extraButton: ExtraButtonComponent, e: MouseEvent) => {
+		if (!this.file) return;
+		// console.log("hovering", file.path, state);
+
+		this.app.workspace.trigger("hover-link", {
+			event: e,
+			source: "outliner-md",
+			hoverParent: this.containerEl,
+			targetEl: extraButton.extraSettingsEl,
+			linktext: this.file.path,
+		});
+	}, 200);
 
 	requestSave = debounce(async (file: TFile, data: string) => {
 		if (file) {
@@ -339,18 +353,17 @@ export class EmbeddedEditor extends Component {
 
 			const extraButton = new ExtraButtonComponent(button).setIcon('link');
 
-			this.registerDomEvent(extraButton.extraSettingsEl, 'mouseover', (e) => {
-				if (!this.file) return;
-				// console.log("hovering", file.path, state);
-
-				this.app.workspace.trigger("hover-link", {
-					event: e,
-					source: "outliner-md",
-					hoverParent: this.containerEl,
-					targetEl: extraButton.extraSettingsEl,
-					linktext: this.file.path,
-				});
+			this.registerDomEvent(extraButton.extraSettingsEl, 'click', async (e) => {
+				if (Keymap.isModEvent(e)) {
+					const leaf = this.app.workspace.getLeaf();
+					await leaf.setViewState({
+						type: 'markdown',
+					});
+					this.file && await leaf.openFile(this.file);
+				}
 			});
+
+			this.registerDomEvent(extraButton.extraSettingsEl, 'mouseover', (e) => this.debounceHover(extraButton, e));
 		}
 
 		// @ts-expect-error - This is a private method
