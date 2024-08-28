@@ -88,49 +88,118 @@ export class DragDropManager extends Component {
 		this.currentEditorView = editorView;
 		this.updateLineRects();
 
-		const currentPos = this.currentEditorView.posAtCoords({x: e.clientX, y: e.clientY});
-		if (!currentPos) return;
+		const editorRect = this.currentEditorView.dom.getBoundingClientRect();
+		const lastLineDomInfo = this.getLastLineDomInfo();
+		const relativeY = e.clientY - editorRect.top;
 
-		const newLine = this.currentEditorView.state.doc.lineAt(currentPos).number;
-		if (this.focusLine === newLine) return;
+		if (relativeY <= 5) {
+			this.handleFirstLineDragOver(editorRect);
+		} else if (lastLineDomInfo && relativeY >= lastLineDomInfo.rect.bottom - editorRect.top - 5) {
+			this.handleLastLineDragOver(editorRect, lastLineDomInfo);
+		} else {
+			this.handleMiddleLineDragOver(e);
+		}
+	}
 
-		this.focusLine = newLine;
+	private getLastLineDomInfo() {
+		if (!this.currentEditorView) return null;
 
-		this.handleDragOverBoundaries(e);
-		this.handleDragOverContent(e);
+		const doc = this.currentEditorView.state.doc;
+		const lastPos = doc.length;
+		const domInfo = this.currentEditorView.domAtPos(lastPos);
+		const lastLineEl = domInfo.node.nodeType === Node.TEXT_NODE
+			? domInfo.node.parentElement
+			: domInfo.node;
+
+		if (!lastLineEl || !(lastLineEl instanceof Element)) return null;
+
+		const rect = lastLineEl.getBoundingClientRect();
+
+		return {element: lastLineEl, rect};
 	}
 
 	private updateLineRects() {
 		if (!this.currentEditorView) return;
-		this.firstLineRect = this.currentEditorView.coordsAtPos(0, 1);
-		this.lastLineRect = this.currentEditorView.coordsAtPos(this.currentEditorView.state.doc.length, -1);
+		this.firstLineRect = this.currentEditorView.coordsAtPos(0);
+		const lastLinePos = this.currentEditorView.state.doc.length - 1;
+		this.lastLineRect = this.currentEditorView.coordsAtPos(lastLinePos);
 	}
 
-	private handleDragOverBoundaries(e: DragEvent) {
-		if (!this.currentEditorView) return;
-
-		if (this.firstLineRect && e.clientY < this.firstLineRect.top) {
-			this.moveTargetLine(this.currentEditorView.coordsAtPos(1, undefined), this.currentEditorView.contentDOM.innerWidth, false);
-			return;
-		}
-
-		if (this.lastLineRect && e.clientY > this.lastLineRect.bottom) {
-			this.moveTargetLine(this.lastLineRect, this.currentEditorView.contentDOM.innerWidth, true);
-			return;
+	private handleFirstLineDragOver(editorRect: DOMRect) {
+		const firstLineStart = this.currentEditorView!.state.doc.line(1).from;
+		const firstLineRect = this.currentEditorView!.coordsAtPos(firstLineStart);
+		if (firstLineRect) {
+			this.moveTargetLine(
+				{top: editorRect.top, left: firstLineRect.left, height: 0},
+				this.currentEditorView!.contentDOM.clientWidth,
+				false
+			);
 		}
 	}
 
-	private handleDragOverContent(e: DragEvent) {
+	private handleLastLineDragOver(editorRect: DOMRect, lastLineDomInfo: { element: Element, rect: DOMRect }) {
+		const {rect} = lastLineDomInfo;
+		const editorContent = this.currentEditorView!.contentDOM;
+
+		const left = rect.left; // 使用内容区域的左边界
+		const top = rect.bottom; // 确保不超过内容区域
+
+		this.moveTargetLine(
+			{top, left, height: rect.height},
+			editorContent.clientWidth,
+			true
+		);
+	}
+
+	private handleMiddleLineDragOver(e: DragEvent) {
+		const pos = this.currentEditorView!.posAtCoords({x: e.clientX, y: e.clientY});
+		if (pos === null) return;
+
+		const line = this.currentEditorView!.state.doc.lineAt(pos);
+		const lineStart = line.from;
+
+		if (pos > this.prevFrom && pos < this.prevTo) {
+			this.hideTargetLine();
+		} else {
+			const lineRect = this.currentEditorView!.coordsAtPos(lineStart);
+			if (lineRect) {
+				this.moveTargetLine(lineRect, this.currentEditorView!.contentDOM.clientWidth, false);
+			}
+		}
+	}
+
+	private handleDragOverPosition(e: DragEvent, currentPos: number) {
 		if (!this.currentEditorView) return;
 
-		const linePos = this.currentEditorView.posAtCoords({x: e.clientX, y: e.clientY});
-		if (!linePos) return;
+		const doc = this.currentEditorView.state.doc;
+		const isBeforeFirstLine = currentPos === 0;
+		const isAfterLastLine = currentPos === doc.length;
 
-		const lineStart = this.currentEditorView.state.doc.lineAt(linePos).from;
+		if (isBeforeFirstLine && this.firstLineRect) {
+			this.moveTargetLine(this.firstLineRect, this.currentEditorView.contentDOM.clientWidth, false);
+		} else if (isAfterLastLine && this.lastLineRect) {
+			this.moveTargetLine(this.lastLineRect, this.currentEditorView.contentDOM.clientWidth, true);
+		} else {
+			const line = doc.lineAt(currentPos);
+			const lineStart = line.from;
 
-		if (linePos > this.prevFrom && linePos < this.prevTo) return;
+			if (currentPos > this.prevFrom && currentPos < this.prevTo) {
+				this.hideTargetLine();
+			} else {
+				this.moveTargetLine(this.currentEditorView.coordsAtPos(lineStart) as Rect, this.currentEditorView.contentDOM.clientWidth, false);
+			}
+		}
+	}
 
-		this.moveTargetLine(this.currentEditorView.coordsAtPos(lineStart, undefined), this.currentEditorView.contentDOM.innerWidth, false);
+	private moveTargetLine(rect: { top: number, left: number, height?: number }, width: number, bottom: boolean) {
+		if (!rect || !width || !this.isDragging || !this.targetLineEl) return;
+
+		const left = rect.left;
+		const top = bottom ? rect.top : rect.top - 2;
+
+		this.targetLineEl.style.width = `${width}px`;
+		this.targetLineEl.style.transform = `translate(${left}px, ${top}px)`;
+		this.targetLineEl.style.display = 'block';
 	}
 
 	private handleEditorDragEnter(e: DragEvent, editorView: EditorView) {
@@ -281,7 +350,7 @@ export class DragDropManager extends Component {
 		const dropLineRect = this.targetLineEl?.getBoundingClientRect();
 		if (!dropLineRect) return;
 
-		const dropLinePos = this.currentEditorView.posAtCoords({x: dropLineRect.left, y: dropLineRect.top});
+		const dropLinePos = this.currentEditorView.posAtCoords({x: dropLineRect.left, y: dropLineRect.bottom});
 
 		if (dropLinePos === null) return;
 		const editor = this.getEditorFromState(this.currentEditorView.state);
@@ -327,14 +396,40 @@ export class DragDropManager extends Component {
 
 	handleNormalDrop(editor: Editor, dropLinePos: number, targetLineNum: number, isSameEditor: boolean) {
 		if (!this.currentEditorView) return;
-		const adjustedText = this.adjustIndentation(this.initContent, editor.getLine(targetLineNum));
+		let adjustedText = this.adjustIndentation(this.initContent, editor.getLine(targetLineNum));
+
+		// Remove both leading and trailing newlines
+		adjustedText = adjustedText.replace(/^\n/, '').replace(/\n$/, '');
+
+		// Determine if we need to add newlines
+		let insertPrefix = '';
+		let insertSuffix = '';
+
+		// If not dropping at the start of a line, add a newline prefix
+		if (dropLinePos > editor.posToOffset({
+			line: targetLineNum,
+			ch: 0
+		}) && dropLinePos !== editor.getValue().length) {
+			insertSuffix = '\n';
+		}
+
+		// If not dropping at the end of a line, add a newline suffix
+		if ((dropLinePos < editor.posToOffset({
+			line: targetLineNum,
+			ch: editor.getLine(targetLineNum).length
+		})) || dropLinePos === editor.getValue().length) {
+			insertPrefix = '\n';
+		}
+
+		// Combine the adjusted text with necessary newlines
+		const finalInsertText = insertPrefix + adjustedText + insertSuffix;
 
 		if (!isSameEditor) {
 			this.currentEditorView.dispatch({
 				changes: {
 					from: dropLinePos,
 					to: dropLinePos,
-					insert: adjustedText,
+					insert: finalInsertText,
 				}
 			});
 
@@ -348,7 +443,6 @@ export class DragDropManager extends Component {
 				});
 			}
 		} else {
-
 			this.currentEditorView.dispatch({
 				changes: [{
 					from: this.prevFrom,
@@ -357,7 +451,7 @@ export class DragDropManager extends Component {
 				}, {
 					from: dropLinePos,
 					to: dropLinePos,
-					insert: adjustedText,
+					insert: finalInsertText,
 				}]
 			});
 		}
@@ -428,21 +522,9 @@ export class DragDropManager extends Component {
 			return createIndent(newIndentLevel) + line;
 		};
 
-		return lines.map(adjustLine).join('\n');
+		return '\n' + lines.map(adjustLine).join('\n');
 	}
 
-	moveTargetLine(domRect: any, width: number, bottom?: boolean) {
-		if (!domRect || !width || !this.isDragging) return;
-
-		const left = domRect.left;
-		const top = bottom ? (domRect.top + domRect.height) : domRect.top;
-
-		if (!this.targetLineEl) return;
-
-		this.targetLineEl.style.width = width + "px";
-		this.targetLineEl.style.transform = `translate(${left}px, ${top}px)`;
-		this.targetLineEl.style.display = 'block';
-	}
 
 	updateGhostPosition(event: DragEvent) {
 		if (!this.ghostEl) return;
@@ -482,10 +564,6 @@ class DragNDropHandlerWidget extends WidgetType {
 		readonly to: number,
 	) {
 		super();
-
-		if (view.field(pluginInfoField)?.plugin) {
-			this.plugin = view.field(pluginInfoField)?.plugin;
-		}
 	}
 
 	eq(other: DragNDropHandlerWidget) {
@@ -493,6 +571,10 @@ class DragNDropHandlerWidget extends WidgetType {
 	}
 
 	toDOM() {
+		if (this.view.field(pluginInfoField)?.plugin) {
+			this.plugin = this.view.field(pluginInfoField)?.plugin;
+		}
+
 		this.dragHandlerContainerEl = createEl('span', {
 			cls: 'cm-drag-handler-container',
 			attr: {
@@ -577,7 +659,6 @@ export const DragNDropHandler = StateField.define<DecorationSet>({
 			// 检查是否进入或离开特殊区块
 			isSpecialBlockStart = AVAILABLE_CLASS_LIST.some(cls => nodeProps.includes(cls)) && !inSpecialBlock;
 
-			console.log(isSpecialBlockStart, nodeProps);
 			if (isSpecialBlockStart) {
 				inSpecialBlock = true;
 			} else if (inSpecialBlock && (!AVAILABLE_CLASS_LIST.some(cls => nodeProps.includes(cls)))) {

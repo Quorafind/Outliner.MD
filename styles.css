@@ -512,10 +512,7 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 .cm-editor:has(.cm-sizer.hide-sections-tabs) .omd-section-tab.omd-section-tab-active button::after {
   display: none;
 }
-.cm-editor:has(.cm-sizer.hide-sections-tabs) .cm-scroller .inline-title {
-  display: none;
-}
-.cm-editor:has(.cm-sizer.hide-sections-tabs) .cm-scroller .metadata-container {
+.cm-editor:has(.cm-sizer:not(.hide-sections-tabs)) .cm-scroller .inline-title {
   display: none;
 }
 .omd-section-rename .rename-textarea {
