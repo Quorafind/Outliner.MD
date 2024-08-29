@@ -309,6 +309,7 @@ span.cm-task-group-title {
 }
 .internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event .cm-editor .cm-content {
   padding-bottom: 0 !important;
+  padding-inline-start: var(--size-4-9);
 }
 .outliner-editor .internal-embed + img.cm-widgetBuffer {
   height: 0 !important;
@@ -354,6 +355,9 @@ span.cm-task-group-title {
 }
 .internal-embed.is-loaded:has(.source-btn) {
   position: relative;
+}
+.internal-embed.is-loaded:has(.markdown-source-view) {
+  margin-inline-start: calc(var(--size-4-12) * -1) !important;
 }
 .internal-embed.is-loaded .source-btn {
   position: absolute;
@@ -448,6 +452,12 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 .create-embedded-editor-btn .clickable-icon {
   padding: var(--size-2-1);
   margin-bottom: -2px;
+}
+.markdown-source-view.mod-cm6 .cm-line:has(.cm-bullet-menu-marker):has(.cm-fold-indicator) span.cm-drag-handler-container .clickable-icon {
+  inset-inline-end: 46px;
+}
+.markdown-source-view.mod-cm6 .cm-line:has(.cm-bullet-menu-marker) span.cm-drag-handler-container .clickable-icon {
+  inset-inline-end: 28px;
 }
 .cm-editor .omd-container.cm-panel {
   display: flex;
