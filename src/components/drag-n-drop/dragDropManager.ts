@@ -215,6 +215,8 @@ export class DragDropManager extends Component {
 
 
 	async handleDragStart(event: DragEvent, from: number, to: number, view: EditorState) {
+		event.stopPropagation();
+		
 		this.isDragging = true;
 
 		const editorView = view.field(editorEditorField);

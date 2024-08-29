@@ -101,6 +101,7 @@ body.outliner-paper-layout .outliner-editor .markdown-source-view.mod-cm6 .cm-li
 
 .search-result-file-match .markdown-source-view.mod-cm6 .cm-content.embed-editor {
 	padding-bottom: 0 !important;
+	padding-inline-start: var(--size-4-16);
 }
 
 
@@ -473,6 +474,10 @@ span.cm-task-group-title {
 }
 
 .internal-embed.is-loaded:has(.markdown-source-view) {
+	margin-inline-start: calc(var(--size-4-12) * -1) !important;
+}
+
+.embedded-part .markdown-source-view {
 	margin-inline-start: calc(var(--size-4-12) * -1) !important;
 }
 
