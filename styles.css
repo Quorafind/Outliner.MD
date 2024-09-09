@@ -81,7 +81,7 @@ body.outliner-paper-layout .outliner-editor .markdown-source-view.mod-cm6 .cm-li
 }
 .search-result-file-match .markdown-source-view.mod-cm6 .cm-content.embed-editor {
   padding-bottom: 0 !important;
-  padding-inline-start: var(--size-4-16);
+  padding-inline-start: var(--size-2-2);
 }
 .outliner-editor .cm-placeholder:before {
   content: attr(data-ph);
@@ -185,7 +185,8 @@ span.cm-group-collapse-button {
 .outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker:hover .clickable-icon {
   opacity: 1;
 }
-.outliner-editor .markdown-source-view.mod-cm6 .cm-line:hover .clickable-icon {
+.outliner-editor .markdown-source-view.mod-cm6 .cm-line:hover > .cm-drag-handler-container .clickable-icon,
+.cm-line:hover .cm-bullet-menu-marker .clickable-icon {
   opacity: 1;
 }
 /*.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
@@ -271,6 +272,10 @@ button.clickable-icon.view-action.hide-completed {
 .cm-date-button-container button {
   box-shadow: unset;
 }
+.cm-block-id-container,
+.cm-text-fragment-container {
+  color: var(--text-faint);
+}
 span.cm-task-group-title {
   display: flex;
   justify-content: space-between;
@@ -310,7 +315,7 @@ span.cm-task-group-title {
 }
 .internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event .cm-editor .cm-content {
   padding-bottom: 0 !important;
-  padding-inline-start: var(--size-4-9);
+  padding-inline-start: var(--size-4-8);
 }
 .outliner-editor .internal-embed + img.cm-widgetBuffer {
   height: 0 !important;
@@ -328,26 +333,42 @@ span.cm-task-group-title {
 .cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6 .cm-content [contenteditable="false"] + .cm-line {
   display: inline !important;
 }
-.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) :is(.cm-editor, .cm-scroller, .cm-sizer, .cm-contentContainer, .cm-content, .cm-content > div[contenteditable="false"]) {
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) :is(
+		.cm-editor,
+		.cm-scroller,
+		.cm-sizer,
+		.cm-contentContainer,
+		.cm-content,
+		.cm-content > div[contenteditable="false"]
+	) {
   display: inline !important;
 }
 .cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) {
   display: inline !important;
 }
-.cm-line .internal-embed.is-loaded.embedded-part:has(.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)) {
+.cm-line .internal-embed.is-loaded.embedded-part:has( .markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)) {
   display: inline !important;
   width: fit-content;
 }
 .cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6 .cm-content:not(:has(.cm-line ~ .cm-line)) .cm-line {
   display: inline !important;
 }
-.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line)) :is(.cm-editor, .cm-scroller, .cm-sizer, .cm-contentContainer, .cm-content, .cm-content > div[contenteditable="false"]) {
+.cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line)) :is(
+		.cm-editor,
+		.cm-scroller,
+		.cm-sizer,
+		.cm-contentContainer,
+		.cm-content,
+		.cm-content > div[contenteditable="false"]
+	) {
   display: inline !important;
 }
 .cm-line .internal-embed.is-loaded.embedded-part .markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line)) {
   display: inline !important;
 }
-.cm-line .internal-embed.is-loaded.embedded-part:has(.markdown-source-view.mod-cm6):not(:has(.cm-line ~ .cm-line)) {
+.cm-line .internal-embed.is-loaded.embedded-part:has(
+		.markdown-source-view.mod-cm6
+	):not(:has(.cm-line ~ .cm-line)) {
   display: inline !important;
   width: fit-content;
 }
@@ -360,7 +381,7 @@ span.cm-task-group-title {
 .internal-embed.is-loaded:has(.markdown-source-view) {
   margin-inline-start: calc(var(--size-4-12) * -1) !important;
 }
-.embedded-part .markdown-source-view {
+.embedded-part:not(.search-result-file-match) .markdown-source-view {
   margin-inline-start: calc(var(--size-4-12) * -1) !important;
 }
 .internal-embed.is-loaded .source-btn {
@@ -435,8 +456,8 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 }
 .backlink-btn {
   position: absolute;
-  top: var(--size-4-2);
   right: var(--size-4-6);
+  top: 0;
 }
 .is-popout-window .internal-embed .markdown-source-view.cm-s-obsidian.mod-cm6 {
   max-height: fit-content;
@@ -457,10 +478,12 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
   padding: var(--size-2-1);
   margin-bottom: -2px;
 }
-.markdown-source-view.mod-cm6 .cm-line:has(.cm-bullet-menu-marker):has(.cm-fold-indicator) span.cm-drag-handler-container .clickable-icon {
+.markdown-source-view.mod-cm6 .cm-line:has(.cm-line > .cm-bullet-menu-marker):has(
+		.cm-line > .cm-fold-indicator
+	) span.cm-drag-handler-container .clickable-icon {
   inset-inline-end: 46px;
 }
-.markdown-source-view.mod-cm6 .cm-line:has(.cm-bullet-menu-marker) span.cm-drag-handler-container .clickable-icon {
+.markdown-source-view.mod-cm6 .cm-line:has(.cm-line > .cm-bullet-menu-marker) span.cm-drag-handler-container .clickable-icon {
   inset-inline-end: 28px;
 }
 .cm-editor .omd-container.cm-panel {
@@ -635,7 +658,7 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
 .markdown-source-view.mod-cm6 .cm-line:has( + :is(.cm-callout, .math)):hover .cm-drag-handler-container .clickable-icon {
   opacity: 0;
 }
-.markdown-source-view.mod-cm6 .cm-line:hover .cm-drag-handler-container .clickable-icon {
+.markdown-source-view.mod-cm6 .cm-line:hover > .cm-drag-handler-container .clickable-icon {
   opacity: 1;
 }
 .markdown-source-view.mod-cm6 .cm-line:has( + :is(.cm-callout, .math)) .cm-drag-handler-container {

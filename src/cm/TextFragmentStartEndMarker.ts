@@ -47,7 +47,7 @@ class MarkRenderWidget extends WidgetType {
 
 	toDOM(): HTMLElement {
 		const el = createEl("span", {
-			cls: 'cm-date-button-container',
+			cls: 'cm-text-fragment-container',
 		});
 
 		setIcon(el, 'book-dashed');

@@ -5,6 +5,8 @@ export const SelectionAnnotation = Annotation.define<string>();
 
 export const selectionController = () => {
 	return EditorState.transactionFilter.of((tr) => {
+
+
 		const currentSelection = tr.state.selection.main;
 		const currentLine = tr.state.doc.lineAt(currentSelection.from);
 

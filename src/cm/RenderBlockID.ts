@@ -33,7 +33,7 @@ class BlockIdRenderWidget extends WidgetType {
 
 	toDOM(): HTMLElement {
 		const el = createEl("span", {
-			cls: 'cm-date-button-container',
+			cls: 'cm-block-id-container',
 		});
 
 		setIcon(el, 'fingerprint');
