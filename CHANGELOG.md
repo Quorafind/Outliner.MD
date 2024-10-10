@@ -1,4 +1,13 @@
 
+# 0.1.10
+
+Platform: Desktop
+Date: October 10, 2024
+
+## Improvement
+
+- feat: support Obsidian 1.7.3+
+
 # 0.1.9
 
 Platform: Desktop
