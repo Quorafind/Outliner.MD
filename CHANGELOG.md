@@ -1,3 +1,11 @@
+# 0.1.11
+
+Platform: Desktop
+Date: October 12, 2024
+
+## Fix
+
+- feat: support event `omd-section-update` to be listened in other plugins.
 
 # 0.1.10
 
