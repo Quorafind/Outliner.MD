@@ -59,12 +59,12 @@ body.outliner-paper-layout .outliner-editor .markdown-source-view.mod-cm6 .cm-li
   color: var(--color-faint);
   font-weight: var(--font-light);
 }
-.outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button {
+.markdown-source-view.mod-cm6 .cm-newline-button {
   color: var(--outliner-button-color);
   display: flex;
   justify-content: flex-start;
 }
-.outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button div {
+.markdown-source-view.mod-cm6 .cm-newline-button div {
   border-radius: 100%;
   padding: var(--size-2-2) var(--size-2-2);
   height: 24px;
@@ -73,10 +73,10 @@ body.outliner-paper-layout .outliner-editor .markdown-source-view.mod-cm6 .cm-li
   margin-left: 2px;
   --icon-stroke: 1px;
 }
-.outliner-editor .markdown-source-view.mod-cm6 .cm-content:not(.embed-editor) {
+.markdown-source-view.mod-cm6 .cm-content:not(.embed-editor) {
   padding-left: var(--size-4-4);
 }
-.outliner-editor .markdown-source-view.mod-cm6 .cm-content.embed-editor {
+.markdown-source-view.mod-cm6 .cm-content.embed-editor {
   padding-bottom: 0 !important;
 }
 .search-result-file-match .markdown-source-view.mod-cm6 .cm-content.embed-editor {
@@ -167,12 +167,12 @@ span.cm-group-collapse-button {
   justify-content: center;
   margin-right: var(--size-2-2);
 }
-.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker {
+.markdown-source-view.mod-cm6 span.cm-bullet-menu-marker {
   /*display: inline-block;*/
   position: relative;
   z-index: 1;
 }
-.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker .clickable-icon {
+.markdown-source-view.mod-cm6 span.cm-bullet-menu-marker .clickable-icon {
   position: absolute;
   top: 0;
   inset-inline-end: 0;
@@ -182,17 +182,17 @@ span.cm-group-collapse-button {
   --icon-stroke: 2px;
   opacity: 0;
 }
-.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker:hover .clickable-icon {
+.markdown-source-view.mod-cm6 span.cm-bullet-menu-marker:hover .clickable-icon {
   opacity: 1;
 }
-.outliner-editor .markdown-source-view.mod-cm6 .cm-line:hover > .cm-drag-handler-container .clickable-icon,
+.markdown-source-view.mod-cm6 .cm-line:hover > .cm-drag-handler-container .clickable-icon,
 .cm-line:hover .cm-bullet-menu-marker .clickable-icon {
   opacity: 1;
 }
 /*.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line span.cm-bullet-menu-marker .clickable-icon {*/
 /*	padding-inline-end: 0;*/
 /*}*/
-.outliner-editor .markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-bullet-menu-marker .clickable-icon {
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-list-line:has(.cm-fold-indicator) span.cm-bullet-menu-marker .clickable-icon {
   margin-inline-end: 18px;
 }
 .outliner-editor .cm-task-group:has(.markdown-source-view) {

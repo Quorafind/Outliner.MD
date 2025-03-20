@@ -21,11 +21,11 @@ export function rangeSetToArray<T extends RangeValue>(
 
 
 export function getIndent(app: App) {
-	const useTab = app.vault.getConfig('useTab') === undefined || window.app.vault.getConfig('useTab') === true;
-	const tabSize = useTab ? 1 : app.vault.getConfig('tabSize');
+	const useTab = app.vault.getConfig('useTab') === undefined || (window as any).app.vault.getConfig('useTab') === true;
+	const tabSize = useTab ? 1 : app.vault.getConfig('tabSize') ;
 
 	// const removeNewLine = MemoContent.replace(/\n/g, '<br>');
-	const indentNewLine = (useTab ? '\t' : ' ').repeat(tabSize);
+	const indentNewLine = (useTab ? '\t' : ' ').repeat(tabSize as number);
 
 	return indentNewLine;
 }

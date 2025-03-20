@@ -11,8 +11,21 @@
  * Make sure to also check out the original source code here: https://github.com/mgmeyers/obsidian-kanban/blob/main/src/components/Editor/MarkdownEditor.tsx
  */
 
-import { App, type Constructor, Editor, Scope, TFile, WorkspaceLeaf } from "obsidian";
-import { Compartment, EditorSelection, EditorState, type Extension, Prec } from "@codemirror/state";
+import {
+	App,
+	type Constructor,
+	Editor,
+	Scope,
+	TFile,
+	WorkspaceLeaf,
+} from "obsidian";
+import {
+	Compartment,
+	EditorSelection,
+	EditorState,
+	type Extension,
+	Prec,
+} from "@codemirror/state";
 import { keymap, ViewUpdate } from "@codemirror/view";
 import { around } from "monkey-around";
 import type { ScrollableMarkdownEditor } from "../types/obsidian-ex";
@@ -27,25 +40,30 @@ import { blankBulletLineWidget } from "../cm/BulletLineWithNoContent";
 import { KeepRangeVisible } from "../cm/KeepRangeVisible";
 import { selectionController } from "../cm/SelectionController";
 import { createDateRendererPlugin } from "../cm/DateRender";
-import { FoldAnnotation, FoldingExtension, getAllFoldableRanges } from "../cm/BulletDescAutoCollpase";
+import {
+	FoldAnnotation,
+	FoldingExtension,
+	getAllFoldableRanges,
+} from "../cm/BulletDescAutoCollpase";
 import { foldEffect } from "@codemirror/language";
 import { createBlockIdRender } from "../cm/RenderBlockID";
 import { disableToDeleteBlockID } from "../cm/TransFilter";
 
-
 export function resolveEditorPrototype(app: App) {
 	// Create a temporary editor to resolve the prototype of ScrollableMarkdownEditor
 	const widgetEditorView = app.embedRegistry.embedByExtension.md(
-		{app, containerEl: document.createElement('div')},
+		{ app, containerEl: document.createElement("div") },
 		null as unknown as TFile,
-		'',
+		""
 		// @ts-expect-error - This is a private method
 	) as WidgetEditorView;
 
 	// Mark as editable to instantiate the editor
 	widgetEditorView.editable = true;
 	widgetEditorView.showEditor();
-	const MarkdownEditor = Object.getPrototypeOf(Object.getPrototypeOf(widgetEditorView.editMode!));
+	const MarkdownEditor = Object.getPrototypeOf(
+		Object.getPrototypeOf(widgetEditorView.editMode!)
+	);
 
 	// Unload to remove the temporary editor
 	widgetEditorView.unload();
@@ -54,12 +72,12 @@ export function resolveEditorPrototype(app: App) {
 }
 
 interface MarkdownEditorProps {
-	cursorLocation?: { anchor: number, head: number };
+	cursorLocation?: { anchor: number; head: number };
 	value?: string;
 	cls?: string;
 	placeholder?: string;
 	view?: OutlinerEditorView;
-	type: 'embed' | 'outliner';
+	type?: "embed" | "outliner" | "task-group";
 	foldByDefault?: boolean;
 	disableTimeFormat?: boolean;
 
@@ -69,60 +87,80 @@ interface MarkdownEditorProps {
 	getDisplayText: () => string;
 	getViewType: () => string;
 	onFocus: (editor: EmbeddableMarkdownEditor) => void;
-	onEnter: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
+	onEnter: (
+		editor: EmbeddableMarkdownEditor,
+		mod: boolean,
+		shift: boolean
+	) => boolean;
 	onEscape: (editor: EmbeddableMarkdownEditor) => void;
 	onSubmit: (editor: EmbeddableMarkdownEditor) => void;
 	onBlur: (editor: EmbeddableMarkdownEditor, path?: string) => void;
 	onPaste: (e: ClipboardEvent, editor: EmbeddableMarkdownEditor) => void;
 	onChange: (update: ViewUpdate, path?: string) => void;
 	onDelete: (editor: EmbeddableMarkdownEditor) => boolean;
-	onIndent: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
-	onArrowUp: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
-	onArrowDown: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
-	onArrowLeft: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
-	onArrowRight: (editor: EmbeddableMarkdownEditor, mod: boolean, shift: boolean) => boolean;
+	onIndent: (
+		editor: EmbeddableMarkdownEditor,
+		mod: boolean,
+		shift: boolean
+	) => boolean;
+	onArrowUp: (
+		editor: EmbeddableMarkdownEditor,
+		mod: boolean,
+		shift: boolean
+	) => boolean;
+	onArrowDown: (
+		editor: EmbeddableMarkdownEditor,
+		mod: boolean,
+		shift: boolean
+	) => boolean;
+	onArrowLeft: (
+		editor: EmbeddableMarkdownEditor,
+		mod: boolean,
+		shift: boolean
+	) => boolean;
+	onArrowRight: (
+		editor: EmbeddableMarkdownEditor,
+		mod: boolean,
+		shift: boolean
+	) => boolean;
 }
 
 const defaultProperties: MarkdownEditorProps = {
-	cursorLocation: {anchor: 0, head: 0},
-	value: '',
-	cls: '',
-	placeholder: '',
+	cursorLocation: { anchor: 0, head: 0 },
+	value: "",
+	cls: "",
+	placeholder: "",
 	view: undefined,
-	type: 'embed',
+	type: "embed",
 	foldByDefault: true,
 
 	disableTimeFormat: false,
 
-	path: '',
+	path: "",
 
-	toggleMode: () => '',
-	getViewType: () => '',
-	getDisplayText: () => '',
-	onFocus: () => {
-	},
+	toggleMode: () => "",
+	getViewType: () => "",
+	getDisplayText: () => "",
+	onFocus: () => {},
 	onEnter: () => false,
-	onEscape: () => {
-	},
-	onSubmit: () => {
-	},
+	onEscape: () => {},
+	onSubmit: () => {},
 	// NOTE: Blur takes precedence over Escape (this can be changed)
-	onBlur: () => {
-	},
-	onPaste: () => {
-	},
-	onChange: () => {
-	},
+	onBlur: () => {},
+	onPaste: () => {},
+	onChange: () => {},
 	onDelete: () => false,
 	onIndent: () => false,
 	onArrowUp: () => false,
 	onArrowDown: () => false,
 	onArrowLeft: () => false,
-	onArrowRight: () => false
+	onArrowRight: () => false,
 };
 
-
-export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implements ScrollableMarkdownEditor {
+export class EmbeddableMarkdownEditor
+	extends resolveEditorPrototype((window as any).app)
+	implements ScrollableMarkdownEditor
+{
 	options: MarkdownEditorProps;
 	initial_value: string;
 	scope: Scope;
@@ -139,17 +177,20 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	 * @param container - Container element to add the editor to
 	 * @param options - Options for controling the initial state of the editor
 	 */
-	constructor(app: App, container: HTMLElement, options: Partial<MarkdownEditorProps>) {
+	constructor(
+		app: App,
+		container: HTMLElement,
+		options: Partial<MarkdownEditorProps>
+	) {
 		super(app, container, {
 			app,
 			// This mocks the MarkdownView functions, which is required for proper functioning of scrolling
-			onMarkdownScroll: () => {
-			},
+			onMarkdownScroll: () => {},
 			toggleMode: () => this.options.toggleMode(),
-			getMode: () => 'source',
+			getMode: () => "source",
 			getDisplayText: () => this.options.getDisplayText(),
 		});
-		this.options = {...defaultProperties, ...options};
+		this.options = { ...defaultProperties, ...options };
 		this.initial_value = this.options.value!;
 		this.scope = new Scope(this.app.scope);
 		// NOTE: Hotkeys take precedence over CM keymap, so scope is introduced to allow for specific hotkeys to be overwritten
@@ -164,10 +205,11 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		// 	return true;
 		// });
 
-		this.options?.type === 'outliner' && this.scope.register(["Mod"], "f", (e, ctx) => {
-			this.view && this.view?.search();
-			return true;
-		});
+		this.options?.type === "outliner" &&
+			this.scope.register(["Mod"], "f", (e, ctx) => {
+				this.view && this.view?.search();
+				return true;
+			});
 
 		// Since the commands expect that this is a MarkdownView (with editMode as the Editor itself),
 		//   we need to mock this by setting both the editMode and editor to this instance and its containing view respectively
@@ -177,10 +219,9 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		this.owner.getViewType = this.options.getViewType;
 
-
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this;
-		this.set(options.value || '');
+		this.set(options.value || "");
 		// this.editor.cm.dispatch({
 		// 	effects: [
 		// 		EditorView.scrollIntoView(this.editor.cm.state.selection.main, {
@@ -190,14 +231,20 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		// });
 		this.register(
 			around(this.app.workspace, {
-				setActiveLeaf: (oldMethod: (leaf: WorkspaceLeaf, params?: ({ focus?: boolean })) => void) =>
+				setActiveLeaf:
+					(
+						oldMethod: (
+							leaf: WorkspaceLeaf,
+							params?: { focus?: boolean }
+						) => void
+					) =>
 					(leaf: WorkspaceLeaf, params: { focus?: boolean }) => {
 						// If the editor is currently focused, prevent the workspace setting the focus to a workspaceLeaf instead
 						if (!this.activeCM.hasFocus) {
 							oldMethod.call(this.app.workspace, leaf, params);
 						}
 					},
-			}),
+			})
 		);
 
 		this.register(
@@ -205,11 +252,15 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 				getClickableTokenAt: (oldMethod: any) => {
 					return function (...args: any[]) {
 						const token = oldMethod.call(this, ...args);
-						if (token && token.type === 'tag') {
+						if (token && token.type === "tag") {
 							// console.log(this, self.app.workspace.activeLeaf?.view, self.app.workspace.activeLeaf?.view?.getViewType());
-							const activeView = self.app.workspace.activeEditor.editMode.view as OutlinerEditorView;
+							const activeView = self.app.workspace.activeEditor
+								.editMode.view as OutlinerEditorView;
 							// console.log(activeView, token.text, this.activeCM);
-							if (activeView.getViewType() !== 'outliner-editor-view') {
+							if (
+								activeView.getViewType() !==
+								"outliner-editor-view"
+							) {
 								return token;
 							}
 
@@ -217,19 +268,18 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 							return;
 						}
 						return token;
-
 					};
-				}
-			}),
+				},
+			})
 		);
 
 		// Execute onBlur when the editor loses focus
 		// NOTE: Apparently Chrome does a weird thing where removing an element from the DOM triggers a blur event
 		//		 (Hence why the ._loaded check is necessary)
 		if (this.options.onBlur !== defaultProperties.onBlur) {
-			this.editor.cm.contentDOM.addEventListener('blur', () => {
+			this.editor.cm.contentDOM.addEventListener("blur", () => {
 				this.app.keymap.popScope(this.scope);
-				if (this._loaded || this.options?.type === 'embed') {
+				if (this._loaded || this.options?.type === "embed") {
 					this.options.onBlur(this, this.options?.path);
 				}
 			});
@@ -237,38 +287,49 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 
 		// Whenever the editor is focused, set the activeEditor to the mocked view (this.owner)
 		// This allows for the editorCommands to actually work
-		this.editor.cm.contentDOM.addEventListener('focusin', (e: FocusEvent) => {
-			this.app.keymap.pushScope(this.scope);
-			this.app.workspace.activeEditor = this.owner;
+		this.editor.cm.contentDOM.addEventListener(
+			"focusin",
+			(e: FocusEvent) => {
+				this.app.keymap.pushScope(this.scope);
+				this.app.workspace.activeEditor = this.owner;
 
-			if (this._loaded)
-				this.options.onFocus(this);
-		});
+				if (this._loaded) this.options.onFocus(this);
+			}
+		);
 
 		if (options.cls) this.editorEl.classList.add(options.cls);
 		if (options.cursorLocation) {
 			this.editor.cm.dispatch({
-				selection: EditorSelection.range(options.cursorLocation.anchor, options.cursorLocation.head),
+				selection: EditorSelection.range(
+					options.cursorLocation.anchor,
+					options.cursorLocation.head
+				),
 			});
 		}
 
 		this.view = this.options.view!;
-		this.editor.cm.contentDOM.toggleClass('embed-editor', this.options.type === 'embed');
-
+		this.editor.cm.contentDOM.toggleClass(
+			"embed-editor",
+			this.options.type === "embed"
+		);
 
 		if (this.options.foldByDefault) {
 			const allFoldedRanges = getAllFoldableRanges(this.editor.cm.state);
 
-			const effects = allFoldedRanges.filter((t) => {
-				t.from < t.to;
-			}).map((r) => {
-
-				return foldEffect.of({
-					from: r.from,
-					to: r.to,
+			const effects = allFoldedRanges
+				.filter((t) => {
+					t.from < t.to;
+				})
+				.map((r) => {
+					return foldEffect.of({
+						from: r.from,
+						to: r.to,
+					});
 				});
+			this.editor.cm.dispatch({
+				effects,
+				annotations: [FoldAnnotation.of("outliner.fold")],
 			});
-			this.editor.cm.dispatch({effects, annotations: [FoldAnnotation.of('outliner.fold')]});
 		}
 		// this.editor.setCursor(0, 0);
 		// this.sizerEl.appendChild(this.options.view?.backlinksEl);
@@ -297,87 +358,110 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 		// 		this.options.onPaste(event, this);
 		// 	}
 		// }));
-		extensions.push(Prec.highest(keymap.of([
-			{
-				key: 'Enter',
-				run: (cm) => this.options.onEnter(this, false, false),
-				shift: (cm) => this.options.onEnter(this, false, true)
-			},
-			{
-				key: 'Mod-Enter',
-				run: (cm) => this.options.onEnter(this, true, false),
-				shift: (cm) => this.options.onEnter(this, true, true)
-			},
-			{
-				key: 'Escape',
-				run: (cm) => {
-					this.options.onEscape(this);
-					return true;
-				},
-				preventDefault: true
-			},
-			{
-				key: 'Backspace',
-				run: (cm) => this.options.onDelete(this)
-			},
-			{
-				key: 'Delete',
-				run: (cm) => this.options.onDelete(this)
+		extensions.push(
+			Prec.highest(
+				keymap.of([
+					{
+						key: "Enter",
+						run: (cm) => this.options.onEnter(this, false, false),
+						shift: (cm) => this.options.onEnter(this, false, true),
+					},
+					{
+						key: "Mod-Enter",
+						run: (cm) => this.options.onEnter(this, true, false),
+						shift: (cm) => this.options.onEnter(this, true, true),
+					},
+					{
+						key: "Escape",
+						run: (cm) => {
+							this.options.onEscape(this);
+							return true;
+						},
+						preventDefault: true,
+					},
+					{
+						key: "Backspace",
+						run: (cm) => this.options.onDelete(this),
+					},
+					{
+						key: "Delete",
+						run: (cm) => this.options.onDelete(this),
+					},
+					{
+						key: "Tab",
+						run: (cm) => this.options.onIndent(this, false, false),
+						shift: (cm) => this.options.onIndent(this, false, true),
+					},
+					{
+						key: "ArrowLeft",
+						run: (cm) =>
+							this.options.onArrowLeft(this, false, false),
+						shift: (cm) =>
+							this.options.onArrowLeft(this, false, true),
+					},
+					{
+						key: "ArrowRight",
+						run: (cm) =>
+							this.options.onArrowRight(this, false, false),
+						shift: (cm) =>
+							this.options.onArrowRight(this, false, true),
+					},
+					{
+						key: "ArrowUp",
+						run: (cm) => this.options.onArrowUp(this, false, false),
+						shift: (cm) =>
+							this.options.onArrowUp(this, false, true),
+					},
+					{
+						key: "ArrowDown",
+						run: (cm) =>
+							this.options.onArrowDown(this, false, false),
+						shift: (cm) =>
+							this.options.onArrowDown(this, false, true),
+					},
+					{
+						key: "Mod-ArrowUp",
+						run: (cm) => this.options.onArrowUp(this, true, false),
+						shift: (cm) => this.options.onArrowUp(this, true, true),
+					},
+					{
+						key: "Mod-ArrowDown",
+						run: (cm) =>
+							this.options.onArrowDown(this, true, false),
+						shift: (cm) =>
+							this.options.onArrowDown(this, true, true),
+					},
+				])
+			)
+		);
 
-			},
-			{
-				key: 'Tab',
-				run: (cm) => this.options.onIndent(this, false, false),
-				shift: (cm) => this.options.onIndent(this, false, true)
-			},
-			{
-				key: 'ArrowLeft',
-				run: (cm) => this.options.onArrowLeft(this, false, false),
-				shift: (cm) => this.options.onArrowLeft(this, false, true)
-			},
-			{
-				key: 'ArrowRight',
-				run: (cm) => this.options.onArrowRight(this, false, false),
-				shift: (cm) => this.options.onArrowRight(this, false, true)
-			},
-			{
-				key: 'ArrowUp',
-				run: (cm) => this.options.onArrowUp(this, false, false),
-				shift: (cm) => this.options.onArrowUp(this, false, true)
-			},
-			{
-				key: 'ArrowDown',
-				run: (cm) => this.options.onArrowDown(this, false, false),
-				shift: (cm) => this.options.onArrowDown(this, false, true)
-			},
-			{
-				key: 'Mod-ArrowUp',
-				run: (cm) => this.options.onArrowUp(this, true, false),
-				shift: (cm) => this.options.onArrowUp(this, true, true)
-			},
-			{
-				key: 'Mod-ArrowDown',
-				run: (cm) => this.options.onArrowDown(this, true, false),
-				shift: (cm) => this.options.onArrowDown(this, true, true)
-			}
-		])));
-
-		extensions.push([this.readOnlyDepartment.of(
-			EditorState.readOnly.of(false)
-		), blankBulletLineWidget, Prec.highest(this.KeepOnlyZoomedContentVisible?.getExtension()), selectionController(), FoldingExtension]);
+		extensions.push([
+			this.readOnlyDepartment.of(EditorState.readOnly.of(false)),
+			blankBulletLineWidget,
+			Prec.highest(this.KeepOnlyZoomedContentVisible?.getExtension()),
+			selectionController(),
+			FoldingExtension,
+		]);
 
 		if (!this.options.disableTimeFormat) {
 			extensions.push([createDateRendererPlugin()]);
 		}
 
-		if (this.options.type === 'outliner') {
-			extensions.push([AddNewLineBtn, TaskGroupComponent, SearchHighlight, BulletMenu]);
+		if (this.options.type === "outliner") {
+			extensions.push([
+				AddNewLineBtn,
+				TaskGroupComponent,
+				SearchHighlight,
+				BulletMenu,
+			]);
 		}
 
-		if (this.options.type === 'embed') {
-			extensions.push([Prec.default(createBlockIdRender()), disableToDeleteBlockID()]);
+		if (this.options.type === "embed") {
+			extensions.push([
+				Prec.default(createBlockIdRender()),
+				disableToDeleteBlockID(),
+			]);
 		}
-
 
 		return extensions;
 	}
@@ -386,8 +470,7 @@ export class EmbeddableMarkdownEditor extends resolveEditorPrototype(app) implem
 	 * Ensure that the editor is properly destroyed when the view is closed
 	 */
 	destroy(): void {
-		if (this._loaded)
-			this.unload();
+		if (this._loaded) this.unload();
 		this.app.keymap.popScope(this.scope);
 		this.app.workspace.activeEditor = null;
 		this.containerEl.empty();

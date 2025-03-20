@@ -8,9 +8,6 @@ import {
 	TFile,
 } from "obsidian";
 import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
-import { EmbeddableMarkdownEditor } from "../../editor-components/MarkdownEditor";
-import { getIndent } from "../../utils/utils";
-import { foldable } from "@codemirror/language";
 import {
 	hideFrontMatterEffect,
 	zoomInEffect,
@@ -18,11 +15,11 @@ import {
 } from "../../cm/VisibleRangeController";
 import { KeepRangeVisible } from "../../cm/KeepRangeVisible";
 import OutlinerViewPlugin from "../../OutlinerViewIndex";
-import { EditorState } from "@codemirror/state";
 import {
-	handleRegularEnter,
-	handleShiftEnter,
-} from "../../utils/keyDownHandler";
+	EditorFactory,
+	EditorType,
+} from "../../editor-components/EditorFactory";
+import { editorRangeUtils } from "../../utils/editorRangeUtils";
 
 export class EmbeddedEditor extends Component {
 	plugin: OutlinerViewPlugin;
@@ -72,40 +69,20 @@ export class EmbeddedEditor extends Component {
 		super.onload();
 
 		const targetFile = this.file;
-		targetFile &&
-			!this.initData &&
-			this.app.vault.read(targetFile).then((data) => {
-				this.data = data;
-				if (!targetFile) return;
+		if (!targetFile) return;
 
-				const targetRange = this.getRange(targetFile);
-
-				// const embedEl = this.containerEl.createEl('div', {
-				// 	cls: 'embedded-editor-container',
-				// });
-
-				this.createEditor(
-					this.containerEl,
-					targetFile?.path,
-					this.data || "",
-					targetRange
-				);
-			});
-
-		if (this.initData && targetFile && this.targetRange) {
+		// If we have initial data, create editor directly
+		if (this.initData && this.targetRange) {
 			this.data = this.initData;
-			// const targetRange = this.getRange(targetFile);
-			this.createEditor(
-				this.containerEl,
-				targetFile?.path,
-				this.data || "",
-				{
-					...this.targetRange,
-					type: "part",
-				}
-			);
+			this.createEditor();
+		} else {
+			// Otherwise read the file then create editor
+			const data = await this.app.vault.read(targetFile);
+			this.data = data;
+			this.createEditor();
 		}
 
+		// Register for file changes
 		this.registerEvent(
 			this.app.metadataCache.on("changed", (file) => {
 				this.updateFile(file);
@@ -119,33 +96,43 @@ export class EmbeddedEditor extends Component {
 			if (this.data === data) return;
 
 			this.data = data;
-			// const lastLine = this.editor?.cm.state.doc.lineAt(this.editor?.cm.state.doc.length - 1);
-			this.editor?.replaceRange(
-				data,
-				{
-					line: 0,
-					ch: 0,
-				},
-				this.editor.offsetToPos(this.editor.cm.state.doc.length)
-			);
 
-			const targetRange = this.getRange(file);
-			this.range = {
-				from: targetRange.from,
-				to: targetRange.to,
-			};
-			targetRange.type !== "whole" &&
-				this.updateVisibleRange(
-					this.editor as Editor,
-					this.range,
-					targetRange.type as "part" | "block" | "heading"
+			// Update editor content if it exists
+			if (this.editor) {
+				this.editor.replaceRange(
+					data,
+					{
+						line: 0,
+						ch: 0,
+					},
+					this.editor.offsetToPos(this.editor.cm.state.doc.length)
 				);
-			targetRange.type === "whole" &&
-				this.plugin.settings.hideFrontmatter &&
-				this.updateFrontMatterVisible(
-					this.editor as Editor,
-					this.file as TFile
-				);
+
+				const targetRange = this.getRange(file);
+				this.range = {
+					from: targetRange.from,
+					to: targetRange.to,
+				};
+
+				if (targetRange.type !== "whole") {
+					editorRangeUtils.updateVisibleRange(
+						this.editor,
+						this.range,
+						targetRange.type as "part" | "block" | "heading"
+					);
+				}
+
+				if (
+					targetRange.type === "whole" &&
+					this.plugin.settings.hideFrontmatter
+				) {
+					editorRangeUtils.updateFrontMatterVisible(
+						this.editor,
+						this.app,
+						this.file
+					);
+				}
+			}
 		}
 	}, 800);
 
@@ -162,7 +149,6 @@ export class EmbeddedEditor extends Component {
 	debounceHover = debounce(
 		(extraButton: ExtraButtonComponent, e: MouseEvent) => {
 			if (!this.file) return;
-			// console.log("hovering", file.path, state);
 
 			this.app.workspace.trigger("hover-link", {
 				event: e,
@@ -186,310 +172,155 @@ export class EmbeddedEditor extends Component {
 		this.data = data;
 	});
 
-	createEditor(
-		container: HTMLElement,
-		path: string,
-		data: string,
-		range: {
-			from: number;
-			to: number;
-			type: string;
-		}
-	) {
-		const embedEditor = new EmbeddableMarkdownEditor(this.app, container, {
-			onEnter: (editor, mod: boolean, shift: boolean) => {
-				if (!editor.view) return false;
+	createEditor() {
+		if (!this.file) return;
 
-				const editorInstance = editor.editor as Editor;
-				const cursor = editorInstance.getCursor();
-				const { line, ch } = cursor;
-				const lineText = editorInstance.getLine(line);
-
-				if (shift) {
-					return handleShiftEnter(editorInstance, line, lineText);
-				}
-
-				return handleRegularEnter(editorInstance, line, ch, lineText);
-			},
-			onDelete: (editor) => {
-				if (!editor.view) return false;
-				const { line, ch } = (editor.editor as Editor).getCursor();
-				const lineText = editor.editor.getLine(line);
-				// const from = editor.editor.posToOffset({line, ch});
-				const lineFrom = editor.editor.posToOffset({ line, ch: 0 });
-				const lineTo =
-					editor.editor.posToOffset({ line: line + 1, ch: 0 }) - 1;
-
-				const foldRange = foldable(
-					editor.editor.cm.state,
-					lineFrom,
-					lineTo
-				);
-
-				if (
-					/^(\s*?)((-|\*|\d+\.)(\s\[.\])?)\s/g.test(lineText) &&
-					/^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lineText.trim())
-				) {
-					if (line === 0) {
-						return true;
-					}
-
-					if (foldRange) {
-						return true;
-					}
-
-					const range = this.app.plugins
-						.getPlugin("obsidian-zoom")
-						?.getZoomRange(editor.editor);
-					if (range) {
-						const firstLineInRange = range.from.line;
-						if (firstLineInRange === line) {
-							return true;
-						}
-					}
-
-					(editor.editor as Editor).transaction({
-						changes: [
-							{
-								text: "",
-								from: {
-									line: line - 1,
-									ch: editor.editor.getLine(line - 1).length,
-								},
-								to: { line, ch: ch },
-							},
-						],
-					});
-					return true;
-				} else if (/^\s+$/g.test(lineText)) {
-					(editor.editor as Editor).transaction({
-						changes: [
-							{
-								text: "",
-								from: {
-									line: line - 1,
-									ch: editor.editor.getLine(line - 1).length,
-								},
-								to: { line, ch: ch },
-							},
-						],
-					});
-					return true;
-				}
-
-				return false;
-			},
-			onIndent: (editor, mod: boolean, shift: boolean) => {
-				if (!editor.view) return false;
-				if (shift) {
-					const range = this.app.plugins
-						.getPlugin("obsidian-zoom")
-						?.getZoomRange(editor.editor);
-
-					if (range) {
-						const firstLineInRange = range.from.line;
-						const lastLineInRange = range.to.line;
-
-						const spaceOnFirstLine = editor.editor
-							.getLine(firstLineInRange)
-							?.match(/^\s*/)?.[0];
-						const lastLineInRangeText =
-							editor.editor.getLine(lastLineInRange);
-						const spaceOnLastLine =
-							lastLineInRangeText?.match(/^\s*/)?.[0];
-						const indentNewLine = getIndent(this.app);
-
-						if (firstLineInRange === lastLineInRange) return true;
-
-						if (
-							spaceOnFirstLine === spaceOnLastLine ||
-							spaceOnLastLine === spaceOnFirstLine + indentNewLine
-						) {
-							return true;
-						}
-					}
-				}
-
-				return false;
-			},
-			onBlur: (editor, path) => {
-				if (this.file && this.targetRange) {
-					const data = editor.editor?.cm.state.doc.toString();
-					// console.log('data', data, this.data, data === this.data);
-					if (this.data === data) return;
-					// this.file && this.requestSave(this.file, data);
-
-					// if (!update.docChanged) return;
-					// if (this.data === data) return;
-
-					this.requestSave(this.file, data);
-				}
-			},
-			onChange: (update, path) => {
-				if (path) {
-					if (!update.docChanged) return;
-					if (this.data === update.state.doc.toString()) return;
-					!this.targetRange &&
-						this.file &&
-						this.requestSave(
-							this.file,
-							update.state.doc.toString()
-						);
-				}
-			},
-			toggleMode: () => {
-				// @ts-expect-error
-				const cmView = this.containerEl.cmView;
-				if (cmView) {
-					// console.log(cmView.widget.editor);
-					cmView.widget.editor.owner.toggleMode();
-				}
-			},
-			type: "embed",
-			value: data || "",
-			path: this.file?.path,
-			disableTimeFormat: !this.plugin.settings.timeFormatWidget,
-		});
-
-		// embedEditor.editor.getValue = () => {
-		// 	return this.data || "";
-		// };
-
+		const targetRange = this.getRange(this.file);
 		this.range = {
-			from: range.from,
-			to: range.to,
+			from: targetRange.from,
+			to: targetRange.to,
 		};
-		this.editor = embedEditor.editor;
 
-		if (this.targetRange && !this.plugin.settings.livePreviewForBacklinks) {
-			// console.log('targetRange', this.targetRange);
-			this.editor?.editorComponent.toggleSource();
+		// Use our new factory to create the editor
+		const { editor, updateRange } = EditorFactory.createEditor(
+			EditorType.EMBEDDED,
+			{
+				app: this.app,
+				containerEl: this.containerEl,
+				file: this.file,
+				subpath: this.subpath,
+				targetRange: this.targetRange,
+				data: this.data,
+				plugin: this.plugin,
+				disableTimeFormat: !this.plugin.settings.timeFormatWidget,
+				onSave: (file, data) => this.requestSave(file, data),
+			}
+		);
+
+		this.editor = editor;
+
+		// Add the ability to update ranges if needed
+		if (updateRange) {
+			this.updateRange = updateRange;
 		}
 
+		// Add UI elements for specific cases
+		this.addUIElements(targetRange.type);
+
+		return this.editor;
+	}
+
+	addUIElements(rangeType: string) {
 		if (this.targetRange && this.containerEl) {
-			console.log(this.containerEl.parentElement);
-			(this.containerEl as HTMLElement).createEl(
-				"div",
-				{
-					cls: "backlink-btn",
-				},
-				(el) => {
-					const extraButton = new ExtraButtonComponent(el).setIcon(
-						"file-symlink"
-					);
-
-					this.registerDomEvent(
-						extraButton.extraSettingsEl,
-						"mouseover",
-						(e) => {
-							if (!this.file || !this.targetRange) return;
-							const line = this.editor?.cm.state.doc.lineAt(
-								this.targetRange.from + 1
-							);
-
-							if (!line) return;
-							const state = {
-								scroll: line.number,
-							};
-
-							// console.log("hovering", file.path, state);
-
-							this.app.workspace.trigger("hover-link", {
-								event: e,
-								source: "outliner-md",
-								hoverParent: this.containerEl,
-								targetEl: extraButton.extraSettingsEl,
-								linktext: this.file.path,
-								state: state,
-							});
-						}
-					);
-				}
-			);
+			this.addBacklinkButton();
 		}
 
-		range.type !== "whole" &&
-			this.updateVisibleRange(
-				embedEditor.editor,
-				range,
-				range.type as "part" | "block" | "heading"
-			);
-		range.type === "whole" &&
-			this.plugin.settings.hideFrontmatter &&
-			this.updateFrontMatterVisible(
-				this.editor as Editor,
-				this.file as TFile
-			);
+		if (rangeType !== "part") {
+			this.addSourceButton();
+		}
 
-		// range.type === 'while' && this.editor?.editorComponent.toggleFrontMatter();
-
+		// Check for readonly flag
 		const title = this.containerEl.getAttr("alt");
 		if (title) {
 			if (title === "readonly" || title.contains("readonly")) {
-				this.editor?.cm.dispatch({
-					effects: [
-						embedEditor.readOnlyDepartment.reconfigure(
-							EditorState.readOnly.of(true)
-						),
-					],
-				});
-
-				this.containerEl.toggleClass("readonly", true);
-
-				const button = this.containerEl.createEl("div", {
-					cls: "lock-btn",
-				});
-
-				let locked = true;
-
-				const component = new ExtraButtonComponent(button)
-					.setIcon("lock")
-					.onClick(() => {
-						this.editor?.cm.dispatch({
-							effects: embedEditor.readOnlyDepartment.reconfigure(
-								EditorState.readOnly.of(!locked)
-							),
-						});
-
-						locked = !locked;
-						component.setIcon(locked ? "lock" : "unlock");
-						this.containerEl.toggleClass("readonly", locked);
-					});
+				this.addReadonlyButton();
 			}
 		}
+	}
 
-		if (range.type !== "part") {
-			const button = this.containerEl.createEl("div", {
-				cls: "source-btn embedded-editor-btn",
+	addBacklinkButton() {
+		const backLinkBtn = this.containerEl.createEl("div", {
+			cls: "backlink-btn",
+		});
+
+		const extraButton = new ExtraButtonComponent(backLinkBtn).setIcon(
+			"file-symlink"
+		);
+
+		this.registerDomEvent(extraButton.extraSettingsEl, "mouseover", (e) => {
+			if (!this.file || !this.targetRange || !this.editor) return;
+
+			const line = this.editor.cm.state.doc.lineAt(
+				this.targetRange.from + 1
+			);
+
+			if (!line) return;
+			const state = {
+				scroll: line.number,
+			};
+
+			this.app.workspace.trigger("hover-link", {
+				event: e,
+				source: "outliner-md",
+				hoverParent: this.containerEl,
+				targetEl: extraButton.extraSettingsEl,
+				linktext: this.file.path,
+				state: state,
 			});
+		});
+	}
 
-			const extraButton = new ExtraButtonComponent(button).setIcon(
-				"link"
-			);
+	addSourceButton() {
+		const button = this.containerEl.createEl("div", {
+			cls: "source-btn embedded-editor-btn",
+		});
 
-			this.registerDomEvent(
-				extraButton.extraSettingsEl,
-				"click",
-				async (e) => {
-					if (Keymap.isModEvent(e)) {
-						const leaf = this.app.workspace.getLeaf();
-						await leaf.setViewState({
-							type: "markdown",
-						});
-						this.file && (await leaf.openFile(this.file));
-					}
+		const extraButton = new ExtraButtonComponent(button).setIcon("link");
+
+		this.registerDomEvent(
+			extraButton.extraSettingsEl,
+			"click",
+			async (e) => {
+				if (Keymap.isModEvent(e)) {
+					const leaf = this.app.workspace.getLeaf();
+					await leaf.setViewState({
+						type: "markdown",
+					});
+					this.file && (await leaf.openFile(this.file));
 				}
-			);
+			}
+		);
 
-			this.registerDomEvent(
-				extraButton.extraSettingsEl,
-				"mouseover",
-				(e) => this.debounceHover(extraButton, e)
-			);
-		}
+		this.registerDomEvent(extraButton.extraSettingsEl, "mouseover", (e) =>
+			this.debounceHover(extraButton, e)
+		);
+	}
 
-		// @ts-expect-error - This is a private method
-		return this.addChild(embedEditor);
+	addReadonlyButton() {
+		this.containerEl.toggleClass("readonly", true);
+
+		const button = this.containerEl.createEl("div", {
+			cls: "lock-btn",
+		});
+
+		let locked = true;
+
+		const component = new ExtraButtonComponent(button)
+			.setIcon("lock")
+			.onClick(() => {
+				if (!this.editor) return;
+
+				// For simplicity, recreate the editor with the opposite readonly state
+				if (this.file && this.data) {
+					EditorFactory.createEditor(EditorType.EMBEDDED, {
+						app: this.app,
+						containerEl: this.containerEl,
+						file: this.file,
+						subpath: this.subpath,
+						targetRange: this.targetRange,
+						data: this.data,
+						plugin: this.plugin,
+						disableTimeFormat:
+							!this.plugin.settings.timeFormatWidget,
+						readOnly: !locked,
+						onSave: (file, data) => this.requestSave(file, data),
+					});
+				}
+
+				locked = !locked;
+				component.setIcon(locked ? "lock" : "unlock");
+				this.containerEl.toggleClass("readonly", locked);
+			});
 	}
 
 	public updateRange(range: { from: number; to: number }) {
@@ -497,11 +328,20 @@ export class EmbeddedEditor extends Component {
 			from: range.from,
 			to: range.to,
 		};
-		this.updateVisibleRange(this.editor as Editor, range, "part");
-		// this.updateIndentVisible(
-		// 	this.editor as Editor,
-		// 	range
-		// );
+
+		if (this.editor) {
+			editorRangeUtils.updateVisibleRange(this.editor, range, "part");
+		}
+	}
+
+	getRange(targetFile: TFile) {
+		return editorRangeUtils.getRange(
+			this.app,
+			targetFile,
+			this.subpath,
+			this.targetRange,
+			this.data
+		);
 	}
 
 	updateVisibleRange(
@@ -629,99 +469,6 @@ export class EmbeddedEditor extends Component {
 			// 	effects: [zoomInEffect.of(range)]
 			// });
 		}
-	}
-
-	getRange(targetFile: TFile) {
-		const cache = this.app.metadataCache.getFileCache(targetFile);
-
-		if (!this.subpath && this.targetRange) {
-			return {
-				from: this.targetRange.from,
-				to: this.targetRange.to,
-				type: "part",
-			};
-		}
-
-		if (!this.subpath) {
-			const title = this.containerEl
-				.getAttr("alt")
-				?.replace("readonly", "");
-
-			if (title) {
-				const content = this.data;
-				const targetBlockId = `%%${title}%%`;
-
-				// console.log('content', content, targetBlockId, title);
-
-				if (!content) {
-					return {
-						from: 0,
-						to: 0,
-						type: "whole",
-					};
-				}
-
-				const start = content.indexOf(targetBlockId);
-				const end = content.indexOf(targetBlockId, start + 1);
-
-				if (start !== -1 && end !== -1) {
-					return {
-						from: start + targetBlockId.length + 1,
-						to: end - 1,
-						type: "part",
-					};
-				}
-			}
-		}
-
-		let targetRange = {
-			from: 0,
-			to: this.data?.length || 0,
-			type: "whole",
-		};
-		if (cache && this.subpath) {
-			if (/#\^/.test(this.subpath)) {
-				const id = this.subpath.slice(2);
-				const block = Object.values(cache?.blocks || {}).find((key) => {
-					return key.id === id;
-				});
-				if (block) {
-					targetRange = {
-						from: block.position?.start.offset,
-						to: block.position?.end.offset,
-						type: "block",
-					};
-
-					// console.log('cache', cache, block);
-				}
-
-				// console.log('block', block);
-
-				return targetRange;
-			} else if (/^#/.test(this.subpath)) {
-				const heading = this.subpath.slice(1);
-				const headingBlock = Object.values(cache?.headings || {}).find(
-					(key) => {
-						return (
-							heading.trim() &&
-							key.heading
-								.replace(/((\[\[)|(\]\]))/g, "")
-								.trim() === heading.trim()
-						);
-					}
-				);
-				if (headingBlock) {
-					targetRange = {
-						from: headingBlock.position.start.offset,
-						to: headingBlock.position.end.offset,
-						type: "heading",
-					};
-				}
-
-				return targetRange;
-			}
-		}
-		return targetRange;
 	}
 
 	updateIndentVisible(editor: Editor, range: { from: number; to: number }) {

@@ -9,7 +9,7 @@ import {
 	TextFileView,
 	TFile,
 	type ViewStateResult,
-	WorkspaceLeaf
+	WorkspaceLeaf,
 } from "obsidian";
 import OutlinerViewPlugin from "./OutlinerViewIndex";
 import { EmbeddableMarkdownEditor } from "./editor-components/MarkdownEditor";
@@ -23,12 +23,15 @@ import { SelectionAnnotation } from "./cm/SelectionController";
 
 export function isEmebeddedLeaf(leaf: WorkspaceLeaf) {
 	// Work around missing enhance.js API by checking match condition instead of looking up parent
-	return leaf.containerEl.matches('.tv-block.tv-leaf-view .workspace-leaf');
+	return leaf.containerEl.matches(".tv-block.tv-leaf-view .workspace-leaf");
 }
 
 export const OUTLINER_EDITOR_VIEW_ID = "outliner-editor-view";
 
-export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo {
+export class OutlinerEditorView
+	extends TextFileView
+	implements MarkdownFileInfo
+{
 	// editors: HTMLElement[] = [];
 	app: App;
 	editor: Editor | undefined;
@@ -45,7 +48,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 	changedBySelf: boolean = false;
 
-	inlineTitleEl: HTMLElement = createEl('div', {cls: 'inline-title'});
+	inlineTitleEl: HTMLElement = createEl("div", { cls: "inline-title" });
 
 	hideCompleted: boolean = false;
 
@@ -75,11 +78,11 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	}
 
 	setViewData(data: string, clear: boolean) {
-
-
-		if (data.replace(this.frontmatter, '').trimStart() === this.fileContentData.trimStart()) {
+		if (
+			data.replace(this.frontmatter, "").trimStart() ===
+			this.fileContentData.trimStart()
+		) {
 			// new Notice('No changes to save');
-
 
 			return;
 		}
@@ -87,10 +90,12 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		if (!this.editor) return;
 
 		this.editor.replaceRange(
-			data.replace(this.frontmatter, '').trimStart(), {
+			data.replace(this.frontmatter, "").trimStart(),
+			{
 				line: 0,
-				ch: 0
-			}, this.editor.offsetToPos(this.editor.cm.state.doc.length)
+				ch: 0,
+			},
+			this.editor.offsetToPos(this.editor.cm.state.doc.length)
 		);
 
 		// this.editor.scrollTo(null, currentScrollInfo.top);
@@ -103,12 +108,10 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	}
 
 	getIcon() {
-		return 'list';
+		return "list";
 	}
 
-	clear() {
-
-	}
+	clear() {}
 
 	getSelection() {
 		return this.editor?.getSelection();
@@ -127,19 +130,19 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 	onPaneMenu(menu: Menu, source: "more-options" | "tab-header" | string) {
 		super.onPaneMenu(menu, source);
 		menu.addItem((item) => {
-			item
-				.setIcon('file-edit')
-				.setTitle('Open as Markdown View')
+			item.setIcon("file-edit")
+				.setTitle("Open as Markdown View")
 				.onClick(async () => {
-					this.plugin.outlinerFileModes[(this.leaf as any).id] = 'markdown';
+					this.plugin.outlinerFileModes[(this.leaf as any).id] =
+						"markdown";
 					await this.plugin.setMarkdownView(this.leaf);
 				})
-				.setSection?.('pane');
+				.setSection?.("pane");
 		});
 	}
 
 	async onRename(file: TFile): Promise<void> {
-		if (!(file?.extension === 'md')) return super.onRename(file);
+		if (!(file?.extension === "md")) return super.onRename(file);
 
 		this.filePath = file.path;
 		this.file = file;
@@ -151,7 +154,7 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			},
 			{
 				history: false,
-			},
+			}
 		);
 		this.updateHeader();
 		return super.onRename(file);
@@ -165,24 +168,28 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		const parentPath = this.file?.parent?.path;
 
 		// If a valid path exists and it's not the root directory
-		if (parentPath && parentPath !== '/') {
+		if (parentPath && parentPath !== "/") {
 			// Split the path by '/' to get each part of the path
-			const parts = parentPath.split('/');
+			const parts = parentPath.split("/");
 
 			// Iterate over each part of the path to create breadcrumbs
 			parts.forEach((part, index) => {
 				// Join the parts of the path up to the current index to form the breadcrumb's path
-				const pathToHere = parts.slice(0, index + 1).join('/');
+				const pathToHere = parts.slice(0, index + 1).join("/");
 
 				// Create the breadcrumb span and add a click listener
 				const breadcrumbSpan = this.titleParentEl.createSpan({
-					cls: 'view-header-breadcrumb',
+					cls: "view-header-breadcrumb",
 					text: part,
 				});
-				breadcrumbSpan.addEventListener('click', () => {
-					const fileExplorerPlugin = this.app.internalPlugins.getEnabledPluginById('file-explorer');
+				breadcrumbSpan.addEventListener("click", () => {
+					const fileExplorerPlugin =
+						this.app.internalPlugins.getEnabledPluginById(
+							"file-explorer"
+						);
 					if (fileExplorerPlugin) {
-						const file = this.app.vault.getAbstractFileByPath(pathToHere);
+						const file =
+							this.app.vault.getAbstractFileByPath(pathToHere);
 						if (file) {
 							fileExplorerPlugin.revealInFolder(file);
 						}
@@ -191,8 +198,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 				// Create the separator span
 				this.titleParentEl.createSpan({
-					cls: 'view-header-breadcrumb-separator',
-					text: '/',
+					cls: "view-header-breadcrumb-separator",
+					text: "/",
 				});
 			});
 		}
@@ -202,7 +209,9 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		this.titleEl.setText(this.file?.basename || this.filePath);
 		this.leaf.updateHeader();
 		setTimeout(() => {
-			this.leaf.tabHeaderInnerTitleEl.setText(this.file?.basename || this.filePath);
+			this.leaf.tabHeaderInnerTitleEl.setText(
+				this.file?.basename || this.filePath
+			);
 		}, 20);
 		this.updateTitleBreadcrumbs();
 		this.titleEl.onclick = () => {
@@ -221,54 +230,89 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			// },
 			onEnter: (editor, mod: boolean, shift: boolean) => {
 				if (!shift) {
-					const {line, ch} = (editor.editor as Editor).getCursor();
+					const { line, ch } = (editor.editor as Editor).getCursor();
 					const lineText = editor.editor.getLine(line);
 
-					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
+					const range = this.app.plugins
+						.getPlugin("obsidian-zoom")
+						?.getZoomRange(editor.editor);
 					// const range = getZoomRange(editorView.state);
 					const indentNewLine = getIndent(this.app);
 
 					if (range) {
 						const firstLineInRange = range.from.line;
 						const lastLineInRange = range.to.line;
-						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0] || '';
-						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
+						const spaceOnFirstLine =
+							editor.editor
+								.getLine(firstLineInRange)
+								?.match(/^\s*/)?.[0] || "";
+						const lastLineInRangeText =
+							editor.editor.getLine(lastLineInRange);
 
 						const cursor = editor.editor.getCursor();
 						const lineText = editor.editor.getLine(cursor.line);
 
-						if (/^((-|\*|\d+\.)(\s\[.\])?)/g.test(lineText.trim())) {
+						if (
+							/^((-|\*|\d+\.)(\s\[.\])?)/g.test(lineText.trim())
+						) {
 							const currentLine = cursor.line;
-							const currentLineText = editor.editor.getLine(currentLine);
-							const spaceOnCurrentLine = currentLineText.match(/^\s*/)?.[0] || '';
+							const currentLineText =
+								editor.editor.getLine(currentLine);
+							const spaceOnCurrentLine =
+								currentLineText.match(/^\s*/)?.[0] || "";
 
 							editor.editor.transaction({
 								changes: [
 									{
-										text: `\n${spaceOnCurrentLine}${spaceOnCurrentLine.length > spaceOnFirstLine.length ? '' : indentNewLine}- `,
+										text: `\n${spaceOnCurrentLine}${
+											spaceOnCurrentLine.length >
+											spaceOnFirstLine.length
+												? ""
+												: indentNewLine
+										}- `,
 										from: {
 											line: cursor.line,
 											ch: cursor.ch || 0,
-										}
-									}
+										},
+									},
 								],
 								selection: {
 									from: {
 										line: cursor.line + 1,
-										ch: 2 + (`${spaceOnCurrentLine}${spaceOnCurrentLine.length > spaceOnFirstLine.length ? '' : indentNewLine}`.length)
+										ch:
+											2 +
+											`${spaceOnCurrentLine}${
+												spaceOnCurrentLine.length >
+												spaceOnFirstLine.length
+													? ""
+													: indentNewLine
+											}`.length,
 									},
 									to: {
 										line: cursor.line + 1,
-										ch: 2 + (`${spaceOnCurrentLine}${spaceOnCurrentLine.length > spaceOnFirstLine.length ? '' : indentNewLine}`.length)
-									}
-								}
+										ch:
+											2 +
+											`${spaceOnCurrentLine}${
+												spaceOnCurrentLine.length >
+												spaceOnFirstLine.length
+													? ""
+													: indentNewLine
+											}`.length,
+									},
+								},
 							});
 							return true;
 						}
 
-						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
+						const spaceOnLastLine =
+							lastLineInRangeText?.match(/^\s*/)?.[0];
 
-						if (/^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lastLineInRangeText.trim()) && spaceOnLastLine === (spaceOnFirstLine + indentNewLine)) {
+						if (
+							/^((-|\*|\d+\.)(\s\[.\])?)$/g.test(
+								lastLineInRangeText.trim()
+							) &&
+							spaceOnLastLine === spaceOnFirstLine + indentNewLine
+						) {
 							editor.editor.transaction({
 								changes: [
 									{
@@ -276,36 +320,50 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 										from: {
 											line: lastLineInRange,
 											ch: lastLineInRangeText.length || 0,
-										}
-									}
+										},
+									},
 								],
 								selection: {
 									from: {
 										line: lastLineInRange + 1,
-										ch: 2 + (`${spaceOnFirstLine}${indentNewLine}`.length)
+										ch:
+											2 +
+											`${spaceOnFirstLine}${indentNewLine}`
+												.length,
 									},
 									to: {
 										line: lastLineInRange + 1,
-										ch: 2 + (`${spaceOnFirstLine}${indentNewLine}`.length)
-									}
-								}
+										ch:
+											2 +
+											`${spaceOnFirstLine}${indentNewLine}`
+												.length,
+									},
+								},
 							});
 							return true;
 						}
 					}
 
-					const prevLine = line > 0 ? editor.editor.getLine(line - 1) : "";
+					const prevLine =
+						line > 0 ? editor.editor.getLine(line - 1) : "";
 
 					if (lineText.trimStart().startsWith("- ")) {
-						const currentItemisFoldable = foldable(editor.editor.cm.state, editor.editor.posToOffset({
-							line,
-							ch: 0
-						}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+						const currentItemisFoldable = foldable(
+							editor.editor.cm.state,
+							editor.editor.posToOffset({
+								line,
+								ch: 0,
+							}),
+							editor.editor.posToOffset({
+								line: line + 1,
+								ch: 0,
+							}) - 1
+						);
 
-						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
+						const spaceBeforeStartLine =
+							lineText.match(/^\s+/)?.[0] || "";
 
 						if (ch !== lineText.length) {
-
 							return false;
 						}
 
@@ -315,19 +373,31 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 						// Check until next line contains -
 						if (currentItemisFoldable) {
-							const currentLineEnd = editor.editor.cm.state.doc.line(line + 1).to;
+							const currentLineEnd =
+								editor.editor.cm.state.doc.line(line + 1).to;
 							const foldRangeTo = currentItemisFoldable.to;
 							// const folaRangeFrom = currentItemisFoldable.from;
 
 							// console.log(foldRangeTo);
 
-							const lineAtFoldRangeTo = (editor.editor.cm as EditorView).state.doc.lineAt(foldRangeTo);
+							const lineAtFoldRangeTo = (
+								editor.editor.cm as EditorView
+							).state.doc.lineAt(foldRangeTo);
 							// const lineAtFoldRangeFrom = (editor.editor.cm as EditorView).state.doc.lineAt(folaRangeFrom);
 							let hasChildNodes = false;
-							for (let i = editor.editor.cm.state.doc.lineAt(currentLineEnd + 1).number; i <= lineAtFoldRangeTo.number; i++) {
-								const rangeLineText = editor.editor.cm.state.doc.line(i).text;
+							for (
+								let i = editor.editor.cm.state.doc.lineAt(
+									currentLineEnd + 1
+								).number;
+								i <= lineAtFoldRangeTo.number;
+								i++
+							) {
+								const rangeLineText =
+									editor.editor.cm.state.doc.line(i).text;
 
-								if (rangeLineText.trimStart().startsWith("- ")) {
+								if (
+									rangeLineText.trimStart().startsWith("- ")
+								) {
 									hasChildNodes = true;
 									break;
 								}
@@ -335,66 +405,100 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 							let realEndPos = currentLineEnd;
 
-							for (let i = editor.editor.cm.state.doc.lineAt(currentLineEnd + 1).number; i <= lineAtFoldRangeTo.number; i++) {
-								const rangeLineText = editor.editor.cm.state.doc.line(i).text;
+							for (
+								let i = editor.editor.cm.state.doc.lineAt(
+									currentLineEnd + 1
+								).number;
+								i <= lineAtFoldRangeTo.number;
+								i++
+							) {
+								const rangeLineText =
+									editor.editor.cm.state.doc.line(i).text;
 								// console.log(currentLineEnd, editor.editor.cm.state.doc.lineAt(currentLineEnd + 1), rangeLineText, lineAtFoldRangeTo, currentLineEnd + 1);
 								// if (rangeLineText === undefined) continue;
-								if (rangeLineText.trimStart().startsWith('- ')) {
-									realEndPos = editor.editor.cm.state.doc.line(i).from - 1;
+								if (
+									rangeLineText.trimStart().startsWith("- ")
+								) {
+									realEndPos =
+										editor.editor.cm.state.doc.line(i)
+											.from - 1;
 									break;
 								}
 							}
 
 							// console.log("hasChildNodes", hasChildNodes, realEndPos, foldRangeTo, lineAtFoldRangeTo);
 
-
 							if (hasChildNodes) {
-								const newLineText = `\n${spaceBeforeStartLine}${hasChildNodes ? indentNewLine : ''}- `;
+								const newLineText = `\n${spaceBeforeStartLine}${
+									hasChildNodes ? indentNewLine : ""
+								}- `;
 								const finalFrom = realEndPos;
 								// console.log('finalFrom', finalFrom);
 								// const finalSelection = newLineText.length - 2;
-								const finalLine = editor.editor.cm.state.doc.lineAt(finalFrom);
+								const finalLine =
+									editor.editor.cm.state.doc.lineAt(
+										finalFrom
+									);
 
 								(editor.editor as Editor).transaction({
 									changes: [
 										{
 											text: newLineText,
-											from: {line: finalLine.number - 1, ch: finalLine.text.length},
-										}
+											from: {
+												line: finalLine.number - 1,
+												ch: finalLine.text.length,
+											},
+										},
 									],
 								});
 								setTimeout(() => {
 									(editor.editor as Editor).transaction({
 										selection: {
-											from: {line: finalLine.number, ch: 2},
-											to: {line: finalLine.number, ch: 2},
-										}
+											from: {
+												line: finalLine.number,
+												ch: 2,
+											},
+											to: {
+												line: finalLine.number,
+												ch: 2,
+											},
+										},
 										// annotations: SelectionAnnotation.of('arrow.down.selection'),
 									});
 								}, 20);
-
 							} else {
-								const lineAtFoldRangeTo = editor.editor.cm.state.doc.lineAt(foldRangeTo);
+								const lineAtFoldRangeTo =
+									editor.editor.cm.state.doc.lineAt(
+										foldRangeTo
+									);
 
 								(editor.editor as Editor).transaction({
 									changes: [
 										{
 											text: `\n${spaceBeforeStartLine}- `,
 											from: {
-												line: lineAtFoldRangeTo.number - 1,
-												ch: lineAtFoldRangeTo.text.length
+												line:
+													lineAtFoldRangeTo.number -
+													1,
+												ch: lineAtFoldRangeTo.text
+													.length,
 											},
-										}
+										},
 									],
-
 								});
 
 								setTimeout(() => {
 									(editor.editor as Editor).transaction({
 										selection: {
-											from: {line: lineAtFoldRangeTo.number, ch: 0},
-											to: {line: lineAtFoldRangeTo.number, ch: 0},
-										}
+											from: {
+												line: lineAtFoldRangeTo.number,
+												ch: 0,
+											},
+											to: {
+												line: lineAtFoldRangeTo.number,
+												ch: 0,
+											},
+										},
 										// annotations: SelectionAnnotation.of('arrow.down.selection'),
 									});
 								}, 20);
@@ -402,107 +506,152 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							return true;
 						}
 
-
 						(editor.editor as Editor).transaction({
 							changes: [
 								{
 									text: "\n- ",
-									from: {line, ch: ch},
-								}
+									from: { line, ch: ch },
+								},
 							],
 							selection: {
-								from: {line: line, ch: ch + 3},
-								to: {line: line, ch: ch + 3},
-							}
+								from: { line: line, ch: ch + 3 },
+								to: { line: line, ch: ch + 3 },
+							},
 						});
 						return true;
-					} else if (!lineText.trim() && (/^(-|\*|\d+\.)(\s\[.\])?/g.test(prevLine.trim()))) {
+					} else if (
+						!lineText.trim() &&
+						/^(-|\*|\d+\.)(\s\[.\])?/g.test(prevLine.trim())
+					) {
 						(editor.editor as Editor).transaction({
 							changes: [
 								{
 									text: "- ",
-									from: {line, ch: 0},
-								}
+									from: { line, ch: 0 },
+								},
 							],
 							selection: {
-								from: {line: line, ch: 2},
-								to: {line: line, ch: 2},
-							}
+								from: { line: line, ch: 2 },
+								to: { line: line, ch: 2 },
+							},
 						});
 						return true;
-					} else if (/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
+					} else if (
+						/^\s+/g.test(lineText) &&
+						!/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())
+					) {
 						const currentIndent = lineText.match(/^\s+/)?.[0] || "";
 
 						(editor.editor as Editor).transaction({
 							changes: [
 								{
 									text: `\n${currentIndent}`,
-									from: {line, ch},
-								}
+									from: { line, ch },
+								},
 							],
 							selection: {
-								from: {line: line + 1, ch: currentIndent.length},
-								to: {line: line + 1, ch: currentIndent.length},
-							}
+								from: {
+									line: line + 1,
+									ch: currentIndent.length,
+								},
+								to: {
+									line: line + 1,
+									ch: currentIndent.length,
+								},
+							},
 						});
 						return true;
 					}
 
 					if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
-						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({
-							line,
-							ch: 0
-						}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
+						const range = foldable(
+							editor.editor.cm.state,
+							editor.editor.posToOffset({
+								line,
+								ch: 0,
+							}),
+							editor.editor.posToOffset({
+								line: line + 1,
+								ch: 0,
+							}) - 1
+						);
 						const indentNewLine = getIndent(this.app);
-						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
+						const spaceBeforeStartLine =
+							lineText.match(/^\s+/)?.[0] || "";
 						if (range) {
 							let foundValidLine = false;
 
-							const startLineNum = editor.editor.cm.state.doc.lineAt(range.from).number;
-							for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
-								const line = (editor.editor as Editor).cm.state.doc.line(i);
+							const startLineNum =
+								editor.editor.cm.state.doc.lineAt(
+									range.from
+								).number;
+							for (
+								let i = startLineNum + 1;
+								i <
+								(editor.editor as Editor).cm.state.doc.lines;
+								i++
+							) {
+								const line = (
+									editor.editor as Editor
+								).cm.state.doc.line(i);
 								const lineText = line.text;
 
 								// 检查行是否有缩进并且不以列表标记开始
-								if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
+								if (
+									/^\s+/.test(lineText) &&
+									!/^(-|\*|\d+\.)\s/.test(
+										lineText.trimStart()
+									)
+								) {
 									foundValidLine = true;
 								} else {
 									// 遇到不满足条件的行，检查是否已经遍历过至少一行
 									if (foundValidLine) {
-										const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
+										const currentLine = (
+											editor.editor as Editor
+										).cm.state.doc.line(i - 1);
 										if (currentLine.to === range.to) {
-											(editor.editor as Editor).transaction({
+											(
+												editor.editor as Editor
+											).transaction({
 												changes: [
 													{
 														text: `${spaceBeforeStartLine}- \n`,
-														from: {line: i - 1, ch: 0},
-													}
-												]
+														from: {
+															line: i - 1,
+															ch: 0,
+														},
+													},
+												],
 											});
-											(editor.editor as Editor).cm.dispatch({
+											(
+												editor.editor as Editor
+											).cm.dispatch({
 												selection: {
 													head: line.from,
 													anchor: line.from,
-												}
+												},
 											});
 											return true;
 										} else {
-											(editor.editor as Editor).cm.dispatch({
+											(
+												editor.editor as Editor
+											).cm.dispatch({
 												changes: {
 													insert: `${spaceBeforeStartLine}${indentNewLine}- \n`,
 													from: line.from,
-												}
+												},
 											});
-											(editor.editor as Editor).cm.dispatch({
+											(
+												editor.editor as Editor
+											).cm.dispatch({
 												selection: {
 													head: line.from,
 													anchor: line.from,
-												}
+												},
 											});
 											return true;
 										}
-
-
 									}
 									return false;
 								}
@@ -512,50 +661,89 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					}
 				}
 				if (shift) {
-					const {line, ch} = (editor.editor as Editor).getCursor();
-					const charOffset = (editor.editor as Editor).posToOffset({line, ch});
-					const charLine = (editor.editor as Editor).cm.state.doc.lineAt(charOffset);
+					const { line, ch } = (editor.editor as Editor).getCursor();
+					const charOffset = (editor.editor as Editor).posToOffset({
+						line,
+						ch,
+					});
+					const charLine = (
+						editor.editor as Editor
+					).cm.state.doc.lineAt(charOffset);
 
-					if (/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+					if (
+						/^\s+/g.test(charLine.text) &&
+						!/^(-|\*|\d+\.)(\s\[.\])?/g.test(
+							charLine.text.trimStart()
+						)
+					) {
 						const lineNum = charLine.number;
 
 						for (let i = lineNum; i >= 1; i--) {
-							const lineCursor = (editor.editor as Editor).cm.state.doc.line(i);
+							const lineCursor = (
+								editor.editor as Editor
+							).cm.state.doc.line(i);
 							const lineText = lineCursor.text;
-							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
-								const currentLine = (editor.editor as Editor).cm.state.doc.line(i);
+							if (
+								/^(-|\*|\d+\.)(\s\[.\])?/g.test(
+									lineText.trimStart()
+								)
+							) {
+								const currentLine = (
+									editor.editor as Editor
+								).cm.state.doc.line(i);
 								(editor.editor as Editor).cm.dispatch({
 									selection: {
 										head: currentLine.to,
 										anchor: currentLine.to,
 									},
-									annotations: SelectionAnnotation.of('arrow.up.selection'),
+									annotations:
+										SelectionAnnotation.of(
+											"arrow.up.selection"
+										),
 								});
 
 								return true;
 							}
 						}
-					} else if ((/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
+					} else if (
+						/^(-|\*|\d+\.)(\s\[.\])?/g.test(
+							charLine.text.trimStart()
+						)
+					) {
 						const startLineNum = charLine.number;
 						let foundValidLine = false;
 
-						for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
-							const line = (editor.editor as Editor).cm.state.doc.line(i);
+						for (
+							let i = startLineNum + 1;
+							i < (editor.editor as Editor).cm.state.doc.lines;
+							i++
+						) {
+							const line = (
+								editor.editor as Editor
+							).cm.state.doc.line(i);
 							const lineText = line.text;
 
 							// 检查行是否有缩进并且不以列表标记开始
-							if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
+							if (
+								/^\s+/.test(lineText) &&
+								!/^(-|\*|\d+\.)\s/.test(lineText.trimStart())
+							) {
 								foundValidLine = true;
 							} else {
 								// 遇到不满足条件的行，检查是否已经遍历过至少一行
 								if (foundValidLine) {
-									const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
+									const currentLine = (
+										editor.editor as Editor
+									).cm.state.doc.line(i - 1);
 									(editor.editor as Editor).cm.dispatch({
 										selection: {
 											head: currentLine.to,
 											anchor: currentLine.to,
 										},
-										annotations: SelectionAnnotation.of('arrow.up.selection'),
+										annotations:
+											SelectionAnnotation.of(
+												"arrow.up.selection"
+											),
 									});
 									// new Notice('No valid line found');
 									return true;
@@ -564,7 +752,11 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 							}
 						}
 						if (foundValidLine) {
-							const lastLine = (editor.editor as Editor).cm.state.doc.line((editor.editor as Editor).cm.state.doc.lines - 1);
+							const lastLine = (
+								editor.editor as Editor
+							).cm.state.doc.line(
+								(editor.editor as Editor).cm.state.doc.lines - 1
+							);
 							(editor.editor as Editor).cm.dispatch({
 								selection: {
 									head: lastLine.to,
@@ -578,19 +770,26 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					}
 				}
 
-
 				return false;
 			},
 			onDelete: (editor) => {
-				const {line, ch} = (editor.editor as Editor).getCursor();
+				const { line, ch } = (editor.editor as Editor).getCursor();
 				const lineText = editor.editor.getLine(line);
 
-				const lineFrom = editor.editor.posToOffset({line, ch: 0});
-				const lineTo = editor.editor.posToOffset({line: line + 1, ch: 0}) - 1;
+				const lineFrom = editor.editor.posToOffset({ line, ch: 0 });
+				const lineTo =
+					editor.editor.posToOffset({ line: line + 1, ch: 0 }) - 1;
 
-				const foldRange = foldable(editor.editor.cm.state, lineFrom, lineTo);
+				const foldRange = foldable(
+					editor.editor.cm.state,
+					lineFrom,
+					lineTo
+				);
 
-				if (/^(\s*?)((-|\*|\d+\.)(\s\[.\])?)\s/g.test(lineText) && /^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lineText.trim())) {
+				if (
+					/^(\s*?)((-|\*|\d+\.)(\s\[.\])?)\s/g.test(lineText) &&
+					/^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lineText.trim())
+				) {
 					if (line === 0) {
 						return true;
 					}
@@ -599,7 +798,9 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						return true;
 					}
 
-					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
+					const range = this.app.plugins
+						.getPlugin("obsidian-zoom")
+						?.getZoomRange(editor.editor);
 					if (range) {
 						const firstLineInRange = range.from.line;
 						if (firstLineInRange === line) {
@@ -611,9 +812,12 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						changes: [
 							{
 								text: "",
-								from: {line: line - 1, ch: editor.editor.getLine(line - 1).length},
-								to: {line, ch: ch},
-							}
+								from: {
+									line: line - 1,
+									ch: editor.editor.getLine(line - 1).length,
+								},
+								to: { line, ch: ch },
+							},
 						],
 					});
 					return true;
@@ -622,10 +826,13 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						changes: [
 							{
 								text: "",
-								from: {line: line - 1, ch: editor.editor.getLine(line - 1).length},
-								to: {line, ch: ch},
-							}
-						]
+								from: {
+									line: line - 1,
+									ch: editor.editor.getLine(line - 1).length,
+								},
+								to: { line, ch: ch },
+							},
+						],
 					});
 					return true;
 				}
@@ -642,20 +849,29 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			// },
 			onIndent: (editor, mod: boolean, shift: boolean) => {
 				if (shift) {
-					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
+					const range = this.app.plugins
+						.getPlugin("obsidian-zoom")
+						?.getZoomRange(editor.editor);
 
 					if (range) {
 						const firstLineInRange = range.from.line;
 						const lastLineInRange = range.to.line;
 
-						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
-						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
-						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
+						const spaceOnFirstLine = editor.editor
+							.getLine(firstLineInRange)
+							?.match(/^\s*/)?.[0];
+						const lastLineInRangeText =
+							editor.editor.getLine(lastLineInRange);
+						const spaceOnLastLine =
+							lastLineInRangeText?.match(/^\s*/)?.[0];
 						const indentNewLine = getIndent(this.app);
 
 						if (firstLineInRange === lastLineInRange) return true;
 
-						if (spaceOnFirstLine === spaceOnLastLine || (spaceOnLastLine === spaceOnFirstLine + indentNewLine)) {
+						if (
+							spaceOnFirstLine === spaceOnLastLine ||
+							spaceOnLastLine === spaceOnFirstLine + indentNewLine
+						) {
 							return true;
 						}
 					}
@@ -665,24 +881,38 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			},
 			onArrowUp: (editor, mod: boolean, shift: boolean) => {
 				if (shift) {
-					let currentLine = (editor.editor as Editor).cm.state.doc.lineAt((editor.editor as Editor).cm.state.selection.main.from);
-					const selection = (editor.editor as Editor).cm.state.selection.ranges[0];
+					let currentLine = (
+						editor.editor as Editor
+					).cm.state.doc.lineAt(
+						(editor.editor as Editor).cm.state.selection.main.from
+					);
+					const selection = (editor.editor as Editor).cm.state
+						.selection.ranges[0];
 
 					if (selection.from === currentLine.from) {
-						currentLine = (editor.editor as Editor).cm.state.doc.lineAt(currentLine.from - 1);
+						currentLine = (
+							editor.editor as Editor
+						).cm.state.doc.lineAt(currentLine.from - 1);
 					}
 
-					const foldableRange = foldable(editor.editor.cm.state, currentLine.from, currentLine.to);
-
+					const foldableRange = foldable(
+						editor.editor.cm.state,
+						currentLine.from,
+						currentLine.to
+					);
 
 					if (foldableRange) {
 						if (!/^(-|\*|\d{1,}\.)/.test(currentLine.text.trim())) {
 							(editor.editor as Editor).cm.dispatch({
 								selection: {
-									head: foldableRange.from - currentLine.length,
+									head:
+										foldableRange.from - currentLine.length,
 									anchor: currentLine.to,
 								},
-								annotations: SelectionAnnotation.of('arrow.up.selection'),
+								annotations:
+									SelectionAnnotation.of(
+										"arrow.up.selection"
+									),
 							});
 							return true;
 						}
@@ -692,20 +922,25 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 								head: foldableRange.from - currentLine.length,
 								anchor: foldableRange.to,
 							},
-							annotations: SelectionAnnotation.of('arrow.up.selection'),
+							annotations:
+								SelectionAnnotation.of("arrow.up.selection"),
 						});
 						return true;
 					}
 
 					(editor.editor as Editor).cm.dispatch({
 						selection: {
-							head: editor.editor.cm.state.doc.line(currentLine.number).to,
-							anchor: editor.editor.cm.state.doc.line(currentLine.number).from,
+							head: editor.editor.cm.state.doc.line(
+								currentLine.number
+							).to,
+							anchor: editor.editor.cm.state.doc.line(
+								currentLine.number
+							).from,
 						},
-						annotations: SelectionAnnotation.of('arrow.up.selection'),
+						annotations:
+							SelectionAnnotation.of("arrow.up.selection"),
 					});
 					return true;
-
 				}
 				return false;
 			},
@@ -715,7 +950,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			getDisplayText: () => this.getDisplayText(),
 			getViewType: () => this.getViewType(),
 			onChange: (update) => {
-				this.data = `${this.frontmatter}\n\n` + update.state.doc.toString();
+				this.data =
+					`${this.frontmatter}\n\n` + update.state.doc.toString();
 				this.requestSave();
 			},
 			// onBlur: (editor) => {
@@ -724,11 +960,10 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			// },
 			value: this.fileContentData || "- ",
 			view: this,
-			type: 'outliner',
+			type: "outliner",
 			foldByDefault: true,
 			disableTimeFormat: !this.plugin.settings.timeFormatWidget,
 		});
-
 
 		this.editor = embedEditor.editor as Editor;
 		this.editor.getValue = () => {
@@ -739,20 +974,18 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		// 	this.editor.setCursor(0, 0);
 		// }, 1000);
 
-
 		// @ts-expect-error - This is a private method
 		return this.addChild(embedEditor);
 	}
-
 
 	async setState(
 		state: {
 			file: string;
 		},
-		result: ViewStateResult,
+		result: ViewStateResult
 	) {
-		if (state && typeof state === 'object') {
-			if ('file' in state) {
+		if (state && typeof state === "object") {
+			if ("file" in state) {
 				this.filePath = state.file;
 				const file = this.app.vault.getFileByPath(state.file);
 				if (file) {
@@ -763,7 +996,8 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 					if (frontmatter) {
 						// const frontmatterStart = frontmatter.index;
-						const frontmatterEnd = frontmatter.index + frontmatter[0].length;
+						const frontmatterEnd =
+							frontmatter.index + frontmatter[0].length;
 						this.frontmatter = frontmatter[0];
 						finalData = data.substring(frontmatterEnd);
 					}
@@ -780,8 +1014,12 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 						const content = this.editor.getValue();
 						this.editor.setCursor(content.length - 1);
 
-						this.editor.editorComponent.sizerEl?.prepend(this.inlineTitleEl);
-						this.inlineTitleEl.setText(file?.basename || this.filePath);
+						this.editor.editorComponent.sizerEl?.prepend(
+							this.inlineTitleEl
+						);
+						this.inlineTitleEl.setText(
+							file?.basename || this.filePath
+						);
 					}, 200);
 
 					// console.log('set state', this.editor, this.editor.cm);
@@ -789,7 +1027,6 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 					// this.editor.editorComponent.sizerEl?.prepend(this.inlineTitleEl);
 					// this.inlineTitleEl.setText(file?.basename || this.filePath);
 				}
-
 			}
 		}
 		await super.setState(state, result);
@@ -805,11 +1042,13 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 		const container = this.containerEl.children[1] as HTMLElement;
 		container.empty();
 
-		container.style.display = 'flex';
-		container.style.flexDirection = 'column';
-		container.style.gap = '1%';
+		container.style.display = "flex";
+		container.style.flexDirection = "column";
+		container.style.gap = "1%";
 
-		const editorContainer = container.createDiv({cls: 'outliner-editor '});
+		const editorContainer = container.createDiv({
+			cls: "outliner-editor ",
+		});
 		editorContainer.style.height = "100%";
 
 		// this.editors.push(editorContainer);
@@ -821,23 +1060,27 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 			// console.log('show all', this.editor, view);
 			this.plugin.KeepOnlyZoomedContentVisible?.showAllContent(view);
 			this.filteredValue = "";
-			this.contentEl.toggleClass('filtered', false);
+			this.contentEl.toggleClass("filtered", false);
 			if (!this.editor) return;
 			view.dispatch({
-				effects: ClearSearchHighlightEffect.of()
+				effects: ClearSearchHighlightEffect.of(),
 			});
 			return;
 		}
 
-		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnSearch(
-			view,
-			this.editor?.getAllFoldableLines() || [],
-			search
-		);
+		const ranges =
+			this.plugin.calculateRangeForZooming.calculateRangesBasedOnSearch(
+				view,
+				this.editor?.getAllFoldableLines() || [],
+				search
+			);
 
 		this.filteredValue = search;
-		this.plugin.KeepOnlyZoomedContentVisible?.keepRangesVisible(view, ranges);
-		this.contentEl.toggleClass('filtered', true);
+		this.plugin.KeepOnlyZoomedContentVisible?.keepRangesVisible(
+			view,
+			ranges
+		);
+		this.contentEl.toggleClass("filtered", true);
 	}
 
 	hideCompletedItems(view: EditorView) {
@@ -855,29 +1098,39 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 
 		// console.log(ranges);
 
-		const ranges = this.plugin.calculateRangeForZooming.calculateRangesBasedOnType(view, 'completed');
+		const ranges =
+			this.plugin.calculateRangeForZooming.calculateRangesBasedOnType(
+				view,
+				"completed"
+			);
 
 		if (!this.editor) return;
 		this.editor.cm.dispatch({
-			effects: [hideRangesEffect.of({
-				ranges: ranges
-			})]
+			effects: [
+				hideRangesEffect.of({
+					ranges: ranges,
+				}),
+			],
 		});
 		this.hideCompleted = true;
-
-
 	}
 
-
 	registerSearchActionBtn() {
-		const showCompletedEl = this.addAction("check", "Show Completed", (evt) => {
-			this.editor && this.hideCompletedItems(this.editor.cm);
-			showCompletedEl.toggleClass('hide-completed', this.hideCompleted);
-		});
+		const showCompletedEl = this.addAction(
+			"check",
+			"Show Completed",
+			(evt) => {
+				this.editor && this.hideCompletedItems(this.editor.cm);
+				showCompletedEl.toggleClass(
+					"hide-completed",
+					this.hideCompleted
+				);
+			}
+		);
 
 		this.searchActionEl = this.addAction("search", "Search", (evt) => {
 			const searchMenu = new Menu();
-			searchMenu.dom.toggleClass('search-menu', true);
+			searchMenu.dom.toggleClass("search-menu", true);
 			let block = false;
 			searchMenu.addItem((item) => {
 				const itemDom = (item as any).dom;
@@ -886,44 +1139,57 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 				const settingEl = new Setting(itemDom)
 					.setName("Filter")
 					.addSearch((search) => {
-						search.setValue(this.filteredValue).onChange((value) => {
-							if (block) return;
-							this.editor && this.editor.cm.dispatch({
-								effects: ClearSearchHighlightEffect.of()
+						search
+							.setValue(this.filteredValue)
+							.onChange((value) => {
+								if (block) return;
+								this.editor &&
+									this.editor.cm.dispatch({
+										effects:
+											ClearSearchHighlightEffect.of(),
+									});
+
+								this.editor &&
+									this.filter(this.editor.cm, value);
 							});
 
-							this.editor && this.filter(this.editor.cm, value);
-						});
-
-
-						search.clearButtonEl.addEventListener('click', () => {
+						search.clearButtonEl.addEventListener("click", () => {
 							this.filter(this.editor?.cm as EditorView, "");
 							searchMenu.hide();
-
 						});
 
-						search.inputEl.addEventListener('compositionstart', () => {
-							block = true;
-						});
-						search.inputEl.addEventListener('compositionend', () => {
-							block = false;
-							if (!this.editor) return;
-							this.filter(this.editor.cm, search.inputEl.value);
-						});
+						search.inputEl.addEventListener(
+							"compositionstart",
+							() => {
+								block = true;
+							}
+						);
+						search.inputEl.addEventListener(
+							"compositionend",
+							() => {
+								block = false;
+								if (!this.editor) return;
+								this.filter(
+									this.editor.cm,
+									search.inputEl.value
+								);
+							}
+						);
 					});
-
 
 				item.onClick((e) => {
 					e.preventDefault();
 					e.stopImmediatePropagation();
-					(settingEl.components[0] as SearchComponent).inputEl.focus();
+					(
+						settingEl.components[0] as SearchComponent
+					).inputEl.focus();
 				});
 			});
 			if (!this.searchActionEl) return;
-			const {x, y} = this.searchActionEl.getBoundingClientRect();
+			const { x, y } = this.searchActionEl.getBoundingClientRect();
 			searchMenu.showAtPosition({
 				x: x + this.searchActionEl.offsetHeight,
-				y: y + this.searchActionEl.offsetHeight
+				y: y + this.searchActionEl.offsetHeight,
 			});
 
 			searchMenu.onHide(() => {
@@ -931,33 +1197,35 @@ export class OutlinerEditorView extends TextFileView implements MarkdownFileInfo
 				this.editor.focus();
 			});
 
-			document.body.find('.search-menu input')?.focus();
+			document.body.find(".search-menu input")?.focus();
 		});
 
-		this.clearFilterBtn = this.addAction("filter-x", "Clear Filter", (evt) => {
-			this.editor && this.filter(this.editor.cm, "");
-
-		});
-		this.clearFilterBtn.toggleClass('filter-clear', true);
-
-
+		this.clearFilterBtn = this.addAction(
+			"filter-x",
+			"Clear Filter",
+			(evt) => {
+				this.editor && this.filter(this.editor.cm, "");
+			}
+		);
+		this.clearFilterBtn.toggleClass("filter-clear", true);
 	}
 
 	public search() {
 		if (!this.searchActionEl) return;
 		this.searchActionEl.click();
-		document.body.find('.search-menu input')?.focus();
+		document.body.find(".search-menu input")?.focus();
 	}
 
 	public searchWithText(text: string) {
 		if (!this.searchActionEl) return;
 		this.searchActionEl.click();
 
-		const searchInput = document.body.find('.search-menu input') as HTMLInputElement;
+		const searchInput = document.body.find(
+			".search-menu input"
+		) as HTMLInputElement;
 		searchInput?.focus();
 		searchInput.value = text;
-		searchInput.dispatchEvent(new Event('input'));
-
+		searchInput.dispatchEvent(new Event("input"));
 	}
 
 	async onOpen() {

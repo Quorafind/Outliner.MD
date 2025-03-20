@@ -1,15 +1,12 @@
 import { App, Component, debounce, Editor, setIcon, TFile } from "obsidian";
-import { EmbeddableMarkdownEditor } from "../../editor-components/MarkdownEditor";
-import { getIndent } from "../../utils/utils";
-import { zoomInEffect, zoomWithHideIndentEffect } from "../../cm/VisibleRangeController";
 import { getAPI } from "obsidian-dataview";
-import { foldable } from "@codemirror/language";
-import { KeepRangeVisible } from "../../cm/KeepRangeVisible";
-import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
-import { SelectionAnnotation } from "../../cm/SelectionController";
 import OutlinerViewPlugin from "../../OutlinerViewIndex";
 import { OutlinerViewSettings } from "../../OutlinerViewSettings";
-
+import {
+	EditorFactory,
+	EditorType,
+} from "../../editor-components/EditorFactory";
+import { editorRangeUtils } from "../../utils/editorRangeUtils";
 
 export class TaskGroupEditor extends Component {
 	app: App;
@@ -18,20 +15,15 @@ export class TaskGroupEditor extends Component {
 	file: TFile | null | undefined;
 
 	data: string | undefined;
-	range: { from: number; to: number; } | undefined;
-
-	calculateRangeForZooming = new CalculateRangeForZooming();
-	KeepOnlyZoomedContentVisible = new KeepRangeVisible();
+	range: { from: number; to: number } | undefined;
 
 	contentMap: Map<string, string> = new Map();
 	editorMap: Map<string, Editor> = new Map();
+	editorComponentMap: Map<string, Component> = new Map();
 
 	indexed: boolean = false;
-
 	changedBySelf: boolean = false;
-
 	editing: boolean = false;
-
 	settings: OutlinerViewSettings;
 
 	constructor(app: App, readonly containerEl: HTMLElement) {
@@ -43,30 +35,38 @@ export class TaskGroupEditor extends Component {
 		super.onload();
 
 		try {
-			this.settings = ((this.app.plugins.getPlugin('outliner-md') || this.app.plugins.getPlugin('outliner-md-beta')) as OutlinerViewPlugin).settings;
+			this.settings = (
+				(this.app.plugins.getPlugin("outliner-md") ||
+					this.app.plugins.getPlugin(
+						"outliner-md-beta"
+					)) as OutlinerViewPlugin
+			).settings;
 		} catch (e) {
 			console.error(e);
 		}
 
 		this.initEditor();
+
 		this.registerEvent(
 			this.app.metadataCache.on("dataview:index-ready", () => {
-					this.initEditor();
-					this.indexed = true;
-				}
-			));
+				this.initEditor();
+				this.indexed = true;
+			})
+		);
 
 		this.registerEvent(
-			this.app.metadataCache.on("dataview:metadata-change", (type: any, file: TFile, oldPath?: string | undefined) => {
+			this.app.metadataCache.on(
+				"dataview:metadata-change",
+				(type: any, file: TFile, oldPath?: string | undefined) => {
 					if (!this.indexed) return;
-
 					this.debounceUpdateEditor(file, oldPath);
 				}
-			));
+			)
+		);
 	}
 
 	getDisplayText() {
-		return this.file?.basename || 'Untitled';
+		return this.file?.basename || "Untitled";
 	}
 
 	getViewType() {
@@ -83,460 +83,61 @@ export class TaskGroupEditor extends Component {
 			this.editing = false;
 			await this.app.vault.modify(file, data);
 		}
-
 	}, 3000);
 
-	createEditor(container: HTMLElement, path: string, data: string, range: { from: number, to: number } | {
-		from: number,
-		to: number
-	}[]) {
+	createEditor(
+		container: HTMLElement,
+		path: string,
+		data: string,
+		range: { from: number; to: number } | { from: number; to: number }[]
+	) {
+		const file = this.app.vault.getFileByPath(path);
+		if (!file) return;
 
-		const embedEditor = new EmbeddableMarkdownEditor(this.app, container, {
-			// onEscape: (editor) => {
-			// 	new Notice(`Escaped the editor: (${editor.initial_value})`);
-			// 	this.removeChild(editor);
-			// },
-			onEnter: (editor, mod: boolean, shift: boolean) => {
-				if (!shift) {
-					const {line, ch} = (editor.editor as Editor).getCursor();
-					const lineText = editor.editor.getLine(line);
-
-					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
-					// const range = getZoomRange(editorView.state);
-					const indentNewLine = getIndent(this.app);
-
-					if (range) {
-						const firstLineInRange = range.from.line;
-						const lastLineInRange = range.to.line;
-						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0] || '';
-						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
-
-						const cursor = editor.editor.getCursor();
-						const lineText = editor.editor.getLine(cursor.line);
-
-						if (/^((-|\*|\d+\.)(\s\[.\])?)/g.test(lineText.trim())) {
-							const currentLine = cursor.line;
-							const currentLineText = editor.editor.getLine(currentLine);
-							const spaceOnCurrentLine = currentLineText.match(/^\s*/)?.[0] || '';
-
-							editor.editor.transaction({
-								changes: [
-									{
-										text: `\n${spaceOnCurrentLine}${spaceOnCurrentLine.length > spaceOnFirstLine.length ? '' : indentNewLine}- `,
-										from: {
-											line: cursor.line,
-											ch: cursor.ch || 0,
-										}
-									}
-								],
-								selection: {
-									from: {
-										line: cursor.line + 1,
-										ch: 2 + (`${spaceOnCurrentLine}${spaceOnCurrentLine.length > spaceOnFirstLine.length ? '' : indentNewLine}`.length)
-									},
-									to: {
-										line: cursor.line + 1,
-										ch: 2 + (`${spaceOnCurrentLine}${spaceOnCurrentLine.length > spaceOnFirstLine.length ? '' : indentNewLine}`.length)
-									}
-								}
-							});
-							return true;
-						}
-
-						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
-
-						if (/^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lastLineInRangeText.trim()) && spaceOnLastLine === (spaceOnFirstLine + indentNewLine)) {
-							editor.editor.transaction({
-								changes: [
-									{
-										text: `\n${spaceOnFirstLine}${indentNewLine}- `,
-										from: {
-											line: lastLineInRange,
-											ch: lastLineInRangeText.length || 0,
-										}
-									}
-								],
-								selection: {
-									from: {
-										line: lastLineInRange + 1,
-										ch: 2 + (`${spaceOnFirstLine}${indentNewLine}`.length)
-									},
-									to: {
-										line: lastLineInRange + 1,
-										ch: 2 + (`${spaceOnFirstLine}${indentNewLine}`.length)
-									}
-								}
-							});
-							return true;
-						}
-					}
-
-					const prevLine = line > 0 ? editor.editor.getLine(line - 1) : "";
-
-					if (lineText.startsWith("- ")) {
-						(editor.editor as Editor).transaction({
-							changes: [
-								{
-									text: "\n- ",
-									from: {line, ch: ch},
-								}
-							],
-							selection: {
-								from: {line: line, ch: ch + 3},
-								to: {line: line, ch: ch + 3},
-							}
-						});
-						return true;
-					} else if (!lineText.trim() && (/^(-|\*|\d+\.)(\s\[.\])?/g.test(prevLine.trim()))) {
-						(editor.editor as Editor).transaction({
-							changes: [
-								{
-									text: "- ",
-									from: {line, ch: 0},
-								}
-							],
-							selection: {
-								from: {line: line, ch: 2},
-								to: {line: line, ch: 2},
-							}
-						});
-						return true;
-					} else if (/^\s+/g.test(lineText) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim()))) {
-						const currentIndent = lineText.match(/^\s+/)?.[0] || '';
-
-						(editor.editor as Editor).transaction({
-							changes: [
-								{
-									text: `\n${currentIndent}`,
-									from: {line, ch},
-								}
-							],
-							selection: {
-								from: {line: line + 1, ch: currentIndent.length},
-								to: {line: line + 1, ch: currentIndent.length},
-							}
-						});
-						return true;
-					}
-
-					if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trim())) {
-						const range = foldable(editor.editor.cm.state, editor.editor.posToOffset({
-							line,
-							ch: 0
-						}), editor.editor.posToOffset({line: line + 1, ch: 0}) - 1);
-						const indentNewLine = getIndent(this.app);
-						const spaceBeforeStartLine = lineText.match(/^\s+/)?.[0] || "";
-						if (range) {
-							let foundValidLine = false;
-
-							const startLineNum = editor.editor.cm.state.doc.lineAt(range.from).number;
-							for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
-								const line = (editor.editor as Editor).cm.state.doc.line(i);
-								const lineText = line.text;
-
-								// 检查行是否有缩进并且不以列表标记开始
-								if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
-									foundValidLine = true;
-								} else {
-									// 遇到不满足条件的行，检查是否已经遍历过至少一行
-									if (foundValidLine) {
-										const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
-										if (currentLine.to === range.to) {
-											(editor.editor as Editor).transaction({
-												changes: [
-													{
-														text: `${spaceBeforeStartLine}- \n`,
-														from: {line: i - 1, ch: 0},
-													}
-												]
-											});
-											(editor.editor as Editor).cm.dispatch({
-												selection: {
-													head: line.from,
-													anchor: line.from,
-												}
-											});
-											return true;
-										} else {
-											(editor.editor as Editor).cm.dispatch({
-												changes: {
-													insert: `${spaceBeforeStartLine}${indentNewLine}- \n`,
-													from: line.from,
-												}
-											});
-											(editor.editor as Editor).cm.dispatch({
-												selection: {
-													head: line.from,
-													anchor: line.from,
-												}
-											});
-											return true;
-										}
-
-
-									}
-									return false;
-								}
-							}
-						}
-						return false;
-					}
-				}
-				if (shift) {
-					const {line, ch} = (editor.editor as Editor).getCursor();
-					const charOffset = (editor.editor as Editor).posToOffset({line, ch});
-					const charLine = (editor.editor as Editor).cm.state.doc.lineAt(charOffset);
-
-					if (/^\s+/g.test(charLine.text) && !(/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
-						const lineNum = charLine.number;
-
-						for (let i = lineNum; i >= 1; i--) {
-							const lineCursor = (editor.editor as Editor).cm.state.doc.line(i);
-							const lineText = lineCursor.text;
-							if (/^(-|\*|\d+\.)(\s\[.\])?/g.test(lineText.trimStart())) {
-								const currentLine = (editor.editor as Editor).cm.state.doc.line(i);
-								(editor.editor as Editor).cm.dispatch({
-									selection: {
-										head: currentLine.to,
-										anchor: currentLine.to,
-									},
-									annotations: SelectionAnnotation.of('arrow.up.selection'),
-								});
-								return true;
-							}
-						}
-						// lineCursor.next();
-
-						// console.log('lineNum', lineNum, lineCursor.done);
-						// return false;
-					} else if ((/^(-|\*|\d+\.)(\s\[.\])?/g.test(charLine.text.trimStart()))) {
-						const startLineNum = charLine.number;
-						let foundValidLine = false;
-
-						for (let i = startLineNum + 1; i < (editor.editor as Editor).cm.state.doc.lines; i++) {
-							const line = (editor.editor as Editor).cm.state.doc.line(i);
-							const lineText = line.text;
-
-							// 检查行是否有缩进并且不以列表标记开始
-							if (/^\s+/.test(lineText) && !(/^(-|\*|\d+\.)\s/.test(lineText.trimStart()))) {
-								foundValidLine = true;
-							} else {
-								// 遇到不满足条件的行，检查是否已经遍历过至少一行
-								if (foundValidLine) {
-									const currentLine = (editor.editor as Editor).cm.state.doc.line(i - 1);
-									(editor.editor as Editor).cm.dispatch({
-										selection: {
-											head: currentLine.to,
-											anchor: currentLine.to,
-										},
-										annotations: SelectionAnnotation.of('arrow.up.selection'),
-									});
-									return true;
-								}
-								return false;
-							}
-						}
-						if (foundValidLine) {
-							const lastLine = (editor.editor as Editor).cm.state.doc.line((editor.editor as Editor).cm.state.doc.lines - 1);
-							(editor.editor as Editor).cm.dispatch({
-								selection: {
-									head: lastLine.to,
-									anchor: lastLine.to,
-								},
-								// annotations: SelectionAnnotation.of('arrow.up.selection'),
-							});
-							return true;
-						}
-
-						return false;
-					}
-				}
-				return false;
-			},
-			onDelete: (editor) => {
-				const {line, ch} = (editor.editor as Editor).getCursor();
-				const lineText = editor.editor.getLine(line);
-				// const from = editor.editor.posToOffset({line, ch});
-				const lineFrom = editor.editor.posToOffset({line, ch: 0});
-				const lineTo = editor.editor.posToOffset({line: line + 1, ch: 0}) - 1;
-
-				const foldRange = foldable(editor.editor.cm.state, lineFrom, lineTo);
-
-				if (/^(\s*?)((-|\*|\d+\.)(\s\[.\])?)\s/g.test(lineText) && /^((-|\*|\d+\.)(\s\[.\])?)$/g.test(lineText.trim())) {
-					if (line === 0) {
-						return true;
-					}
-
-					if (foldRange) {
-						return true;
-					}
-
-
-					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
-					if (range) {
-						const firstLineInRange = range.from.line;
-						if (firstLineInRange === line) {
-							return true;
-						}
-					}
-
-					(editor.editor as Editor).transaction({
-						changes: [
-							{
-								text: "",
-								from: {line: line - 1, ch: editor.editor.getLine(line - 1).length},
-								to: {line, ch: ch},
-							}
-						],
-					});
-					return true;
-				} else if (/^\s+$/g.test(lineText)) {
-					(editor.editor as Editor).transaction({
-						changes: [
-							{
-								text: "",
-								from: {line: line - 1, ch: editor.editor.getLine(line - 1).length},
-								to: {line, ch: ch},
-							}
-						]
-					});
-					return true;
-				}
-
-				return false;
-			},
-			onIndent: (editor, mod: boolean, shift: boolean) => {
-				if (shift) {
-					const range = this.app.plugins.getPlugin('obsidian-zoom')?.getZoomRange(editor.editor);
-
-					if (range) {
-						const firstLineInRange = range.from.line;
-						const lastLineInRange = range.to.line;
-
-						const spaceOnFirstLine = editor.editor.getLine(firstLineInRange)?.match(/^\s*/)?.[0];
-						const lastLineInRangeText = editor.editor.getLine(lastLineInRange);
-						const spaceOnLastLine = lastLineInRangeText?.match(/^\s*/)?.[0];
-						const indentNewLine = getIndent(this.app);
-
-						if (firstLineInRange === lastLineInRange) return true;
-
-						if (spaceOnFirstLine === spaceOnLastLine || (spaceOnLastLine === spaceOnFirstLine + indentNewLine)) {
-							return true;
-						}
-					}
-				}
-
-				return false;
-			},
-			getDisplayText: () => this.getDisplayText(),
-			getViewType: () => this.getViewType(),
-			onChange: (update, path) => {
-				// this.data = update.state.doc.toString();
-				// this.requestSave();
-
-				if (path) {
-					if (!update.docChanged) return;
-					if (this.contentMap.get(path) === update.state.doc.toString()) return;
-
+		// Use our factory to create the editor
+		const { editor, component } = EditorFactory.createEditor(
+			EditorType.TASK_GROUP,
+			{
+				app: this.app,
+				containerEl: container,
+				file: file,
+				data: data,
+				foldByDefault: true,
+				disableTimeFormat: !this.settings.timeFormatWidget,
+				onSave: (file, data) => {
 					if (this.changedBySelf) {
 						this.changedBySelf = false;
 						return;
 					}
-
 					this.editing = true;
-					this.requestSave(path, update.state.doc.toString());
-				}
-			},
-			type: 'embed',
-			value: data || "",
-			path: path,
-			foldByDefault: true,
-			disableTimeFormat: !this.settings.timeFormatWidget,
-		});
-
-		this.editorMap.set(path, embedEditor.editor);
-		embedEditor.editor.getValue = () => {
-			return data || "";
-		};
-
-		this.updateVisibleRange(embedEditor.editor, range);
-
-		// @ts-expect-error - This is a private method
-		return this.addChild(embedEditor);
-	}
-
-	zoomIn() {
-		if (!this.editor || !this.range) return;
-		const rangeForZooming = this.calculateRangeForZooming.calculateRangeForZooming(this.editor.cm.state, this.range.from);
-		if (rangeForZooming) {
-			this.editor.cm.dispatch({
-				effects: zoomInEffect.of(rangeForZooming)
-			});
-		}
-	}
-
-
-	updateVisibleRange(editor: Editor, range: { from: number, to: number } | { from: number, to: number }[]) {
-		if (Array.isArray(range)) {
-			const wholeRanges = range.map((r) => {
-				return (this.calculateRangeForZooming.calculateRangeForZooming(editor.cm.state, r.from) || {
-					from: r.from,
-					to: r.to
-				});
-			});
-			this.KeepOnlyZoomedContentVisible.keepRangesVisible(editor.cm, wholeRanges);
-
-			for (const r of wholeRanges) {
-				const firstLine = editor.cm.state.doc.lineAt(r.from);
-				const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-
-				if (firstLineIndent) {
-					editor.cm.dispatch({
-						effects: zoomWithHideIndentEffect.of({
-							range: {
-								from: r.from,
-								to: r.to,
-							},
-							indent: firstLineIndent
-						})
-					});
-				}
+					this.requestSave(file.path, data);
+				},
 			}
-		} else {
-			const newRange = this.calculateRangeForZooming.calculateRangeForZooming(editor.cm.state, range.from);
+		);
 
-			if (newRange) {
-				editor.cm.dispatch({
-					effects: [zoomInEffect.of(newRange)]
-				});
-				const firstLine = editor.cm.state.doc.lineAt(newRange.from);
-				const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-				if (firstLineIndent) {
-					editor.cm.dispatch({
-						effects: zoomWithHideIndentEffect.of({
-							range: {
-								from: newRange.from,
-								to: newRange.to,
-							},
-							indent: firstLineIndent
-						})
-					});
-				}
-			}
-		}
+		// Store the editor and component for later updates
+		this.editorMap.set(path, editor);
+		this.editorComponentMap.set(path, component);
+		this.contentMap.set(path, data);
+
+		// Update the visibility range
+		editorRangeUtils.updateVisibleRange(editor, range);
+
+		return editor;
 	}
 
-	updateResultEl(
-		length: number,
-	) {
-		this.containerEl.toggleClass('cm-task-group-result-empty', length === 0);
-		this.containerEl.find('.cm-task-group-result').setText(length.toString() + ' results');
+	updateResultEl(length: number) {
+		this.containerEl.toggleClass(
+			"cm-task-group-result-empty",
+			length === 0
+		);
+		this.containerEl
+			.find(".cm-task-group-result")
+			.setText(length.toString() + " results");
 	}
 
 	async initEditor() {
-
 		const api = getAPI(this.app);
-
 		if (!api) return;
 
 		const result = await api.query(`TASK  
@@ -552,28 +153,43 @@ GROUP BY file.path`);
 		for (const v of values) {
 			if (!v.key || this.editorMap.has(v.key)) continue;
 
+			const linkHeader = this.containerEl.createEl("div", {
+				cls: "cm-task-group-header",
+			});
+			const taskGroupContainer = this.containerEl.createEl("div", {
+				cls: "cm-task-container",
+			});
+			const collapseButton = linkHeader.createEl("span", {
+				cls: "cm-group-collapse-button",
+			});
+			setIcon(collapseButton, "chevron-right");
 
-			const linkHeader = this.containerEl.createEl('div', {cls: 'cm-task-group-header'});
-			const taskGroupContainer = this.containerEl.createEl('div', {cls: 'cm-task-container'});
-			const collapseButton = linkHeader.createEl('span', {cls: 'cm-group-collapse-button'});
-			setIcon(collapseButton, 'chevron-right');
-
-			const titleEl = linkHeader.createEl('span', {cls: 'cm-group-title', text: v.key});
+			const titleEl = linkHeader.createEl("span", {
+				cls: "cm-group-title",
+				text: v.key,
+			});
 
 			collapseButton.onclick = () => {
-				taskGroupContainer.isShown() ? taskGroupContainer.hide() : taskGroupContainer.show();
-				collapseButton.toggleClass('cm-task-container-collapsed', !taskGroupContainer.isShown());
+				taskGroupContainer.isShown()
+					? taskGroupContainer.hide()
+					: taskGroupContainer.show();
+				collapseButton.toggleClass(
+					"cm-task-container-collapsed",
+					!taskGroupContainer.isShown()
+				);
 			};
 
 			titleEl.onclick = () => {
-				this.app.workspace.openLinkText(v.key, '', true, {
+				this.app.workspace.openLinkText(v.key, "", true, {
 					active: true,
 				});
 			};
 
 			this.settings.foldTaskGroup && taskGroupContainer.hide();
-			collapseButton.toggleClass('cm-task-container-collapsed', !taskGroupContainer.isShown());
-
+			collapseButton.toggleClass(
+				"cm-task-container-collapsed",
+				!taskGroupContainer.isShown()
+			);
 
 			if (this.app.vault.getFileByPath(v.key)) {
 				const file = this.app.vault.getFileByPath(v.key);
@@ -591,8 +207,6 @@ GROUP BY file.path`);
 					this.createEditor(taskGroupContainer, v.key, data, ranges);
 				}
 			}
-
-
 		}
 
 		this.updateResultEl(count);
@@ -606,7 +220,6 @@ GROUP BY file.path`);
 		if (this.editing) return;
 
 		const api = getAPI(this.app);
-
 		if (!api) return;
 
 		const result = await api.query(`TASK  
@@ -628,46 +241,83 @@ GROUP BY file.path`);
 			});
 
 			if (this.editorMap.has(v.key)) {
+				// Update existing editor
 				const targetFile = this.app.vault.getFileByPath(v.key);
 				if (!targetFile) continue;
+
 				const editor = this.editorMap.get(targetFile?.path);
 				if (editor) {
 					const data = await this.app.vault.read(targetFile);
-
 					const lastContent = this.contentMap.get(targetFile.path);
-					if (lastContent !== data) {
 
+					if (lastContent !== data) {
 						if (this.contentMap.has(targetFile.path)) {
 							this.contentMap.set(targetFile.path, data);
 						}
 
 						this.changedBySelf = true;
-						// const endPos = editor.offsetToPos((lastContent || editor.getValue()).length);
-						const lastLine = editor.cm.state.doc.lineAt(editor.cm.state.doc.length - 1);
-						editor.replaceRange(data, {line: 0, ch: 0}, {line: lastLine.number, ch: lastLine.length - 1});
+
+						// Update the editor content
+						const lastLine = editor.cm.state.doc.lineAt(
+							editor.cm.state.doc.length - 1
+						);
+						editor.replaceRange(
+							data,
+							{ line: 0, ch: 0 },
+							{ line: lastLine.number, ch: lastLine.length - 1 }
+						);
 						this.contentMap.set(targetFile.path, data);
 
-						// const values = result.value.values;
-						this.updateVisibleRange(editor, ranges);
+						// Update visibility range
+						editorRangeUtils.updateVisibleRange(editor, ranges);
 					}
 				}
 			} else {
+				// Create new editor for this file
 				const myfile = this.app.vault.getFileByPath(v.key);
+				if (!myfile) continue;
 
-				// this.containerEl.createEl('div', {cls: 'cm-task-group-header', text: v.key});
+				const linkHeader = this.containerEl.createEl("div", {
+					cls: "cm-task-group-header",
+				});
+				const taskGroupContainer = this.containerEl.createEl("div", {
+					cls: "cm-task-container",
+				});
+				const collapseButton = linkHeader.createEl("span", {
+					cls: "cm-group-collapse-button",
+				});
+				setIcon(collapseButton, "chevron-right");
 
-				const linkHeader = this.containerEl.createEl('div', {cls: 'cm-task-group-header', text: v.key});
-				linkHeader.onclick = () => {
-					this.app.workspace.openLinkText(v.key, '', true, {
-						active: true
+				const titleEl = linkHeader.createEl("span", {
+					cls: "cm-group-title",
+					text: v.key,
+				});
+
+				collapseButton.onclick = () => {
+					taskGroupContainer.isShown()
+						? taskGroupContainer.hide()
+						: taskGroupContainer.show();
+					collapseButton.toggleClass(
+						"cm-task-container-collapsed",
+						!taskGroupContainer.isShown()
+					);
+				};
+
+				titleEl.onclick = () => {
+					this.app.workspace.openLinkText(v.key, "", true, {
+						active: true,
 					});
 				};
 
-				if (myfile) {
-					const data = await this.app.vault.read(myfile);
-					this.createEditor(this.containerEl, v.key, data, ranges);
-					this.contentMap.set(myfile.path, data);
-				}
+				this.settings.foldTaskGroup && taskGroupContainer.hide();
+				collapseButton.toggleClass(
+					"cm-task-container-collapsed",
+					!taskGroupContainer.isShown()
+				);
+
+				const data = await this.app.vault.read(myfile);
+				this.createEditor(taskGroupContainer, v.key, data, ranges);
+				this.contentMap.set(myfile.path, data);
 			}
 		}
 

@@ -7,7 +7,7 @@ import {
 	editorInfoField,
 	ExtraButtonComponent,
 	Menu,
-	Modal
+	Modal,
 } from "obsidian";
 import { EditorView } from "@codemirror/view";
 
@@ -17,15 +17,17 @@ export function renderHeader(
 		view: EditorView;
 		sections: Section[];
 		selected: number;
-		onClick: (pos: {
-			start: number;
-			end: number;
-			index: number;
-		} | null) => void;
+		onClick: (
+			pos: {
+				start: number;
+				end: number;
+				index: number;
+			} | null
+		) => void;
 		createSection: () => void;
 	}
 ) {
-	const {sections, selected, onClick, createSection, view} = ctx;
+	const { sections, selected, onClick, createSection, view } = ctx;
 
 	const parentContainer = doc.createEl("div", "omd-container");
 	new TabsContainer({
@@ -34,21 +36,22 @@ export function renderHeader(
 		selected,
 		onClick,
 		createSection,
-		view
+		view,
 	}).onload();
 
 	return parentContainer;
 }
 
-
 class TabsContainer extends Component {
 	parentContainer: HTMLElement;
 	sections: Section[];
-	onClick: (pos: {
-		start: number;
-		end: number;
-		index: number;
-	} | null) => void;
+	onClick: (
+		pos: {
+			start: number;
+			end: number;
+			index: number;
+		} | null
+	) => void;
 	createSection: () => void;
 	selected: number | null = null;
 	view: EditorView;
@@ -56,15 +59,24 @@ class TabsContainer extends Component {
 	currentTab: HTMLElement | null = null;
 	app: App;
 
-	constructor({parentContainer, sections, selected, onClick, createSection, view}: {
+	constructor({
+		parentContainer,
+		sections,
+		selected,
+		onClick,
+		createSection,
+		view,
+	}: {
 		parentContainer: HTMLElement;
 		sections: Section[];
 		selected: number | null;
-		onClick: (pos: {
-			start: number;
-			end: number;
-			index: number;
-		} | null) => void;
+		onClick: (
+			pos: {
+				start: number;
+				end: number;
+				index: number;
+			} | null
+		) => void;
 		createSection: () => void;
 		view: EditorView;
 	}) {
@@ -80,114 +92,241 @@ class TabsContainer extends Component {
 	}
 
 	onload() {
-		this.parentContainer.createEl("div", "omd-section-tab-container", (container) => {
-			for (let i = 0; i < this.sections.length; i++) {
-				const sectionTab = this.sections[i];
-				container.createEl('div', "omd-section-tab", (o) => {
-					o.dataset.start = String(sectionTab.start);
-					o.dataset.end = String(sectionTab.end);
+		this.parentContainer.createEl(
+			"div",
+			"omd-section-tab-container",
+			(container) => {
+				for (let i = 0; i < this.sections.length; i++) {
+					const sectionTab = this.sections[i];
+					container.createEl("div", "omd-section-tab", (o) => {
+						o.dataset.start = String(sectionTab.start);
+						o.dataset.end = String(sectionTab.end);
 
-					const button = new ButtonComponent(o).setButtonText(sectionTab.name);
+						const button = new ButtonComponent(o).setButtonText(
+							sectionTab.name
+						);
 
-					if (this.selected === i) {
-						this.currentTab = o;
-						this.currentTab.toggleClass('omd-section-tab-active', true);
-					}
-
-					button.onClick((e) => {
-						e.preventDefault();
-						const start = o.dataset.start;
-						const end = o.dataset.end;
-						if (start && end && this.selected !== i) {
-							this.onClick({start: +start, end: +end, index: i});
-						} else {
-							this.onClick(null);
+						if (this.selected === i) {
+							this.currentTab = o;
+							this.currentTab.toggleClass(
+								"omd-section-tab-active",
+								true
+							);
 						}
 
-						if (this.currentTab) {
-							this.currentTab.toggleClass('omd-section-tab-active', false);
-						}
-						this.currentTab = o;
-						this.currentTab.toggleClass('omd-section-tab-active', true);
-					});
+						button.onClick((e) => {
+							e.preventDefault();
+							const start = o.dataset.start;
+							const end = o.dataset.end;
+							if (start && end && this.selected !== i) {
+								this.onClick({
+									start: +start,
+									end: +end,
+									index: i,
+								});
+								this.submitEvent(
+									{ start: +start, end: +end, index: i },
+									this.view
+								);
+								this.updateParentContainerDataset(+start, +end);
+							} else {
+								this.onClick(null);
+								this.submitEvent(null, this.view);
+								this.updateParentContainerDataset(null, null);
+							}
 
-					this.registerDomEvent(o, 'mouseover', (e) => {
-						debouncedMouseover(this.view, e, o, this.app);
-					});
+							if (this.currentTab) {
+								this.currentTab.toggleClass(
+									"omd-section-tab-active",
+									false
+								);
+							}
+							this.currentTab = o;
+							this.currentTab.toggleClass(
+								"omd-section-tab-active",
+								true
+							);
+						});
 
+						this.registerDomEvent(o, "mouseover", (e) => {
+							debouncedMouseover(this.view, e, o, this.app);
+						});
 
-					this.registerDomEvent(o, 'contextmenu', (e) => {
-						e.preventDefault();
-						const menu = new Menu();
+						this.registerDomEvent(o, "contextmenu", (e) => {
+							e.preventDefault();
+							const menu = new Menu();
 
-						menu
-							.addItem((item) => {
-								item.setDisabled(this.sections[i].type === 'lineage').setSection('action').setIcon('pencil').setTitle("Rename").onClick(() => {
-									new RenameModal(this.app, (name) => {
+							menu.addItem((item) => {
+								item.setDisabled(
+									this.sections[i].type === "lineage"
+								)
+									.setSection("action")
+									.setIcon("pencil")
+									.setTitle("Rename")
+									.onClick(() => {
+										new RenameModal(this.app, (name) => {
+											const section = this.sections[i];
+
+											const originalNameLine =
+												this.view.state.doc.lineAt(
+													section.start - 1
+												);
+											const newNameLine =
+												originalNameLine.text.replace(
+													/%%SECTION\{.*?\}%%/,
+													`%%SECTION{${name}}%%`
+												);
+
+											this.view.dispatch({
+												changes: [
+													{
+														from: originalNameLine.from,
+														to: originalNameLine.to,
+														insert: newNameLine,
+													},
+												],
+											});
+											this.submitEvent(
+												{
+													start: section.start,
+													end: section.end,
+													index: i,
+												},
+												this.view
+											);
+											this.updateParentContainerDataset(
+												section.start,
+												section.end
+											);
+										}).open();
+									});
+							}).addItem((item) => {
+								item.setSection("danger")
+									.setIcon("trash")
+									.setTitle("Delete")
+									.onClick(() => {
 										const section = this.sections[i];
 
-										const originalNameLine = this.view.state.doc.lineAt(section.start - 1);
-										const newNameLine = originalNameLine.text.replace(/%%SECTION\{.*?\}%%/, `%%SECTION{${name}}%%`);
+										const startLine =
+											this.view.state.doc.lineAt(
+												section.start - 1
+											);
+										const endLine =
+											this.view.state.doc.lineAt(
+												section.end
+											);
 
 										this.view.dispatch({
 											changes: [
 												{
-													from: originalNameLine.from,
-													to: originalNameLine.to,
-													insert: newNameLine
-												}
-											]
+													from: startLine.from,
+													to:
+														endLine.to ===
+														this.view.state.doc
+															.length
+															? endLine.to
+															: endLine.to + 2,
+													insert: "",
+												},
+											],
 										});
-									}).open();
-								});
-							})
-							.addItem((item) => {
-								item.setSection('danger').setIcon('trash').setTitle("Delete").onClick(() => {
-									const section = this.sections[i];
 
-									const startLine = this.view.state.doc.lineAt(section.start - 1);
-									const endLine = this.view.state.doc.lineAt(section.end);
-
-									this.view.dispatch({
-										changes: [
-											{
-												from: startLine.from,
-												to: endLine.to === this.view.state.doc.length ? endLine.to : endLine.to + 2,
-												insert: ''
-											}
-										]
+										if (this.selected === i) {
+											this.onClick(null);
+											this.submitEvent(null, this.view);
+											this.updateParentContainerDataset(
+												null,
+												null
+											);
+										} else {
+											this.submitEvent(
+												{
+													start: section.start,
+													end: section.end,
+													index: i,
+												},
+												this.view
+											);
+										}
 									});
-
-									if (this.selected === i) {
-										this.onClick(null);
-									}
-								});
-								(item as any).dom.toggleClass('is-warning', true);
+								(item as any).dom.toggleClass(
+									"is-warning",
+									true
+								);
 							});
 
-						menu.showAtMouseEvent(e);
+							menu.showAtMouseEvent(e);
+						});
 					});
+				}
+			}
+		);
+
+		this.parentContainer.createEl(
+			"div",
+			"omd-section-tab-add-button",
+			(container) => {
+				const button = new ExtraButtonComponent(container)
+					.setIcon("plus")
+					.setTooltip("Add section");
+				button.onClick(() => {
+					this.createSection();
+					// 注意：这里可能需要在createSection方法中添加submitEvent的调用
 				});
 			}
-		});
+		);
 
-		this.parentContainer.createEl('div', "omd-section-tab-add-button", (container) => {
-			const button = new ExtraButtonComponent(container).setIcon("plus").setTooltip("Add section");
+		this.parentContainer.createEl("div", "omd-section-tab-spacer");
+
+		this.parentContainer.createEl("div", "omd-back-to-full", (o) => {
+			const button = new ExtraButtonComponent(o)
+				.setIcon("book-open-text")
+				.setTooltip("Back to full document");
 			button.onClick(() => {
-				// this.onClick(null);
-				this.createSection();
-			});
-		});
-
-		this.parentContainer.createEl('div', 'omd-section-tab-spacer');
-
-		this.parentContainer.createEl('div', "omd-back-to-full", (o) => {
-			const button = new ExtraButtonComponent(o).setIcon("book-open-text").setTooltip("Back to full document");
-			button.onClick(() => {
-				this.currentTab?.toggleClass('omd-section-tab-active', false);
+				this.currentTab?.toggleClass("omd-section-tab-active", false);
 				this.onClick(null);
+				this.submitEvent(null, this.view);
+				this.updateParentContainerDataset(null, null);
 			});
 		});
+
+		this.updateParentContainerDataset(
+			this.selected !== null && this.sections && this.sections.length > 0
+				? this.sections[this.selected]?.start
+				: null,
+			this.selected !== null && this.sections && this.sections.length > 0
+				? this.sections[this.selected]?.end
+				: null
+		);
+	}
+
+	submitEvent(
+		pos: {
+			start: number;
+			end: number;
+			index: number;
+		} | null,
+		view: EditorView
+	) {
+		const file = view.state.field(editorInfoField).file;
+		if (!file) return;
+
+		this.app.workspace.trigger("omd-section-update", pos, file);
+	}
+
+	updateParentContainerDataset(start: number | null, end: number | null) {
+		if (
+			start !== null &&
+			end !== null &&
+			typeof start === "number" &&
+			typeof end === "number"
+		) {
+			this.parentContainer.dataset.start = String(start);
+			this.parentContainer.dataset.end = String(end);
+		} else {
+			this.parentContainer.removeAttribute("data-start");
+			this.parentContainer.removeAttribute("data-end");
+		}
 	}
 
 	onunload() {
@@ -203,7 +342,7 @@ class RenameModal extends Modal {
 	onOpen() {
 		this.setTitle("Rename section");
 
-		this.contentEl.toggleClass('omd-section-rename', true);
+		this.contentEl.toggleClass("omd-section-rename", true);
 
 		const frag = document.createDocumentFragment();
 		const input = frag.createEl("input", {
@@ -211,7 +350,7 @@ class RenameModal extends Modal {
 		});
 
 		input.onkeydown = (e) => {
-			if (e.key === 'Enter') {
+			if (e.key === "Enter") {
 				const value = input.value;
 				if (value) {
 					this.cb(value);
@@ -221,7 +360,9 @@ class RenameModal extends Modal {
 		};
 
 		frag.createEl("div", "modal-button-container", (el) => {
-			const button = new ButtonComponent(el).setCta().setButtonText("Rename");
+			const button = new ButtonComponent(el)
+				.setCta()
+				.setButtonText("Rename");
 			button.onClick(() => {
 				const value = input.value;
 				if (value) {
@@ -230,13 +371,14 @@ class RenameModal extends Modal {
 				}
 			});
 
-			const cancelButton = new ButtonComponent(el).setButtonText("Cancel");
-			cancelButton.buttonEl.toggleClass('mod-cancel', true);
+			const cancelButton = new ButtonComponent(el).setButtonText(
+				"Cancel"
+			);
+			cancelButton.buttonEl.toggleClass("mod-cancel", true);
 			cancelButton.onClick(() => {
 				this.close();
 			});
 		});
-
 
 		this.setContent(frag);
 	}
@@ -246,23 +388,26 @@ class RenameModal extends Modal {
 	}
 }
 
-const debouncedMouseover = debounce((view: EditorView, e: MouseEvent, o: HTMLElement, app: App) => {
-	const file = view.state.field(editorInfoField).file;
-	if (!file) return;
-	//
-	// const line = this.view.state.doc.lineAt(sectionTab.start + 1);
-	// const state = {
-	// 	scroll: line.number
-	// };
+const debouncedMouseover = debounce(
+	(view: EditorView, e: MouseEvent, o: HTMLElement, app: App) => {
+		const file = view.state.field(editorInfoField).file;
+		if (!file) return;
+		//
+		// const line = this.view.state.doc.lineAt(sectionTab.start + 1);
+		// const state = {
+		// 	scroll: line.number
+		// };
 
-	// console.log("hovering", file.path, state);
+		// console.log("hovering", file.path, state);
 
-	app.workspace.trigger("hover-link", {
-		event: e,
-		source: "outliner-md",
-		hoverParent: view.dom,
-		targetEl: o,
-		linktext: file.path,
-		// state: state
-	});
-}, 200);
+		app.workspace.trigger("hover-link", {
+			event: e,
+			source: "outliner-md",
+			hoverParent: view.dom,
+			targetEl: o,
+			linktext: file.path,
+			// state: state
+		});
+	},
+	200
+);

@@ -1,4 +1,5 @@
 import {
+	Constructor,
 	debounce,
 	Editor,
 	ExtraButtonComponent,
@@ -9,6 +10,7 @@ import {
 	moment,
 	Notice,
 	Plugin,
+	requireApiVersion,
 	TFile,
 	TFolder,
 	View,
@@ -97,7 +99,7 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.registerRibbons();
 
 		this.patchMarkdownView(this);
-		this.noteAsNotebook();
+		await this.noteAsNotebook();
 
 		this.patchEmbedView();
 		this.patchWorkspaceLeaf();
@@ -109,13 +111,13 @@ export default class OutlinerViewPlugin extends Plugin {
 		this.registerCommands();
 
 		// this.patchInlinePreview();
-		this.app.workspace.onLayoutReady(() => {
-			// document.body.toggleClass(
-			// 	"outliner-paper-layout",
-			// 	this.settings.paperLayout
-			// );
-			// document.body.toggleClass('outliner-bold-text', this.settings.boldText);
-		});
+		// this.app.workspace.onLayoutReady(() => {
+		// 	// document.body.toggleClass(
+		// 	// 	"outliner-paper-layout",
+		// 	// 	this.settings.paperLayout
+		// 	// );
+		// 	// document.body.toggleClass('outliner-bold-text', this.settings.boldText);
+		// });
 	}
 
 	onunload() {
@@ -140,7 +142,7 @@ export default class OutlinerViewPlugin extends Plugin {
 		});
 	}
 
-	noteAsNotebook() {
+	async noteAsNotebook() {
 		if (!this.settings.noteAsNotebook) return;
 		initSectionFeature(this);
 		this.registerEditorExtension([
@@ -161,7 +163,7 @@ export default class OutlinerViewPlugin extends Plugin {
 			"omd-hide-empty-section-header",
 			this.settings.autoHideEmptySectionHeader
 		);
-		this.initAllMarkdownView();
+		await this.initAllMarkdownView();
 	}
 
 	registerRibbons() {
@@ -205,6 +207,9 @@ export default class OutlinerViewPlugin extends Plugin {
 		const fileLeaves = this.app.workspace.getLeavesOfType("markdown");
 		for (const leaf of fileLeaves) {
 			const file = leaf.view.file;
+			if (leaf.isDeferred) {
+				continue;
+			}
 			const cache = this.app.metadataCache.getFileCache(file);
 			if (cache?.frontmatter && cache.frontmatter[FRONT_MATTER_KEY]) {
 				this.outlinerFileModes[leaf.id] = OUTLINER_EDITOR_VIEW_ID;
@@ -349,9 +354,14 @@ export default class OutlinerViewPlugin extends Plugin {
 		patchEditor(this);
 	}
 
-	initAllMarkdownView() {
+	async initAllMarkdownView() {
 		const fileLeaves = this.app.workspace.getLeavesOfType("markdown");
 		for (const leaf of fileLeaves) {
+			if (leaf.isDeferred) {
+				console.log("deferred", leaf.id);
+				continue;
+			}
+
 			const view = (leaf.view as any).editMode.editor.cm;
 			const sections = getAllSectionsRangeAndName({
 				state: view.state,
@@ -408,7 +418,7 @@ export default class OutlinerViewPlugin extends Plugin {
 				md: (next) => {
 					return function (e: any, t: any, n: any) {
 						if (e && e.displayMode === false && e.showInline) {
-							// console.log(this);
+							console.log(this);
 							if (t.path.contains(".excalidraw.md"))
 								return next.apply(this, [e, t, n]);
 							const newResult = newMdFunction(e, t, n);
@@ -422,7 +432,7 @@ export default class OutlinerViewPlugin extends Plugin {
 							e.displayMode === undefined &&
 							e.showInline
 						) {
-							// console.log(this);
+							console.log(this);
 							if (t.path.contains(".excalidraw.md"))
 								return next.apply(this, [e, t, n]);
 							const newResult = renderReadingMode(e, t, n);
@@ -532,7 +542,7 @@ export default class OutlinerViewPlugin extends Plugin {
 							// Then check for the kanban frontMatterKey
 
 							const cache = self.app.metadataCache.getCache(
-								state.state.file
+								state.state.file as string
 							);
 
 							if (
@@ -547,8 +557,9 @@ export default class OutlinerViewPlugin extends Plugin {
 									},
 								};
 
-								self.outlinerFileModes[state.state.file] =
-									OUTLINER_EDITOR_VIEW_ID;
+								self.outlinerFileModes[
+									state.state.file as string
+								] = OUTLINER_EDITOR_VIEW_ID;
 
 								return next.apply(this, [newState, ...rest]);
 							}
@@ -635,7 +646,6 @@ export default class OutlinerViewPlugin extends Plugin {
 				render: (old) => {
 					return function (e: any, b: any) {
 						const result = old.call(this, e, b);
-						console.log(e, b, this);
 						const containerEl =
 							this.parentDom.parentDom.el.closest(
 								".mod-global-search"
@@ -789,9 +799,17 @@ export default class OutlinerViewPlugin extends Plugin {
 			this.register(componentUninstaller);
 		};
 
-		const patchSearchDom = (plugin: OutlinerViewPlugin) => {
-			const searchView = this.app.workspace.getLeavesOfType("search")[0]
-				?.view as any;
+		const patchSearchDom = async (plugin: OutlinerViewPlugin) => {
+			const leaf = this.app.workspace.getLeavesOfType(
+				"search"
+			)[0] as WorkspaceLeaf;
+
+			if (leaf) {
+				if (requireApiVersion("1.7.2")) {
+					await leaf?.loadIfDeferred();
+				}
+			}
+			const searchView = leaf.view as any;
 			if (!searchView) return false;
 
 			const dom = searchView.dom.constructor;
@@ -823,10 +841,12 @@ export default class OutlinerViewPlugin extends Plugin {
 			return true;
 		};
 
-		this.app.workspace.onLayoutReady(() => {
-			if (!patchSearchDom(this)) {
-				const evt = this.app.workspace.on("layout-change", () => {
-					if (patchSearchDom(this)) {
+		this.app.workspace.onLayoutReady(async () => {
+			const patched = await patchSearchDom(this);
+			if (!patched) {
+				const evt = this.app.workspace.on("layout-change", async () => {
+					const patchedre = await patchSearchDom(this);
+					if (patchedre) {
 						this.app.workspace.offref(evt);
 					}
 				});
@@ -900,8 +920,9 @@ export default class OutlinerViewPlugin extends Plugin {
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				// @ts-ignore
-				const outlinerView =
-					this.app.workspace.getActiveViewOfType(OutlinerEditorView);
+				const outlinerView = this.app.workspace.getActiveViewOfType(
+					OutlinerEditorView as unknown as Constructor<View>
+				);
 				if (outlinerView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -986,8 +1007,9 @@ export default class OutlinerViewPlugin extends Plugin {
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				// @ts-ignore
-				const outlinerView =
-					this.app.workspace.getActiveViewOfType(OutlinerEditorView);
+				const outlinerView = this.app.workspace.getActiveViewOfType(
+					OutlinerEditorView as unknown as Constructor<View>
+				);
 				if (outlinerView) {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
@@ -1007,8 +1029,9 @@ export default class OutlinerViewPlugin extends Plugin {
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
 				// @ts-ignore
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
+				const markdownView = this.app.workspace.getActiveViewOfType(
+					MarkdownView as unknown as Constructor<View>
+				);
 				if (
 					markdownView &&
 					markdownView.getViewType() === "markdown" &&
@@ -1034,9 +1057,9 @@ export default class OutlinerViewPlugin extends Plugin {
 			name: "Open as Markdown View",
 			checkCallback: (checking: boolean) => {
 				// Conditions to check
-				// @ts-ignore
-				const outlinerView =
-					this.app.workspace.getActiveViewOfType(OutlinerEditorView);
+				const outlinerView = this.app.workspace.getActiveViewOfType(
+					OutlinerEditorView as unknown as Constructor<View>
+				);
 				if (outlinerView) {
 					if (!checking) {
 						this.outlinerFileModes[outlinerView.leaf.id] =

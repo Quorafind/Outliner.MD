@@ -105,6 +105,7 @@ declare module "obsidian" {
 	}
 
 	interface WorkspaceLeaf {
+		loadIfDeferred(): Promise<void>;
 		width: number;
 		height: number;
 		activeTime: number;

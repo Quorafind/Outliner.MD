@@ -32,7 +32,7 @@
 		"eslint-plugin-svelte": "^2.37.0",
 		"less": "^4.2.0",
 		"monkey-around": "^3.0.0",
-		"obsidian": "latest",
+		"obsidian": "^1.7.2",
 		"obsidian-dataview": "^0.5.66",
 		"obsidian-typings": "^1.1.1",
 		"regexp-match-indices": "^1.0.2",

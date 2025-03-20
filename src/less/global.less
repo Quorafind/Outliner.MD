@@ -84,13 +84,13 @@ body.outliner-paper-layout
 	font-weight: var(--font-light);
 }
 
-.outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button {
+.markdown-source-view.mod-cm6 .cm-newline-button {
 	color: var(--outliner-button-color);
 	display: flex;
 	justify-content: flex-start;
 }
 
-.outliner-editor .markdown-source-view.mod-cm6 .cm-newline-button div {
+.markdown-source-view.mod-cm6 .cm-newline-button div {
 	border-radius: 100%;
 	padding: var(--size-2-2) var(--size-2-2);
 	height: 24px;
@@ -101,11 +101,11 @@ body.outliner-paper-layout
 	--icon-stroke: 1px;
 }
 
-.outliner-editor .markdown-source-view.mod-cm6 .cm-content:not(.embed-editor) {
+.markdown-source-view.mod-cm6 .cm-content:not(.embed-editor) {
 	padding-left: var(--size-4-4);
 }
 
-.outliner-editor .markdown-source-view.mod-cm6 .cm-content.embed-editor {
+.markdown-source-view.mod-cm6 .cm-content.embed-editor {
 	padding-bottom: 0 !important;
 }
 
@@ -233,16 +233,13 @@ span.cm-group-collapse-button {
 	margin-right: var(--size-2-2);
 }
 
-.outliner-editor .markdown-source-view.mod-cm6 span.cm-bullet-menu-marker {
+.markdown-source-view.mod-cm6 span.cm-bullet-menu-marker {
 	/*display: inline-block;*/
 	position: relative;
 	z-index: 1;
 }
 
-.outliner-editor
-	.markdown-source-view.mod-cm6
-	span.cm-bullet-menu-marker
-	.clickable-icon {
+.markdown-source-view.mod-cm6 span.cm-bullet-menu-marker .clickable-icon {
 	position: absolute;
 	top: 0;
 	inset-inline-end: 0;
@@ -256,15 +253,11 @@ span.cm-group-collapse-button {
 	opacity: 0;
 }
 
-.outliner-editor
-	.markdown-source-view.mod-cm6
-	span.cm-bullet-menu-marker:hover
-	.clickable-icon {
+.markdown-source-view.mod-cm6 span.cm-bullet-menu-marker:hover .clickable-icon {
 	opacity: 1;
 }
 
-.outliner-editor
-	.markdown-source-view.mod-cm6
+.markdown-source-view.mod-cm6
 	.cm-line:hover
 	> .cm-drag-handler-container
 	.clickable-icon,
@@ -276,8 +269,7 @@ span.cm-group-collapse-button {
 /*	padding-inline-end: 0;*/
 /*}*/
 
-.outliner-editor
-	.markdown-source-view.mod-cm6
+.markdown-source-view.mod-cm6
 	.cm-line.HyperMD-list-line:has(.cm-fold-indicator)
 	span.cm-bullet-menu-marker
 	.clickable-icon {
