@@ -7,24 +7,17 @@ import {
 	Keymap,
 	TFile,
 } from "obsidian";
-import { CalculateRangeForZooming } from "../../cm/CalculateRangeForZooming";
-import {
-	hideFrontMatterEffect,
-	zoomInEffect,
-	zoomWithHideIndentEffect,
-} from "../../cm/VisibleRangeController";
-import { KeepRangeVisible } from "../../cm/KeepRangeVisible";
 import OutlinerViewPlugin from "../../OutlinerViewIndex";
-import {
-	EditorFactory,
-	EditorType,
-} from "../../editor-components/EditorFactory";
+import { EditorBuilder } from "../../editor-components/EditorBuilder";
+import { EditorFactory } from "../../editor-components/EditorFactory";
+import { EditorType } from "../../editor-components/EditorTypes";
 import { editorRangeUtils } from "../../utils/editorRangeUtils";
 
 export class EmbeddedEditor extends Component {
 	plugin: OutlinerViewPlugin;
 	app: App;
 	editor: Editor | undefined;
+	editorId?: string;
 
 	file: TFile | undefined;
 	subpath: string | undefined;
@@ -40,8 +33,8 @@ export class EmbeddedEditor extends Component {
 		| { from: number; to: number }[]
 		| undefined;
 
-	calculateRangeForZooming = new CalculateRangeForZooming();
-	KeepOnlyZoomedContentVisible = new KeepRangeVisible();
+	// Remove custom range and visibility methods as they're now handled by the new architecture
+	private updateRange?: (range: { from: number; to: number }) => void;
 
 	constructor(
 		plugin: OutlinerViewPlugin,
@@ -114,14 +107,12 @@ export class EmbeddedEditor extends Component {
 					to: targetRange.to,
 				};
 
-				if (targetRange.type !== "whole") {
-					editorRangeUtils.updateVisibleRange(
-						this.editor,
-						this.range,
-						targetRange.type as "part" | "block" | "heading"
-					);
+				// Use the updateRange function provided by the new architecture
+				if (this.updateRange && targetRange.type !== "whole") {
+					this.updateRange(this.range);
 				}
 
+				// Handle front matter visibility for whole files
 				if (
 					targetRange.type === "whole" &&
 					this.plugin.settings.hideFrontmatter
@@ -137,14 +128,16 @@ export class EmbeddedEditor extends Component {
 	}, 800);
 
 	async onunload() {
+		// Clean up managed editor if using lifecycle management
+		if (this.editorId) {
+			try {
+				await EditorFactory.destroyManagedEditor(this.editorId);
+			} catch (error) {
+				console.error("Error destroying managed editor:", error);
+			}
+		}
 		super.onunload();
 	}
-
-	onFileChanged(file: TFile) {
-		console.log(file);
-	}
-
-	loadFile(file: TFile, subpath: string) {}
 
 	debounceHover = debounce(
 		(extraButton: ExtraButtonComponent, e: MouseEvent) => {
@@ -168,10 +161,6 @@ export class EmbeddedEditor extends Component {
 		}
 	}, 400);
 
-	longWaitUpdate = debounce((data: string) => {
-		this.data = data;
-	});
-
 	createEditor() {
 		if (!this.file) return;
 
@@ -181,30 +170,45 @@ export class EmbeddedEditor extends Component {
 			to: targetRange.to,
 		};
 
-		// Use our new factory to create the editor
-		const { editor, updateRange } = EditorFactory.createEditor(
-			EditorType.EMBEDDED,
-			{
-				app: this.app,
-				containerEl: this.containerEl,
-				file: this.file,
-				subpath: this.subpath,
-				targetRange: this.targetRange,
-				data: this.data,
-				plugin: this.plugin,
-				disableTimeFormat: !this.plugin.settings.timeFormatWidget,
+		// Check if readonly mode is requested
+		const title = this.containerEl.getAttr("alt");
+		const isReadOnly =
+			title && (title === "readonly" || title.contains("readonly"));
+
+		// Use EditorBuilder for cleaner, more flexible configuration
+		const builder = EditorBuilder.embedded()
+			.withApp(this.app)
+			.inContainer(this.containerEl)
+			.forFile(this.file)
+			.withData(this.data || "")
+			.withPlugin(this.plugin)
+			.disableTimeFormat(!this.plugin.settings.timeFormatWidget)
+			.readOnly(isReadOnly || false)
+			.withEventHandlers({
 				onSave: (file, data) => this.requestSave(file, data),
-			}
-		);
+			});
 
-		this.editor = editor;
-
-		// Add the ability to update ranges if needed
-		if (updateRange) {
-			this.updateRange = updateRange;
+		// Add subpath and range if available
+		if (this.subpath && this.subpath.trim()) {
+			builder.withSubpath(this.subpath);
+		}
+		if (this.targetRange) {
+			builder.withRange(this.targetRange.from, this.targetRange.to);
 		}
 
-		// Add UI elements for specific cases
+		// Build the editor with enhanced features
+		const result = builder.withEnhancedTypeSystem(true).build();
+
+		this.editor = result.editor;
+		this.updateRange = result.updateRange;
+
+		// Store metadata if available
+		if (result.metadata) {
+			// Could store metadata for debugging/monitoring purposes
+			console.debug("Editor metadata:", result.metadata);
+		}
+
+		// Add UI elements based on the range type
 		this.addUIElements(targetRange.type);
 
 		return this.editor;
@@ -221,10 +225,8 @@ export class EmbeddedEditor extends Component {
 
 		// Check for readonly flag
 		const title = this.containerEl.getAttr("alt");
-		if (title) {
-			if (title === "readonly" || title.contains("readonly")) {
-				this.addReadonlyButton();
-			}
+		if (title && (title === "readonly" || title.contains("readonly"))) {
+			this.addReadonlyButton();
 		}
 	}
 
@@ -298,24 +300,24 @@ export class EmbeddedEditor extends Component {
 		const component = new ExtraButtonComponent(button)
 			.setIcon("lock")
 			.onClick(() => {
-				if (!this.editor) return;
+				if (!this.editor || !this.file) return;
 
-				// For simplicity, recreate the editor with the opposite readonly state
-				if (this.file && this.data) {
-					EditorFactory.createEditor(EditorType.EMBEDDED, {
-						app: this.app,
-						containerEl: this.containerEl,
-						file: this.file,
-						subpath: this.subpath,
-						targetRange: this.targetRange,
-						data: this.data,
-						plugin: this.plugin,
-						disableTimeFormat:
-							!this.plugin.settings.timeFormatWidget,
-						readOnly: !locked,
+				// Recreate editor with opposite readonly state using the builder
+				const result = EditorBuilder.embedded()
+					.withApp(this.app)
+					.inContainer(this.containerEl)
+					.forFile(this.file)
+					.withData(this.data || "")
+					.withPlugin(this.plugin)
+					.disableTimeFormat(!this.plugin.settings.timeFormatWidget)
+					.readOnly(!locked)
+					.withEventHandlers({
 						onSave: (file, data) => this.requestSave(file, data),
-					});
-				}
+					})
+					.build();
+
+				this.editor = result.editor;
+				this.updateRange = result.updateRange;
 
 				locked = !locked;
 				component.setIcon(locked ? "lock" : "unlock");
@@ -323,14 +325,14 @@ export class EmbeddedEditor extends Component {
 			});
 	}
 
-	public updateRange(range: { from: number; to: number }) {
-		this.range = {
-			from: range.from,
-			to: range.to,
-		};
+	/**
+	 * Update the visible range using the new architecture
+	 */
+	public updateEditorRange(range: { from: number; to: number }) {
+		this.range = range;
 
-		if (this.editor) {
-			editorRangeUtils.updateVisibleRange(this.editor, range, "part");
+		if (this.updateRange) {
+			this.updateRange(range);
 		}
 	}
 
@@ -344,162 +346,6 @@ export class EmbeddedEditor extends Component {
 		);
 	}
 
-	updateVisibleRange(
-		editor: Editor,
-		range:
-			| { from: number; to: number }
-			| {
-					from: number;
-					to: number;
-			  }[],
-		type: "part" | "block" | "heading"
-	) {
-		if (Array.isArray(range)) {
-			const wholeRanges = range.map((r) => {
-				return (
-					this.calculateRangeForZooming.calculateRangeForZooming(
-						editor.cm.state,
-						r.from
-					) || {
-						from: r.from,
-						to: r.to,
-					}
-				);
-			});
-			this.KeepOnlyZoomedContentVisible.keepRangesVisible(
-				editor.cm,
-				wholeRanges
-			);
-
-			for (const r of wholeRanges) {
-				const firstLine = editor.cm.state.doc.lineAt(r.from);
-				const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-
-				if (firstLineIndent) {
-					editor.cm.dispatch({
-						effects: zoomWithHideIndentEffect.of({
-							range: {
-								from: r.from,
-								to: r.to,
-							},
-							indent: firstLineIndent,
-						}),
-					});
-				}
-			}
-			// for(const r of range) {
-			// 	editor.cm.dispatch({
-			// 		effects: [zoomInEffect.of(r)]
-			// 	});
-			// }
-		} else {
-			// if(range.from === 0 && range.to === this.editor?.cm.state.doc.length) return;
-			if (type === "part") {
-				const cache = this.app.metadataCache.getFileCache(
-					this.file as TFile
-				);
-
-				const blockCache = cache?.sections?.find((key) => {
-					return (
-						key.type === "table" &&
-						key.position.start.offset < range.from &&
-						key.position.end.offset > range.to
-					);
-				});
-
-				if (blockCache) {
-					this.editor?.editorComponent.toggleSource();
-				}
-
-				editor.cm.dispatch({
-					effects: [
-						zoomInEffect.of({
-							from: range.from,
-							to: range.to,
-							type: "part",
-							container: this.targetRange
-								? undefined
-								: this.containerEl,
-						}),
-					],
-				});
-
-				// this.editor?.editorComponent.toggleSource();
-				// this.updateIndentVisible(
-				// 	editor,
-				// 	range
-				// );
-				this.containerEl.toggleClass("embedded-part", true);
-				return;
-			}
-
-			const newRange =
-				this.calculateRangeForZooming.calculateRangeForZooming(
-					editor.cm.state,
-					range.from
-				);
-
-			// console.log('newRange', newRange, range);
-
-			if (newRange) {
-				editor.cm.dispatch({
-					effects: [zoomInEffect.of(newRange)],
-				});
-				const firstLine = editor.cm.state.doc.lineAt(newRange.from);
-				const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-				if (firstLineIndent) {
-					editor.cm.dispatch({
-						effects: zoomWithHideIndentEffect.of({
-							range: {
-								from: newRange.from,
-								to: newRange.to,
-							},
-							indent: firstLineIndent,
-						}),
-					});
-				}
-			} else {
-				editor.cm.dispatch({
-					effects: [zoomInEffect.of(range)],
-				});
-			}
-
-			// editor.cm.dispatch(
-			// {
-			// 	effects: [zoomInEffect.of(range)]
-			// });
-		}
-	}
-
-	updateIndentVisible(editor: Editor, range: { from: number; to: number }) {
-		const firstLine = editor.cm.state.doc.lineAt(range.from);
-		const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-		if (firstLineIndent) {
-			editor.cm.dispatch({
-				effects: zoomWithHideIndentEffect.of({
-					range: {
-						from: range.from,
-						to: range.to,
-					},
-					indent: firstLineIndent,
-				}),
-			});
-		}
-	}
-
-	updateFrontMatterVisible(editor: Editor, file: TFile) {
-		const cache = this.app.metadataCache.getFileCache(file);
-		const frontMatter = cache?.frontmatterPosition;
-
-		if (frontMatter) {
-			editor.cm.dispatch({
-				effects: hideFrontMatterEffect.of({
-					range: {
-						from: frontMatter.start.offset,
-						to: frontMatter.end.offset,
-					},
-				}),
-			});
-		}
-	}
+	// Remove the custom updateVisibleRange, updateIndentVisible, updateFrontMatterVisible methods
+	// as they are now handled by the new architecture via editorRangeUtils
 }

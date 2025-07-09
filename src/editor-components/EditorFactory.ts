@@ -10,76 +10,216 @@ import {
 } from "../utils/editorEventHandlers";
 import { EditorState } from "@codemirror/state";
 import OutlinerViewPlugin from "../OutlinerViewIndex";
+import { OutlinerEditorView } from "../OutlinerEditorView";
+import {
+	EditorConfigManager,
+	EditorType,
+	BaseEditorConfig,
+	EditorConfig,
+} from "./EditorConfigManager";
+import { EditorTypeGuards, EditorTypeUtils } from "./EditorTypes";
+import {
+	defaultStrategyFactory,
+	StrategyFactory,
+} from "./strategies/StrategyFactory";
+import {
+	defaultLifecycleManager,
+	EditorLifecycleManager,
+	createLifecycleEventHandlers,
+} from "./lifecycle";
 
 /**
- * Editor types supported by the factory
+ * Legacy interface for backward compatibility
+ * @deprecated Use BaseEditorConfig from EditorConfigManager instead
  */
-export enum EditorType {
-	EMBEDDED = "embed",
-	OUTLINER = "outliner",
-	TASK_GROUP = "task-group",
-}
-
-/**
- * Shared editor configuration options
- */
-export interface EditorFactoryOptions {
-	app: App;
-	containerEl: HTMLElement;
-	file?: TFile;
-	subpath?: string;
-	targetRange?: { from: number; to: number };
-	path?: string;
-	data?: string;
-	foldByDefault?: boolean;
-	disableTimeFormat?: boolean;
-	sourcePath?: string;
-	plugin?: OutlinerViewPlugin;
-	readOnly?: boolean;
-	onSave?: (file: TFile, data: string) => void;
-	type?: EditorType;
-}
+export interface EditorFactoryOptions extends BaseEditorConfig {}
 
 /**
  * Factory for creating different types of editors with shared configuration
  */
 export class EditorFactory {
+	private static strategyFactory: StrategyFactory = defaultStrategyFactory;
+	private static lifecycleManager: EditorLifecycleManager =
+		defaultLifecycleManager;
 	/**
 	 * Creates an editor based on the specified type and options
 	 */
 	static createEditor(
 		type: EditorType,
-		options: EditorFactoryOptions
+		options: BaseEditorConfig
 	): {
 		editor: Editor;
 		component: Component;
 		updateRange?: (range: { from: number; to: number }) => void;
 	} {
+		// Prepare and validate configuration using EditorConfigManager
+		const config = EditorConfigManager.prepareConfig(type, options);
+
 		switch (type) {
 			case EditorType.EMBEDDED:
-				return this.createEmbeddedEditor({
-					...options,
-					type: EditorType.EMBEDDED,
-				});
+				return this.createEmbeddedEditor(config);
 			case EditorType.TASK_GROUP:
-				return this.createTaskGroupEditor({
-					...options,
-					type: EditorType.EMBEDDED,
-				});
+				return this.createTaskGroupEditor(config);
 			case EditorType.OUTLINER:
-				return this.createOutlinerEditor({
-					...options,
-					type: EditorType.OUTLINER,
-				});
+				return this.createOutlinerEditor(config);
 			default:
 				throw new Error(`Unsupported editor type: ${type}`);
 		}
 	}
 
 	/**
+	 * Creates an editor using the enhanced type system
+	 */
+	static createEnhancedEditor(
+		type: EditorType,
+		options: BaseEditorConfig
+	): {
+		editor: Editor;
+		component: Component;
+		updateRange?: (range: { from: number; to: number }) => void;
+		metadata: import("./EditorTypes").EditorMetadata;
+	} {
+		// Validate configuration using enhanced type guards
+		if (!EditorTypeGuards.validateConfigType({ ...options, type })) {
+			throw new Error(`Invalid configuration for editor type: ${type}`);
+		}
+
+		// Prepare configuration using enhanced system
+		const config = EditorConfigManager.prepareEnhancedConfig(type, options);
+
+		// Create metadata for the editor
+		const metadata = EditorTypeUtils.createMetadata(type, {
+			id: `editor-${type}-${Date.now()}`,
+		});
+
+		// Create the editor using the standard method
+		const result = this.createEditor(type, config);
+
+		return {
+			...result,
+			metadata,
+		};
+	}
+
+	/**
+	 * Creates an editor using the strategy pattern
+	 */
+	static createEditorWithStrategy(
+		type: EditorType,
+		options: BaseEditorConfig
+	): {
+		editor: Editor;
+		component: Component;
+		updateRange?: (range: { from: number; to: number }) => void;
+	} {
+		// Use the strategy factory to create the editor
+		const result = this.strategyFactory.createEditor(type, options);
+
+		return {
+			editor: result.editor,
+			component: result.component,
+			updateRange: result.updateRange,
+		};
+	}
+
+	/**
+	 * Sets a custom strategy factory
+	 */
+	static setStrategyFactory(factory: StrategyFactory): void {
+		this.strategyFactory = factory;
+	}
+
+	/**
+	 * Gets the current strategy factory
+	 */
+	static getStrategyFactory(): StrategyFactory {
+		return this.strategyFactory;
+	}
+
+	/**
+	 * Validates configuration using the strategy pattern
+	 */
+	static validateConfigWithStrategy(config: BaseEditorConfig): boolean {
+		return this.strategyFactory.validateConfig(config);
+	}
+
+	/**
+	 * Creates an editor with full lifecycle management
+	 */
+	static createManagedEditor(
+		type: EditorType,
+		options: BaseEditorConfig
+	): {
+		editorId: string;
+		editor: Editor;
+		component: Component;
+		updateRange?: (range: { from: number; to: number }) => void;
+	} {
+		// Create the editor using strategy pattern
+		const result = this.createEditorWithStrategy(type, options);
+
+		// Register with lifecycle manager
+		const editorId = this.lifecycleManager.createEditor(
+			result.editor,
+			result.component,
+			{ ...options, type },
+			result.updateRange
+		);
+
+		// Set up lifecycle event handlers
+		const eventHandlers = createLifecycleEventHandlers(options.app, type);
+		this.lifecycleManager.setEventHandlers(eventHandlers);
+
+		// Initialize the editor
+		this.lifecycleManager
+			.initializeEditor(editorId)
+			.then(() => {
+				this.lifecycleManager.activateEditor(editorId);
+			})
+			.catch((error) => {
+				console.error("Failed to initialize editor:", error);
+			});
+
+		return {
+			editorId,
+			editor: result.editor,
+			component: result.component,
+			updateRange: result.updateRange,
+		};
+	}
+
+	/**
+	 * Destroys a managed editor
+	 */
+	static async destroyManagedEditor(editorId: string): Promise<void> {
+		await this.lifecycleManager.destroyEditor(editorId);
+	}
+
+	/**
+	 * Gets a managed editor instance
+	 */
+	static getManagedEditor(editorId: string) {
+		return this.lifecycleManager.getInstance(editorId);
+	}
+
+	/**
+	 * Sets a custom lifecycle manager
+	 */
+	static setLifecycleManager(manager: EditorLifecycleManager): void {
+		this.lifecycleManager = manager;
+	}
+
+	/**
+	 * Gets the current lifecycle manager
+	 */
+	static getLifecycleManager(): EditorLifecycleManager {
+		return this.lifecycleManager;
+	}
+
+	/**
 	 * Creates an embedded editor
 	 */
-	private static createEmbeddedEditor(options: EditorFactoryOptions) {
+	private static createEmbeddedEditor(options: BaseEditorConfig) {
 		const {
 			app,
 			containerEl,
@@ -189,7 +329,7 @@ export class EditorFactory {
 	/**
 	 * Creates a task group editor
 	 */
-	private static createTaskGroupEditor(options: EditorFactoryOptions) {
+	private static createTaskGroupEditor(options: BaseEditorConfig) {
 		const { app, containerEl, file, data } = options;
 
 		if (!file) {
@@ -216,7 +356,7 @@ export class EditorFactory {
 	/**
 	 * Creates an outliner editor
 	 */
-	private static createOutlinerEditor(options: EditorFactoryOptions) {
+	private static createOutlinerEditor(options: BaseEditorConfig) {
 		const { app, containerEl, file, data } = options;
 
 		// Create a component to host the editor
@@ -245,7 +385,7 @@ export class EditorFactory {
 		path: string,
 		data: string,
 		range: { from: number; to: number; type: string },
-		options: EditorFactoryOptions,
+		options: BaseEditorConfig,
 		component: Component,
 		readOnly: boolean = false
 	): Editor {
@@ -300,6 +440,11 @@ export class EditorFactory {
 						options.onSave(file, update.state.doc.toString());
 					}
 				}
+
+				// Call custom onChange handler if provided
+				if (options.onChange) {
+					options.onChange(update, path);
+				}
 			},
 			onBlur: (editor, path) => {
 				if (path) {
@@ -318,6 +463,7 @@ export class EditorFactory {
 			path: path,
 			foldByDefault: foldByDefault,
 			disableTimeFormat: disableTimeFormat,
+			view: options.view,
 		});
 
 		// Apply visible range settings

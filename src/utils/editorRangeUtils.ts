@@ -8,16 +8,194 @@ import {
 import { hideFrontMatterEffect } from "../cm/VisibleRangeController";
 
 /**
- * Common utilities for editor range operations
+ * Represents a range with type information
  */
+export interface TypedRange {
+	from: number;
+	to: number;
+	type: "part" | "block" | "heading" | "whole";
+}
 
-export class EditorRangeUtils {
-	private calculateRangeForZooming: CalculateRangeForZooming;
-	private keepRangeVisible: KeepRangeVisible;
+/**
+ * Base class for range operations
+ */
+export abstract class BaseRangeManager {
+	protected calculateRangeForZooming: CalculateRangeForZooming;
+	protected keepRangeVisible: KeepRangeVisible;
 
 	constructor() {
 		this.calculateRangeForZooming = new CalculateRangeForZooming();
 		this.keepRangeVisible = new KeepRangeVisible();
+	}
+
+	/**
+	 * Calculates the zoom range for a given position
+	 */
+	protected calculateZoomRange(
+		editor: Editor,
+		from: number
+	): TypedRange | null {
+		const result = this.calculateRangeForZooming.calculateRangeForZooming(
+			editor.cm.state,
+			from
+		);
+		return result ? { ...result, type: "block" as const } : null;
+	}
+
+	/**
+	 * Gets the indent for a line
+	 */
+	protected getLineIndent(editor: Editor, position: number): string | null {
+		const line = editor.cm.state.doc.lineAt(position);
+		return line.text.match(/^\s*/)?.[0] || null;
+	}
+}
+
+/**
+ * Manages single range operations
+ */
+export class SingleRangeManager extends BaseRangeManager {
+	updateVisibility(editor: Editor, range: TypedRange): void {
+		if (range.type === "part") {
+			this.updatePartRange(editor, range);
+		} else {
+			this.updateBlockRange(editor, range);
+		}
+	}
+
+	private updatePartRange(editor: Editor, range: TypedRange): void {
+		editor.cm.dispatch({
+			effects: [
+				zoomInEffect.of({
+					from: range.from,
+					to: range.to,
+					type: "part",
+				}),
+			],
+		});
+	}
+
+	private updateBlockRange(editor: Editor, range: TypedRange): void {
+		const newRange = this.calculateZoomRange(editor, range.from);
+
+		if (newRange) {
+			editor.cm.dispatch({
+				effects: [zoomInEffect.of(newRange)],
+			});
+
+			this.applyIndentHiding(editor, newRange);
+		} else {
+			editor.cm.dispatch({
+				effects: [zoomInEffect.of(range)],
+			});
+		}
+	}
+
+	private applyIndentHiding(editor: Editor, range: TypedRange): void {
+		const indent = this.getLineIndent(editor, range.from);
+		if (indent) {
+			editor.cm.dispatch({
+				effects: zoomWithHideIndentEffect.of({
+					range: {
+						from: range.from,
+						to: range.to,
+					},
+					indent,
+				}),
+			});
+		}
+	}
+}
+
+/**
+ * Manages multiple range operations
+ */
+export class MultiRangeManager extends BaseRangeManager {
+	/**
+	 * Updates visibility for multiple ranges
+	 */
+	updateMultipleRanges(editor: Editor, ranges: TypedRange[]): void {
+		const wholeRanges = ranges.map((r) => {
+			const calculated = this.calculateZoomRange(editor, r.from);
+			return calculated || r;
+		});
+
+		this.keepRangeVisible.keepRangesVisible(editor.cm, wholeRanges);
+
+		for (const range of wholeRanges) {
+			this.applyIndentHiding(editor, range);
+		}
+	}
+
+	private applyIndentHiding(editor: Editor, range: TypedRange): void {
+		const indent = this.getLineIndent(editor, range.from);
+		if (indent) {
+			editor.cm.dispatch({
+				effects: zoomWithHideIndentEffect.of({
+					range: {
+						from: range.from,
+						to: range.to,
+					},
+					indent,
+				}),
+			});
+		}
+	}
+}
+
+/**
+ * Manages front matter visibility
+ */
+export class FrontMatterRangeManager {
+	updateVisibility(editor: Editor, app: App, file: any): void {
+		const cache = app.metadataCache.getFileCache(file);
+		const frontMatter = cache?.frontmatterPosition;
+
+		if (frontMatter) {
+			editor.cm.dispatch({
+				effects: hideFrontMatterEffect.of({
+					range: {
+						from: frontMatter.start.offset,
+						to: frontMatter.end.offset,
+					},
+				}),
+			});
+		}
+	}
+}
+
+/**
+ * Factory for creating appropriate range managers
+ */
+export class RangeManagerFactory {
+	static createSingleRangeManager(): SingleRangeManager {
+		return new SingleRangeManager();
+	}
+
+	static createMultiRangeManager(): MultiRangeManager {
+		return new MultiRangeManager();
+	}
+
+	static createFrontMatterManager(): FrontMatterRangeManager {
+		return new FrontMatterRangeManager();
+	}
+}
+
+/**
+ * Legacy EditorRangeUtils class for backward compatibility
+ * @deprecated Use specific range managers instead
+ */
+export class EditorRangeUtils {
+	private singleRangeManager: SingleRangeManager;
+	private multiRangeManager: MultiRangeManager;
+	private frontMatterManager: FrontMatterRangeManager;
+
+	constructor() {
+		this.singleRangeManager =
+			RangeManagerFactory.createSingleRangeManager();
+		this.multiRangeManager = RangeManagerFactory.createMultiRangeManager();
+		this.frontMatterManager =
+			RangeManagerFactory.createFrontMatterManager();
 	}
 
 	/**
@@ -42,36 +220,11 @@ export class EditorRangeUtils {
 		editor: Editor,
 		ranges: { from: number; to: number }[]
 	) {
-		const wholeRanges = ranges.map((r) => {
-			return (
-				this.calculateRangeForZooming.calculateRangeForZooming(
-					editor.cm.state,
-					r.from
-				) || {
-					from: r.from,
-					to: r.to,
-				}
-			);
-		});
-
-		this.keepRangeVisible.keepRangesVisible(editor.cm, wholeRanges);
-
-		for (const r of wholeRanges) {
-			const firstLine = editor.cm.state.doc.lineAt(r.from);
-			const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-
-			if (firstLineIndent) {
-				editor.cm.dispatch({
-					effects: zoomWithHideIndentEffect.of({
-						range: {
-							from: r.from,
-							to: r.to,
-						},
-						indent: firstLineIndent,
-					}),
-				});
-			}
-		}
+		const typedRanges: TypedRange[] = ranges.map((r) => ({
+			...r,
+			type: "block" as const,
+		}));
+		this.multiRangeManager.updateMultipleRanges(editor, typedRanges);
 	}
 
 	/**
@@ -82,65 +235,30 @@ export class EditorRangeUtils {
 		range: { from: number; to: number },
 		type: "part" | "block" | "heading"
 	) {
-		if (type === "part") {
-			editor.cm.dispatch({
-				effects: [
-					zoomInEffect.of({
-						from: range.from,
-						to: range.to,
-						type: "part",
-					}),
-				],
-			});
-			return;
-		}
-
-		const newRange = this.calculateRangeForZooming.calculateRangeForZooming(
-			editor.cm.state,
-			range.from
-		);
-
-		if (newRange) {
-			editor.cm.dispatch({
-				effects: [zoomInEffect.of(newRange)],
-			});
-
-			const firstLine = editor.cm.state.doc.lineAt(newRange.from);
-			const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-
-			if (firstLineIndent) {
-				editor.cm.dispatch({
-					effects: zoomWithHideIndentEffect.of({
-						range: {
-							from: newRange.from,
-							to: newRange.to,
-						},
-						indent: firstLineIndent,
-					}),
-				});
-			}
-		} else {
-			editor.cm.dispatch({
-				effects: [zoomInEffect.of(range)],
-			});
-		}
+		const typedRange: TypedRange = {
+			...range,
+			type,
+		};
+		this.singleRangeManager.updateVisibility(editor, typedRange);
 	}
 
 	/**
 	 * Updates the indent visibility for a range
 	 */
 	updateIndentVisible(editor: Editor, range: { from: number; to: number }) {
-		const firstLine = editor.cm.state.doc.lineAt(range.from);
-		const firstLineIndent = firstLine.text.match(/^\s*/)?.[0];
-
-		if (firstLineIndent) {
+		// Apply indent hiding directly using the single range manager's logic
+		const indent = this.singleRangeManager["getLineIndent"](
+			editor,
+			range.from
+		);
+		if (indent) {
 			editor.cm.dispatch({
 				effects: zoomWithHideIndentEffect.of({
 					range: {
 						from: range.from,
 						to: range.to,
 					},
-					indent: firstLineIndent,
+					indent,
 				}),
 			});
 		}
@@ -150,19 +268,7 @@ export class EditorRangeUtils {
 	 * Updates front matter visibility
 	 */
 	updateFrontMatterVisible(editor: Editor, app: App, file: any) {
-		const cache = app.metadataCache.getFileCache(file);
-		const frontMatter = cache?.frontmatterPosition;
-
-		if (frontMatter) {
-			editor.cm.dispatch({
-				effects: hideFrontMatterEffect.of({
-					range: {
-						from: frontMatter.start.offset,
-						to: frontMatter.end.offset,
-					},
-				}),
-			});
-		}
+		this.frontMatterManager.updateVisibility(editor, app, file);
 	}
 
 	/**
@@ -236,5 +342,52 @@ export class EditorRangeUtils {
 	}
 }
 
-// Export a singleton instance for convenience
+/**
+ * Modern range management utilities
+ */
+export class RangeUtils {
+	private static singleRangeManager =
+		RangeManagerFactory.createSingleRangeManager();
+	private static multiRangeManager =
+		RangeManagerFactory.createMultiRangeManager();
+	private static frontMatterManager =
+		RangeManagerFactory.createFrontMatterManager();
+
+	/**
+	 * Updates visibility for a single range
+	 */
+	static updateSingleRange(editor: Editor, range: TypedRange): void {
+		this.singleRangeManager.updateVisibility(editor, range);
+	}
+
+	/**
+	 * Updates visibility for multiple ranges
+	 */
+	static updateMultipleRanges(editor: Editor, ranges: TypedRange[]): void {
+		this.multiRangeManager.updateMultipleRanges(editor, ranges);
+	}
+
+	/**
+	 * Updates front matter visibility
+	 */
+	static updateFrontMatter(editor: Editor, app: App, file: any): void {
+		this.frontMatterManager.updateVisibility(editor, app, file);
+	}
+
+	/**
+	 * Creates a typed range from basic range data
+	 */
+	static createTypedRange(
+		from: number,
+		to: number,
+		type: "part" | "block" | "heading" | "whole" = "block"
+	): TypedRange {
+		return { from, to, type };
+	}
+}
+
+// Export a singleton instance for backward compatibility
 export const editorRangeUtils = new EditorRangeUtils();
+
+// Export the modern utilities as the preferred interface
+export { RangeUtils as rangeUtils };

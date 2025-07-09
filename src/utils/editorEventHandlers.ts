@@ -6,6 +6,8 @@ import { SelectionAnnotation } from "../cm/SelectionController";
 /**
  * Shared event handlers for editor operations
  * These functions handle common editor operations across different editor types
+ *
+ * @deprecated Use the new event handler system from editor-components/event-handlers
  */
 
 export interface EditorEventContext {

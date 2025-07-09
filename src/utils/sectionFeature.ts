@@ -8,17 +8,24 @@ export function initSectionFeature(plugin: OutlinerViewPlugin) {
 		setViewData: (next: any) => {
 			return function (data, clear) {
 				const result = next.call(this, data, clear);
-				if (plugin.settings.alwaysShowSectionHeader) {
-					const sections = getAllSectionsRangeAndName({
-						state: this.editor.cm.state,
-					});
-					plugin.sectionTabsNavigation.showSectionTabs(this.editor.cm, sections);
-				}
-				plugin.dragDropManager.initDragManager(this.editor.cm);
+
+				// Defer non-critical operations to avoid blocking the main process
+				setTimeout(() => {
+					if (plugin.settings.alwaysShowSectionHeader) {
+						const sections = getAllSectionsRangeAndName({
+							state: this.editor.cm.state,
+						});
+						plugin.sectionTabsNavigation.showSectionTabs(
+							this.editor.cm,
+							sections
+						);
+					}
+					plugin.dragDropManager.initDragManager(this.editor.cm);
+				}, 0);
 
 				return result;
 			};
-		}
+		},
 	});
 	plugin.register(markdownViewOnloadUninstaller);
 }

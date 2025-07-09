@@ -48,6 +48,13 @@ import {
 import { foldEffect } from "@codemirror/language";
 import { createBlockIdRender } from "../cm/RenderBlockID";
 import { disableToDeleteBlockID } from "../cm/TransFilter";
+import {
+	buildExtensions,
+	ExtensionConfig,
+	ensureDefaultExtensions,
+	EditorType as ExtensionEditorType,
+} from "./extensions";
+import { EditorTypeUtils } from "./EditorTypes";
 
 export function resolveEditorPrototype(app: App) {
 	// Create a temporary editor to resolve the prototype of ScrollableMarkdownEditor
@@ -349,15 +356,65 @@ export class EmbeddableMarkdownEditor
 	 * Note that other plugins will not be able to send updates to these extensions to change configurations
 	 */
 	buildLocalExtensions(): Extension[] {
-		const extensions = super.buildLocalExtensions();
-		// if (this.options.placeholder) extensions.push(placeholder(this.options.placeholder));
+		// Ensure default extensions are initialized
+		ensureDefaultExtensions();
 
-		/* Editor extension for handling specific user inputs */
-		// extensions.push(EditorView.domEventHandlers({
-		// 	paste: (event) => {
-		// 		this.options.onPaste(event, this);
-		// 	}
-		// }));
+		// Get base extensions from parent
+		const extensions = super.buildLocalExtensions();
+
+		// Create extension configuration
+		const extensionConfig: ExtensionConfig = this.createExtensionConfig();
+
+		// Build extensions using the extension manager
+		const managedExtensions = buildExtensions(extensionConfig);
+		extensions.push(...managedExtensions);
+
+		// Add legacy extensions that haven't been migrated yet
+		this.addLegacyExtensions(extensions);
+
+		return extensions;
+	}
+
+	/**
+	 * Creates extension configuration for the current editor
+	 */
+	private createExtensionConfig(): ExtensionConfig {
+		// Map legacy type to new type system
+		const editorType = this.mapLegacyType(this.options.type || "embed");
+
+		// Get default capabilities for the editor type
+		const capabilities = EditorTypeUtils.getDefaultCapabilities(editorType);
+
+		return {
+			type: editorType,
+			capabilities,
+			disableTimeFormat: this.options.disableTimeFormat,
+			readOnly: false, // This editor is always editable
+			customExtensions: [],
+		};
+	}
+
+	/**
+	 * Maps legacy editor type to new type system
+	 */
+	private mapLegacyType(legacyType: string): ExtensionEditorType {
+		switch (legacyType) {
+			case "embed":
+				return ExtensionEditorType.EMBEDDED;
+			case "outliner":
+				return ExtensionEditorType.OUTLINER;
+			case "task-group":
+				return ExtensionEditorType.TASK_GROUP;
+			default:
+				return ExtensionEditorType.EMBEDDED;
+		}
+	}
+
+	/**
+	 * Adds legacy extensions that haven't been migrated to the new system yet
+	 */
+	private addLegacyExtensions(extensions: Extension[]): void {
+		// Custom keymap for this editor instance
 		extensions.push(
 			Prec.highest(
 				keymap.of([
@@ -435,6 +492,7 @@ export class EmbeddableMarkdownEditor
 			)
 		);
 
+		// Core editor extensions
 		extensions.push([
 			this.readOnlyDepartment.of(EditorState.readOnly.of(false)),
 			blankBulletLineWidget,
@@ -443,6 +501,7 @@ export class EmbeddableMarkdownEditor
 			FoldingExtension,
 		]);
 
+		// Legacy type-specific extensions (to be migrated)
 		if (!this.options.disableTimeFormat) {
 			extensions.push([createDateRendererPlugin()]);
 		}
@@ -462,8 +521,6 @@ export class EmbeddableMarkdownEditor
 				disableToDeleteBlockID(),
 			]);
 		}
-
-		return extensions;
 	}
 
 	/**
