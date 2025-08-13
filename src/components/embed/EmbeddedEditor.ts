@@ -184,6 +184,7 @@ export class EmbeddedEditor extends Component {
 			.withPlugin(this.plugin)
 			.disableTimeFormat(!this.plugin.settings.timeFormatWidget)
 			.readOnly(isReadOnly || false)
+			.withBehavior({ autoSave: false })
 			.withEventHandlers({
 				onSave: (file, data) => this.requestSave(file, data),
 			});

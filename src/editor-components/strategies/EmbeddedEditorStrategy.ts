@@ -23,7 +23,7 @@ export class EmbeddedEditorStrategy extends EditorStrategy {
 	 */
 	validateConfig(config: BaseEditorConfig): void {
 		this.validateCommonConfig(config);
-		
+
 		if (!config.file) {
 			throw new Error("File is required for embedded editor");
 		}
@@ -45,7 +45,7 @@ export class EmbeddedEditorStrategy extends EditorStrategy {
 	 */
 	applyConfigTransformations(config: BaseEditorConfig): BaseEditorConfig {
 		const result = this.applyPluginSettings(config);
-		
+
 		// Embedded editors should not fold by default
 		if (result.foldByDefault === undefined) {
 			result.foldByDefault = false;
@@ -221,7 +221,8 @@ export class EmbeddedEditorStrategy extends EditorStrategy {
 					if (!update.docChanged) return;
 
 					const file = app.vault.getFileByPath(path);
-					if (file && config.onSave) {
+					const shouldAutoSave = config?.behavior?.autoSave ?? true;
+					if (file && config.onSave && shouldAutoSave) {
 						config.onSave(file, update.state.doc.toString());
 					}
 				}

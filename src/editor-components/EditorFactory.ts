@@ -436,7 +436,8 @@ export class EditorFactory {
 					if (!update.docChanged) return;
 
 					const file = app.vault.getFileByPath(path);
-					if (file && options.onSave) {
+					const shouldAutoSave = options?.behavior?.autoSave ?? true;
+					if (file && options.onSave && shouldAutoSave) {
 						options.onSave(file, update.state.doc.toString());
 					}
 				}

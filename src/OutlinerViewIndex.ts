@@ -410,36 +410,52 @@ export default class OutlinerViewPlugin extends Plugin {
 			) {
 				return false;
 			}
-			return new EmbeddedRender(e, t, n);
+			// Use EmbeddedEditor instead of EmbeddedRender to avoid loadFile issues
+			return new EmbeddedEditor(
+				this,
+				{
+					...e,
+					sourcePath: t.path,
+				},
+				t,
+				n
+			);
 		};
 
 		this.register(
 			around(mdFunction, {
 				md: (next) => {
 					return function (e: any, t: any, n: any) {
-						if (e && e.displayMode === false && e.showInline) {
+						// Check if this container already has an embedded editor to avoid duplicates
+						if (e && e.containerEl && e.containerEl.hasClass("has-embedded-editor")) {
+							return next.apply(this, [e, t, n]);
+						}
+
+						if (e && e.showInline) {
 							console.log(this);
 							if (t.path.contains(".excalidraw.md"))
 								return next.apply(this, [e, t, n]);
-							const newResult = newMdFunction(e, t, n);
-							if (newResult) {
-								return newResult;
-							} else {
+							
+							// Only process if alt attribute matches our pattern
+							if (!e.containerEl.getAttribute("alt") || 
+								!/o-(.*)?/g.test(e.containerEl.getAttribute("alt"))) {
 								return next.apply(this, [e, t, n]);
 							}
-						} else if (
-							e &&
-							e.displayMode === undefined &&
-							e.showInline
-						) {
-							console.log(this);
-							if (t.path.contains(".excalidraw.md"))
-								return next.apply(this, [e, t, n]);
-							const newResult = renderReadingMode(e, t, n);
-							if (newResult) {
-								return newResult;
-							} else {
-								return next.apply(this, [e, t, n]);
+
+							// Mark container to prevent duplicate processing
+							e.containerEl.addClass("has-embedded-editor");
+
+							// Use appropriate function based on display mode
+							if (e.displayMode === false) {
+								const newResult = newMdFunction(e, t, n);
+								if (newResult) {
+									return newResult;
+								}
+							} else if (e.displayMode === undefined) {
+								const newResult = renderReadingMode(e, t, n);
+								if (newResult) {
+									return newResult;
+								}
 							}
 						}
 
@@ -710,7 +726,7 @@ export default class OutlinerViewPlugin extends Plugin {
 						if (this.embeddedEditor) {
 							const firstChild = this.embeddedEditor;
 							if (firstChild) {
-								(firstChild as EmbeddedEditor).updateRange(
+								(firstChild as EmbeddedEditor).updateEditorRange(
 									this.currentRange || {
 										from: this.start,
 										to: this.end,
@@ -784,14 +800,23 @@ export default class OutlinerViewPlugin extends Plugin {
 			const componentUninstaller = around(parent.constructor.prototype, {
 				renderContentMatches: (old) => {
 					return function () {
-						const children = this.vChildren._children;
-						for (let i = 0; i < children.length; i++) {
-							const child = children[i];
+						// Capture current children before re-render
+						const oldChildren = Array.from(this?.vChildren?._children || []) as any[];
+						const result = old.call(this);
+						// After render, check which children remain
+						const newChildren = Array.from(this?.vChildren?._children || []) as any[];
+						for (let i = 0; i < oldChildren.length; i++) {
+							const child: any = oldChildren[i];
 							if (child?.embeddedEditor) {
-								child.embeddedEditor.unload();
+								const stillPresent = newChildren.includes(child);
+								const isFocused = !!child.embeddedEditor?.containerEl?.contains?.(document.activeElement as Node);
+								// Only unload editors for children that were removed and are not being actively edited
+								if (!stillPresent && !isFocused) {
+									child.embeddedEditor.unload();
+								}
 							}
 						}
-						return old.call(this);
+						return result;
 					};
 				},
 			});
