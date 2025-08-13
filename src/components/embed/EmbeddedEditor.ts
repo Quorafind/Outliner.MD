@@ -139,6 +139,15 @@ export class EmbeddedEditor extends Component {
 		super.onunload();
 	}
 
+	// Compatibility with embed registry expectations
+	// Obsidian's embed loader calls child.loadFile() after constructing
+	// We map that to this.load() and optionally update file/subpath
+	loadFile(file?: TFile, subpath?: string) {
+		if (file) this.file = file;
+		if (typeof subpath === "string") this.subpath = subpath;
+		this.load();
+	}
+
 	debounceHover = debounce(
 		(extraButton: ExtraButtonComponent, e: MouseEvent) => {
 			if (!this.file) return;
@@ -173,7 +182,7 @@ export class EmbeddedEditor extends Component {
 		// Check if readonly mode is requested
 		const title = this.containerEl.getAttr("alt");
 		const isReadOnly =
-			title && (title === "readonly" || title.contains("readonly"));
+			title && (title === "readonly" || title.includes("readonly"));
 
 		// Use EditorBuilder for cleaner, more flexible configuration
 		const builder = EditorBuilder.embedded()
@@ -203,6 +212,11 @@ export class EmbeddedEditor extends Component {
 		this.editor = result.editor;
 		this.updateRange = result.updateRange;
 
+		// Mark embed container for part/block/heading styling
+		if (targetRange.type !== "whole") {
+			this.containerEl.toggleClass("embedded-part", true);
+		}
+
 		// Store metadata if available
 		if (result.metadata) {
 			// Could store metadata for debugging/monitoring purposes
@@ -226,7 +240,7 @@ export class EmbeddedEditor extends Component {
 
 		// Check for readonly flag
 		const title = this.containerEl.getAttr("alt");
-		if (title && (title === "readonly" || title.contains("readonly"))) {
+		if (title && (title === "readonly" || title.includes("readonly"))) {
 			this.addReadonlyButton();
 		}
 	}

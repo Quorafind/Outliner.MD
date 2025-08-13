@@ -2,6 +2,7 @@ import { Editor } from "obsidian";
 import { getIndent } from "./utils";
 import { SelectionAnnotation } from "../cm/SelectionController";
 import { foldable } from "@codemirror/language";
+import { EditorSelection } from "@codemirror/state";
 
 export const handleShiftEnter = (editor: Editor, line: number, lineText: string): boolean => {
 	const charOffset = editor.posToOffset({line, ch: 0});
@@ -59,8 +60,8 @@ const navigateToPreviousListItem = (editor: Editor, startLine: number): boolean 
 		if (isListItem(lineText.trim())) {
 			const currentLine = editor.cm.state.doc.line(i);
 			editor.cm.dispatch({
-				selection: {head: currentLine.to, anchor: currentLine.to},
-				annotations: SelectionAnnotation.of('arrow.up.selection'),
+				selection: EditorSelection.cursor(currentLine.to),
+				annotations: [SelectionAnnotation.of('arrow.up.selection')],
 			});
 			return true;
 		}
@@ -79,8 +80,8 @@ const navigateToNextNonListItem = (editor: Editor, startLine: number): boolean =
 		} else if (foundValidLine) {
 			const currentLine = editor.cm.state.doc.line(i - 1);
 			editor.cm.dispatch({
-				selection: {head: currentLine.to, anchor: currentLine.to},
-				annotations: SelectionAnnotation.of('arrow.up.selection'),
+				selection: EditorSelection.cursor(currentLine.to),
+				annotations: [SelectionAnnotation.of('arrow.up.selection')],
 			});
 			return true;
 		}

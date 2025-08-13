@@ -15,8 +15,8 @@
 	"author": "",
 	"devDependencies": {
 		"@codemirror/language": "https://github.com/lishid/cm-language",
-		"@codemirror/state": "^6.4.1",
-		"@codemirror/view": "^6.37.2",
+		"@codemirror/state": "^6.5.2",
+		"@codemirror/view": "^6.38.1",
 		"@rollup/plugin-node-resolve": "^15.2.3",
 		"@rollup/plugin-replace": "^5.0.5",
 		"@rollup/plugin-terser": "^0.4.4",

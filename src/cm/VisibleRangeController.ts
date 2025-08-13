@@ -101,7 +101,8 @@ export const zoomStateField = StateField.define<DecorationSet>({
 				// 	})
 				// }
 
-				if (e.value.type === "part" && e.value.container) {
+				// Show edit button for any non-whole embedded range when we know the container
+				if (e.value.container && e.value.type !== "whole") {
 					value = value.update({
 						add: [
 							Decoration.widget({

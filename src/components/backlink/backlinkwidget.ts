@@ -6,6 +6,7 @@ import {
 	WidgetType,
 } from "@codemirror/view";
 import { App, editorInfoField, type MarkdownFileInfo } from "obsidian";
+import { TaskGroupEditor } from "../task-group/TaskGroupEditor";
 
 export const TaskGroupComponent = StateField.define<DecorationSet>({
 	create() {

@@ -11,6 +11,7 @@ import {
 	handleShiftEnter,
 } from "../../utils/editorEventHandlers";
 import { EditorState } from "@codemirror/state";
+import { zoomInEffect } from "../../cm/VisibleRangeController";
 
 /**
  * Strategy for creating embedded editors
@@ -258,6 +259,20 @@ export class EmbeddedEditorStrategy extends EditorStrategy {
 			{ from: range.from, to: range.to },
 			range.type as "part" | "block" | "heading"
 		);
+
+		// Ensure edit button widget is available for partial ranges
+		if (range.type === "part") {
+			embedEditor.editor.cm.dispatch({
+				effects: [
+					zoomInEffect.of({
+						from: range.from,
+						to: range.to,
+						type: "part",
+						container: containerEl,
+					}),
+				],
+			});
+		}
 
 		// Apply read-only mode if specified
 		if (readOnly) {

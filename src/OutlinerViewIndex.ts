@@ -404,12 +404,7 @@ export default class OutlinerViewPlugin extends Plugin {
 				return false;
 			}
 
-			if (
-				!e.containerEl.getAttribute("alt") ||
-				!/o-(.*)?/g.test(e.containerEl.getAttribute("alt"))
-			) {
-				return false;
-			}
+			// Allow embedded editor in reading mode without requiring special alt attribute
 			// Use EmbeddedEditor instead of EmbeddedRender to avoid loadFile issues
 			return new EmbeddedEditor(
 				this,
@@ -433,14 +428,10 @@ export default class OutlinerViewPlugin extends Plugin {
 
 						if (e && e.showInline) {
 							console.log(this);
-							if (t.path.contains(".excalidraw.md"))
+							if (t.path.includes(".excalidraw.md"))
 								return next.apply(this, [e, t, n]);
 							
-							// Only process if alt attribute matches our pattern
-							if (!e.containerEl.getAttribute("alt") || 
-								!/o-(.*)?/g.test(e.containerEl.getAttribute("alt"))) {
-								return next.apply(this, [e, t, n]);
-							}
+							// Proceed without requiring special alt attribute
 
 							// Mark container to prevent duplicate processing
 							e.containerEl.addClass("has-embedded-editor");
