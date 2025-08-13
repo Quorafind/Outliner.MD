@@ -1,3 +1,21 @@
+# 0.1.13
+
+## Fix
+
+- fix: improve embedded editor lifecycle management
+  - Prevent duplicate embedded editor creation by checking container state
+  - Add autoSave behavior control to prevent unwanted saves
+  - Improve editor unload logic to preserve active editing sessions
+  - Fix editor range update method naming consistency
+- fix: resolve build errors and improve embedded editor handling
+  - Update CodeMirror dependencies to resolve version conflicts
+  - Add missing TaskGroupEditor import in backlinkwidget
+  - Fix EditorSelection dispatch calls with proper cursor API
+  - Improve embedded editor lifecycle and duplicate prevention
+  - Add loadFile compatibility method for Obsidian embed registry
+  - Simplify fold handler implementation
+  - Remove alt attribute requirement for embedded editors
+
 # 0.1.12
 
 Platform: Desktop
