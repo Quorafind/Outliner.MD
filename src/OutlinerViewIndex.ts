@@ -662,54 +662,41 @@ export default class OutlinerViewPlugin extends Plugin {
 							);
 						this.isBacklink = !!containerEl;
 						if (this.isBacklink) {
-							if (!this.embeddedEditor) {
-								if (this.btnEl || this.editBtn) return;
-								this.btnEl = this.el.createEl(
-									"div",
-									{ cls: "create-embedded-editor-btn" },
-									(el) => {
-										this.editBtn = new ExtraButtonComponent(
-											el
-										)
-											.setIcon("pencil")
-											.setTooltip("Edit this block");
-
-										el.onclick = (e) => {
-											e.preventDefault();
-											e.stopPropagation();
-											el.detach();
-											plugin.taskQueue.enqueue(() => {
-												if (!this.embeddedEditor) {
-													this.embeddedEditor =
-														new EmbeddedEditor(
-															plugin,
-															{
-																sourcePath:
-																	this
-																		.parentDom
-																		.file
-																		.path,
-																app: this
-																	.parentDom
-																	.app,
-																containerEl:
-																	this.el,
-															},
-															this.parentDom.file,
-															"",
-															{
-																from: this
-																	.start,
-																to: this.end,
-															},
-															this.content
-														);
-													this.embeddedEditor.load();
-												}
-											});
-										};
+							// 初始化点击状态管理属性
+							if (!this._clickState) {
+								this._clickState = 'idle'; // 'idle', 'focused', 'editing'
+								this._lastClickTime = 0;
+								this._focused = false;
+								
+								// 添加状态重置方法
+								this._setupBlurListener = () => {
+									if (this._blurListener) return; // 避免重复绑定
+									
+									this._blurListener = (event: MouseEvent) => {
+										// 检查点击是否在当前元素外部
+										if (!this.el.contains(event.target as Node)) {
+											this._resetClickState();
+										}
+									};
+									
+									// 延迟绑定，避免立即触发
+									setTimeout(() => {
+										document.addEventListener('click', this._blurListener, true);
+									}, 0);
+								};
+								
+								this._resetClickState = () => {
+									this._clickState = 'idle';
+									this._focused = false;
+									this._lastClickTime = 0;
+									this.el.classList.remove('search-result-focused');
+									
+									// 移除监听器
+									if (this._blurListener) {
+										document.removeEventListener('click', this._blurListener, true);
+										this._blurListener = null;
 									}
-								);
+								};
 							}
 							return result;
 						}
@@ -754,12 +741,89 @@ export default class OutlinerViewPlugin extends Plugin {
 				},
 				onResultClick: (old) => {
 					return function (e: any) {
+						// 如果已有嵌入编辑器且不是点击反向链接按钮，不处理
 						if (
 							this.embeddedEditor &&
 							!e.target.closest(".backlink-btn")
 						) {
 							return;
 						}
+
+						// 只有在反向链接中才处理新的点击逻辑
+						if (this.isBacklink && !e.target.closest(".backlink-btn")) {
+							const currentTime = Date.now();
+							const timeSinceLastClick = currentTime - this._lastClickTime;
+
+							// 检测快速双击（< 300ms），完全跳过自定义处理
+							if (timeSinceLastClick > 0 && timeSinceLastClick < 300) {
+								this._lastClickTime = currentTime;
+								return old.call(this, e); // 允许默认双击行为
+							}
+
+							// 处理单击逻辑
+							if (this._clickState === 'idle') {
+								// 第一次点击：聚焦
+								e.preventDefault();
+								e.stopPropagation();
+								
+								this._clickState = 'focused';
+								this._focused = true;
+								this._lastClickTime = currentTime;
+								
+								// 添加聚焦视觉反馈
+								this.el.classList.add('search-result-focused');
+								
+								// 设置状态重置监听器
+								this._setupBlurListener();
+								
+								return;
+							} else if (this._clickState === 'focused') {
+								// 第二次点击：检查时间间隔
+								if (timeSinceLastClick >= 300) {
+									// 不是快速双击，进入编辑模式
+									e.preventDefault();
+									e.stopPropagation();
+									
+									this._clickState = 'editing';
+									this._lastClickTime = currentTime;
+									
+									// 移除聚焦样式，准备显示编辑器
+									this.el.classList.remove('search-result-focused');
+									
+									// 创建嵌入编辑器
+									plugin.taskQueue.enqueue(() => {
+										if (!this.embeddedEditor) {
+											this.embeddedEditor = new EmbeddedEditor(
+												plugin,
+												{
+													sourcePath: this.parentDom.file.path,
+													app: this.parentDom.app,
+													containerEl: this.el,
+												},
+												this.parentDom.file,
+												"",
+												{
+													from: this.start,
+													to: this.end,
+												},
+												this.content
+											);
+											this.embeddedEditor.load();
+											// 延迟添加动画类名，等待编辑器渲染完成
+											setTimeout(() => {
+												const editorEl = this.el.querySelector('.markdown-source-view');
+												if (editorEl) {
+													editorEl.classList.add('editor-loaded');
+												}
+											}, 100);
+										}
+									});
+									
+									return;
+								}
+							}
+						}
+
 						return old.call(this, e);
 					};
 				},
@@ -804,6 +868,18 @@ export default class OutlinerViewPlugin extends Plugin {
 								// Only unload editors for children that were removed and are not being actively edited
 								if (!stillPresent && !isFocused) {
 									child.embeddedEditor.unload();
+								}
+							}
+							
+							// 清理不再存在的子元素的事件监听器
+							if (child && !newChildren.includes(child)) {
+								if (child._blurListener) {
+									document.removeEventListener('click', child._blurListener, true);
+									child._blurListener = null;
+								}
+								// 重置状态
+								if (child._resetClickState) {
+									child._resetClickState();
 								}
 							}
 						}

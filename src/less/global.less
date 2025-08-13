@@ -31,8 +31,8 @@ settings:
 */
 
 .theme-dark
-	.workspace-leaf-content[data-type="outliner-editor-view"]
-	.view-content {
+.workspace-leaf-content[data-type="outliner-editor-view"]
+.view-content {
 	--outliner-text-color: rgb(255, 255, 255);
 	--outliner-button-color: var(--color-base-50);
 
@@ -59,27 +59,27 @@ settings:
 }
 
 body.is-mobile
-	.workspace-leaf-content[data-type="outliner-editor-view"]
-	.view-content {
+.workspace-leaf-content[data-type="outliner-editor-view"]
+.view-content {
 	--file-line-width: unset;
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
+.markdown-source-view.mod-cm6
+.cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
 	color: var(--outliner-text-color);
 }
 
 body.outliner-paper-layout
-	.outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
+.outliner-editor
+.markdown-source-view.mod-cm6
+.cm-line.HyperMD-list-line:not(.HyperMD-list-line-nobullet) {
 	font-weight: bold;
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet {
+.markdown-source-view.mod-cm6
+.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet {
 	color: var(--color-faint);
 	font-weight: var(--font-light);
 }
@@ -110,10 +110,14 @@ body.outliner-paper-layout
 }
 
 .search-result-file-match
-	.markdown-source-view.mod-cm6
-	.cm-content.embed-editor {
+.markdown-source-view.mod-cm6
+.cm-content.embed-editor {
 	padding-bottom: 0 !important;
 	padding-inline-start: var(--size-2-2);
+}
+
+.search-result span.cm-edit-button-container {
+	display: none;
 }
 
 .outliner-editor .cm-placeholder:before {
@@ -166,15 +170,15 @@ body.outliner-paper-layout
 }
 
 .cm-task-group
-	.markdown-source-view.mod-cm6
-	.cm-sizer:has(.cm-content.embed-editor) {
+.markdown-source-view.mod-cm6
+.cm-sizer:has(.cm-content.embed-editor) {
 	min-width: auto;
 }
 
 body:not(.is-mobile).outliner-paper-layout
-	.outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-sizer:has(.inline-title) {
+.outliner-editor
+.markdown-source-view.mod-cm6
+.cm-sizer:has(.inline-title) {
 	margin-top: 48px;
 	background-color: var(--background-primary);
 	box-shadow: var(--shadow-s);
@@ -183,16 +187,16 @@ body:not(.is-mobile).outliner-paper-layout
 }
 
 body:not(.is-mobile).outliner-paper-layout
-	.outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-sizer:has(.inline-title) {
+.outliner-editor
+.markdown-source-view.mod-cm6
+.cm-sizer:has(.inline-title) {
 	padding-left: var(--size-4-8);
 	padding-right: var(--size-4-8);
 }
 
 body:not(.is-mobile).outliner-paper-layout
-	.workspace-leaf-content[data-type="outliner-editor-view"]
-	.view-content {
+.workspace-leaf-content[data-type="outliner-editor-view"]
+.view-content {
 	background-color: var(--outliner-paper-background);
 }
 
@@ -218,9 +222,9 @@ span.cm-task-group-margin {
 }
 
 .cm-task-group
-	.cm-task-group-header
-	.cm-group-collapse-button:not(.cm-task-container-collapsed)
-	svg {
+.cm-task-group-header
+.cm-group-collapse-button:not(.cm-task-container-collapsed)
+svg {
 	transform: rotate(90deg);
 
 	transition: all 100ms;
@@ -258,9 +262,9 @@ span.cm-group-collapse-button {
 }
 
 .markdown-source-view.mod-cm6
-	.cm-line:hover
-	> .cm-drag-handler-container
-	.clickable-icon,
+.cm-line:hover
+> .cm-drag-handler-container
+.clickable-icon,
 .cm-line:hover .cm-bullet-menu-marker .clickable-icon {
 	opacity: 1;
 }
@@ -270,9 +274,9 @@ span.cm-group-collapse-button {
 /*}*/
 
 .markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line:has(.cm-fold-indicator)
-	span.cm-bullet-menu-marker
-	.clickable-icon {
+.cm-line.HyperMD-list-line:has(.cm-fold-indicator)
+span.cm-bullet-menu-marker
+.clickable-icon {
 	margin-inline-end: 18px;
 }
 
@@ -285,10 +289,10 @@ span.cm-group-collapse-button {
 }
 
 .outliner-editor
-	.cm-task-group
-	.markdown-source-view.mod-cm6
-	.cm-editor
-	.cm-gutters {
+.cm-task-group
+.markdown-source-view.mod-cm6
+.cm-editor
+.cm-gutters {
 	display: none;
 }
 
@@ -304,8 +308,8 @@ span.cm-group-collapse-button {
 }
 
 .outliner-editor
-	.cm-task-group:has(.markdown-source-view)
-	.cm-task-group-title {
+.cm-task-group:has(.markdown-source-view)
+.cm-task-group-title {
 	/*margin-bottom: var(--size-4-2);*/
 }
 
@@ -317,8 +321,8 @@ span.cm-group-collapse-button {
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-task-group-container:has(.cm-task-group-result-empty) {
+.markdown-source-view.mod-cm6
+.cm-task-group-container:has(.cm-task-group-result-empty) {
 	display: none;
 }
 
@@ -341,29 +345,29 @@ span.cm-group-collapse-button {
 }
 
 div[data-type="outliner-editor-view"]
-	.view-header
-	:is(.view-header-left, .view-header-title-container) {
+.view-header
+:is(.view-header-left, .view-header-title-container) {
 	visibility: hidden;
 }
 
 div[data-type="outliner-editor-view"]
-	.view-header:hover
-	:is(.view-header-left, .view-header-title-container) {
+.view-header:hover
+:is(.view-header-left, .view-header-title-container) {
 	visibility: visible;
 }
 
 .outliner-editor
-	.cm-task-group:has(.markdown-source-view)
-	.cm-task-group-title {
+.cm-task-group:has(.markdown-source-view)
+.cm-task-group-title {
 	/* margin-bottom: var(--size-4-2); */
 	display: flex;
 	justify-content: space-between;
 }
 
 .outliner-editor
-	.cm-task-group:has(.markdown-source-view)
-	.cm-task-group-title
-	.cm-task-group-result {
+.cm-task-group:has(.markdown-source-view)
+.cm-task-group-title
+.cm-task-group-result {
 	color: var(--text-faint);
 }
 
@@ -372,20 +376,20 @@ div[data-type="outliner-editor-view"]
 }
 
 .outliner-editor
-	.HyperMD-list-line:has(.cm-blank-bullet-line)
-	.cm-formatting-list {
+.HyperMD-list-line:has(.cm-blank-bullet-line)
+.cm-formatting-list {
 	visibility: hidden;
 }
 
 .outliner-editor
-	.HyperMD-list-line:has(.cm-blank-bullet-line).cm-active
-	.cm-formatting-list {
+.HyperMD-list-line:has(.cm-blank-bullet-line).cm-active
+.cm-formatting-list {
 	visibility: visible;
 }
 
 .outliner-editor
-	.HyperMD-list-line:has(.cm-blank-bullet-line):hover
-	.cm-formatting-list {
+.HyperMD-list-line:has(.cm-blank-bullet-line):hover
+.cm-formatting-list {
 	visibility: visible;
 }
 
@@ -418,12 +422,10 @@ span.cm-task-group-title {
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet
-	.collapse-indicator.collapse-icon {
-	transform: translateX(
-		calc(var(--direction) * var(--list-bullet-end-padding) * 0.8)
-	);
+.markdown-source-view.mod-cm6
+.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet
+.collapse-indicator.collapse-icon {
+	transform: translateX(calc(var(--direction) * var(--list-bullet-end-padding) * 0.8));
 	padding-inline-end: var(--list-bullet-end-padding);
 }
 
@@ -432,52 +434,52 @@ span.cm-task-group-title {
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet
-	.collapse-indicator.collapse-icon {
+.markdown-source-view.mod-cm6
+.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet
+.collapse-indicator.collapse-icon {
 	opacity: 0;
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet:hover
-	.collapse-indicator.collapse-icon {
+.markdown-source-view.mod-cm6
+.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet:hover
+.collapse-indicator.collapse-icon {
 	opacity: 1;
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet
-	.collapse-indicator.collapse-icon:hover {
+.markdown-source-view.mod-cm6
+.cm-line.HyperMD-list-line.HyperMD-list-line-nobullet
+.collapse-indicator.collapse-icon:hover {
 	opacity: 1;
 }
 
 .outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.lc-list-callout.HyperMD-list-line {
+.markdown-source-view.mod-cm6
+.cm-line.lc-list-callout.HyperMD-list-line {
 	padding-right: 0.4em;
 }
 
 .internal-embed
-	.markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event
-	.cm-editor {
+.markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event
+.cm-editor {
 	height: 100%;
 	/* min-height: 100%; */
 	min-height: fit-content;
 }
 
 .search-result-file-match.embedded-part
-	.markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event
-	.cm-editor {
+.markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event
+.cm-editor {
 	height: 100%;
 	/* min-height: 100%; */
 	min-height: fit-content;
 }
 
 .internal-embed
-	.markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event
-	.cm-editor
-	.cm-content {
+.markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event
+.cm-editor
+.cm-content {
 	padding-bottom: 0 !important;
 	padding-inline-start: var(--size-4-8);
 }
@@ -498,23 +500,23 @@ span.cm-task-group-title {
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part
-	.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)
-	.cm-content
-	:is(.cm-line:not(:has(+ .cm-line))),
+.internal-embed.is-loaded.embedded-part
+.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)
+.cm-content
+:is(.cm-line:not(:has(+ .cm-line))),
 .cm-line
-	.internal-embed.is-loaded.embedded-part
-	.markdown-source-view.mod-cm6
-	.cm-content
-	[contenteditable="false"]
-	+ .cm-line {
+.internal-embed.is-loaded.embedded-part
+.markdown-source-view.mod-cm6
+.cm-content
+[contenteditable="false"]
++ .cm-line {
 	display: inline !important;
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part
-	.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)
-	:is(
+.internal-embed.is-loaded.embedded-part
+.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)
+:is(
 		.cm-editor,
 		.cm-scroller,
 		.cm-sizer,
@@ -526,13 +528,13 @@ span.cm-task-group-title {
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part
-	.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) {
+.internal-embed.is-loaded.embedded-part
+.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line) {
 	display: inline !important;
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part:has(
+.internal-embed.is-loaded.embedded-part:has(
 		.markdown-source-view.mod-cm6:has(.cm-line ~ .cm-line)
 	) {
 	display: inline !important;
@@ -540,17 +542,17 @@ span.cm-task-group-title {
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part
-	.markdown-source-view.mod-cm6
-	.cm-content:not(:has(.cm-line ~ .cm-line))
-	.cm-line {
+.internal-embed.is-loaded.embedded-part
+.markdown-source-view.mod-cm6
+.cm-content:not(:has(.cm-line ~ .cm-line))
+.cm-line {
 	display: inline !important;
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part
-	.markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line))
-	:is(
+.internal-embed.is-loaded.embedded-part
+.markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line))
+:is(
 		.cm-editor,
 		.cm-scroller,
 		.cm-sizer,
@@ -562,13 +564,13 @@ span.cm-task-group-title {
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part
-	.markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line)) {
+.internal-embed.is-loaded.embedded-part
+.markdown-source-view.mod-cm6:not(:has(.cm-line ~ .cm-line)) {
 	display: inline !important;
 }
 
 .cm-line
-	.internal-embed.is-loaded.embedded-part:has(
+.internal-embed.is-loaded.embedded-part:has(
 		.markdown-source-view.mod-cm6
 	):not(:has(.cm-line ~ .cm-line)) {
 	display: inline !important;
@@ -621,30 +623,30 @@ span.cm-task-group-title {
 }
 
 body:not(.outliner-plugin-dragging)
-	.outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.outliner-plugin-dropping-line,
+.outliner-editor
+.markdown-source-view.mod-cm6
+.cm-line.outliner-plugin-dropping-line,
 body:not(.outliner-plugin-dragging)
-	.internal-embed
-	.markdown-source-view.mod-cm6
-	.cm-line.outliner-plugin-dropping-line {
+.internal-embed
+.markdown-source-view.mod-cm6
+.cm-line.outliner-plugin-dropping-line {
 	background-color: unset;
 }
 
 body:not(.outliner-plugin-dragging)
-	.outliner-editor
-	.markdown-source-view.mod-cm6
-	.cm-line.outliner-plugin-dragging-line,
+.outliner-editor
+.markdown-source-view.mod-cm6
+.cm-line.outliner-plugin-dragging-line,
 body:not(.outliner-plugin-dragging)
-	.internal-embed
-	.markdown-source-view.mod-cm6
-	.cm-line.outliner-plugin-dragging-line {
+.internal-embed
+.markdown-source-view.mod-cm6
+.cm-line.outliner-plugin-dragging-line {
 	background-color: unset;
 }
 
 .internal-embed.embedded-part
-	.markdown-source-view.mod-cm6
-	.cm-edit-button-container {
+.markdown-source-view.mod-cm6
+.cm-edit-button-container {
 	text-decoration: unset;
 	display: inline-flex;
 	align-items: center;
@@ -652,15 +654,15 @@ body:not(.outliner-plugin-dragging)
 }
 
 .internal-embed.embedded-part
-	.markdown-source-view.mod-cm6
-	.cm-edit-button-container:hover {
+.markdown-source-view.mod-cm6
+.cm-edit-button-container:hover {
 	color: var(--color-accent);
 }
 
 .internal-embed.embedded-part
-	.markdown-source-view.mod-cm6
-	.cm-edit-button-container
-	+ br {
+.markdown-source-view.mod-cm6
+.cm-edit-button-container
++ br {
 	display: none;
 }
 
@@ -697,8 +699,8 @@ body:not(.outliner-plugin-dragging)
 }
 
 .outliner-view-setting-container
-	.setting-item:has(.checkbox-container):not(.show-reload-button)
-	button {
+.setting-item:has(.checkbox-container):not(.show-reload-button)
+button {
 	display: none;
 }
 
@@ -722,6 +724,40 @@ body:not(.outliner-plugin-dragging)
 	top: 0;
 }
 
+.search-result-focused {
+	background-color: var(--background-modifier-hover);
+	border-radius: var(--radius-s);
+	outline: 2px solid var(--color-accent);
+	outline-offset: -2px;
+	transition: all 200ms ease-in-out;
+}
+
+/* 搜索结果内嵌编辑器过渡动画 */
+.search-result-file-match.embedded-part .markdown-source-view {
+	opacity: 0;
+	transform: translateY(-4px);
+	transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+.search-result-file-match.embedded-part .markdown-source-view.editor-loaded {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+/* 反向链接区域的嵌入编辑器过渡 */
+.internal-query .search-result-file-match.embedded-part .markdown-source-view,
+.mod-global-search .search-result-file-match.embedded-part .markdown-source-view {
+	opacity: 0;
+	transform: scale(0.98) translateY(-2px);
+	transition: opacity 250ms ease-out, transform 250ms ease-out;
+}
+
+.internal-query .search-result-file-match.embedded-part .markdown-source-view.editor-loaded,
+.mod-global-search .search-result-file-match.embedded-part .markdown-source-view.editor-loaded {
+	opacity: 1;
+	transform: scale(1) translateY(0);
+}
+
 //
 //.internal-embed.readonly .cm-cursorLayer {
 //	display: none;
@@ -738,30 +774,19 @@ body:not(.outliner-plugin-dragging)
 	text-align: var(--omd-section-line-text-align);
 }
 
-.create-embedded-editor-btn {
-	display: inline-block;
-	--icon-size: var(--size-4-4);
-	/* padding: 0; */
-	margin-left: var(--size-4-2);
-
-	.clickable-icon {
-		padding: var(--size-2-1);
-		margin-bottom: -2px;
-	}
-}
 
 .markdown-source-view.mod-cm6
-	.cm-line:has(.cm-line > .cm-bullet-menu-marker):has(
+.cm-line:has(.cm-line > .cm-bullet-menu-marker):has(
 		.cm-line > .cm-fold-indicator
 	)
-	span.cm-drag-handler-container
-	.clickable-icon {
+span.cm-drag-handler-container
+.clickable-icon {
 	inset-inline-end: 46px;
 }
 
 .markdown-source-view.mod-cm6
-	.cm-line:has(.cm-line > .cm-bullet-menu-marker)
-	span.cm-drag-handler-container
-	.clickable-icon {
+.cm-line:has(.cm-line > .cm-bullet-menu-marker)
+span.cm-drag-handler-container
+.clickable-icon {
 	inset-inline-end: 28px;
 }

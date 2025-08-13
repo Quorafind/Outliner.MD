@@ -44,6 +44,10 @@ export class DragDropManager extends Component {
 
 	private focusLine: number | null = null;
 
+		private dropAsChild: boolean = false;
+		private static readonly INDENT_STEP_PX: number = 24;
+
+
 	constructor(plugin: OutlinerViewPlugin) {
 		super();
 		this.plugin = plugin;
@@ -155,13 +159,19 @@ export class DragDropManager extends Component {
 		const line = this.currentEditorView!.state.doc.lineAt(pos);
 		const lineStart = line.from;
 
+		// 决定是兄弟还是子节点：以“去掉空白缩进后的内容起点”为基准
+		const lineText = line.text;
+		const spacesLength = (lineText.match(/^\s*/)?.[0] ?? '').length;
+		const contentStartPos = lineStart + spacesLength;
+		const contentStartRect = this.currentEditorView!.coordsAtPos(contentStartPos);
+		if (!contentStartRect) return;
+		const contentLeft = contentStartRect.left;
+		this.dropAsChild = e.clientX - contentLeft > DragDropManager.INDENT_STEP_PX;
+
 		if (pos > this.prevFrom && pos < this.prevTo) {
 			this.hideTargetLine();
 		} else {
-			const lineRect = this.currentEditorView!.coordsAtPos(lineStart);
-			if (lineRect) {
-				this.moveTargetLine(lineRect, this.currentEditorView!.contentDOM.clientWidth, false);
-			}
+			this.moveTargetLine(contentStartRect, this.currentEditorView!.contentDOM.clientWidth, false);
 		}
 	}
 
@@ -191,8 +201,16 @@ export class DragDropManager extends Component {
 	private moveTargetLine(rect: { top: number, left: number, height?: number }, width: number, bottom: boolean) {
 		if (!rect || !width || !this.isDragging || !this.targetLineEl) return;
 
-		const left = rect.left;
+		let left = rect.left;
 		const top = bottom ? rect.top : rect.top - 2;
+
+		// 根据 dropAsChild 偏移指示线，给出“子节点/兄弟节点”的视觉提示
+		if (this.dropAsChild) {
+			left += DragDropManager.INDENT_STEP_PX;
+			this.targetLineEl.addClass('as-child');
+		} else {
+			this.targetLineEl.removeClass('as-child');
+		}
 
 		this.targetLineEl.style.width = `${width}px`;
 		this.targetLineEl.style.transform = `translate(${left}px, ${top}px)`;
@@ -203,6 +221,7 @@ export class DragDropManager extends Component {
 		if (!this.isDragging) return;
 		this.currentEditorView = editorView;
 		this.isInsideEditor = true;
+		this.dropAsChild = false;
 		this.targetLineEl?.show();
 	}
 
@@ -216,7 +235,7 @@ export class DragDropManager extends Component {
 
 	async handleDragStart(event: DragEvent, from: number, to: number, view: EditorState) {
 		event.stopPropagation();
-		
+
 		this.isDragging = true;
 
 		const editorView = view.field(editorEditorField);
@@ -286,7 +305,8 @@ export class DragDropManager extends Component {
 
 	hideTargetLine() {
 		this.targetLineEl?.hide();
-
+		this.dropAsChild = false;
+		this.targetLineEl?.removeClass('as-child');
 	}
 
 	private isValidDragTarget(target: HTMLElement): boolean {
@@ -356,19 +376,19 @@ export class DragDropManager extends Component {
 		const initEditor = this.getEditorFromState(this.initEditorView!.state);
 
 		if (!editor || !initEditor) return;
-		const notSameEditor = editor.getValue() !== initEditor.getValue();
-
-		if (!editor) return;
+		// Determine whether drop happens in the same EditorView instance
+		const isSameEditorView = this.currentEditorView === this.initEditorView;
 
 		let dropPos: EditorPosition = editor.offsetToPos(dropLinePos - 1);
 
-		// If the drop position is near the selection range, do nothing.
-		if (!notSameEditor && editor.offsetToPos(this.prevTo).line === editor.offsetToPos(dropLinePos).line) return;
+		// If the drop position is inside the original selection in the same editor, do nothing to avoid no-op/duplication
+		if (isSameEditorView && dropLinePos >= this.prevFrom && dropLinePos <= this.prevTo) return;
+		// Additionally, if it's the same line as selection end, treat as no-op (legacy behavior)
+		if (isSameEditorView && editor.offsetToPos(this.prevTo).line === editor.offsetToPos(dropLinePos).line) return;
 
-		// If the number of rows put down is greater than the original number of rows,
-		// then the original number of rows should be subtracted accordingly
+		// If dropping below the original selection in the same editor, adjust for removed lines
 		let targetLineNum = dropPos.line;
-		if (!notSameEditor && editor.offsetToPos(this.prevFrom).line < editor.offsetToPos(dropLinePos).line) {
+		if (isSameEditorView && editor.offsetToPos(this.prevFrom).line < editor.offsetToPos(dropLinePos).line) {
 			const lineNum = editor.offsetToPos(this.prevTo).line - editor.offsetToPos(this.prevFrom).line + 1;
 			dropPos = {
 				line: dropPos.line - lineNum,
@@ -380,8 +400,9 @@ export class DragDropManager extends Component {
 			targetLineNum = dropPos.line;
 		}
 
-
-		this.handleNormalDrop(editor, dropLinePos, targetLineNum, !notSameEditor);
+		// Use original dropLinePos for insertion; when applying multiple changes in one transaction,
+		// positions are interpreted in the original document coordinates.
+		this.handleNormalDrop(editor, dropLinePos, targetLineNum, isSameEditorView);
 		this.cleanupDrag();
 	}
 
@@ -393,30 +414,27 @@ export class DragDropManager extends Component {
 
 	}
 
-	handleNormalDrop(editor: Editor, dropLinePos: number, targetLineNum: number, isSameEditor: boolean) {
+	handleNormalDrop(editor: Editor, insertOffset: number, targetLineNum: number, isSameEditor: boolean) {
 		if (!this.currentEditorView) return;
 		let adjustedText = this.adjustIndentation(this.initContent, editor.getLine(targetLineNum));
 
-		// Remove both leading and trailing newlines
-		adjustedText = adjustedText.replace(/^\n/, '').replace(/\n$/, '');
-
-		// Determine if we need to add newlines
+		// Determine if we need to add newlines (不再在 adjustedText 内添加/去除额外换行)
 		let insertPrefix = '';
 		let insertSuffix = '';
 
-		// If not dropping at the start of a line, add a newline prefix
-		if (dropLinePos > editor.posToOffset({
+		// If not dropping at the start of a line, add a newline suffix (把拖拽块与当前行断开)
+		if (insertOffset > editor.posToOffset({
 			line: targetLineNum,
 			ch: 0
-		}) && dropLinePos !== editor.getValue().length) {
+		}) && insertOffset !== editor.getValue().length) {
 			insertSuffix = '\n';
 		}
 
-		// If not dropping at the end of a line, add a newline suffix
-		if ((dropLinePos < editor.posToOffset({
+		// If not dropping at the end of a line, add a newline prefix（把插入块置于独立行）
+		if ((insertOffset < editor.posToOffset({
 			line: targetLineNum,
 			ch: editor.getLine(targetLineNum).length
-		})) || dropLinePos === editor.getValue().length) {
+		})) || insertOffset === editor.getValue().length) {
 			insertPrefix = '\n';
 		}
 
@@ -426,8 +444,8 @@ export class DragDropManager extends Component {
 		if (!isSameEditor) {
 			this.currentEditorView.dispatch({
 				changes: {
-					from: dropLinePos,
-					to: dropLinePos,
+					from: insertOffset,
+					to: insertOffset,
 					insert: finalInsertText,
 				}
 			});
@@ -448,8 +466,13 @@ export class DragDropManager extends Component {
 					to: this.prevTo,
 					insert: "",
 				}, {
-					from: dropLinePos,
-					to: dropLinePos,
+					from: insertOffset,
+					to: insertOffset,
+					insert: finalInsertText,
+				}]
+				});
+			}
+		}
 					insert: finalInsertText,
 				}]
 			});
@@ -470,16 +493,14 @@ export class DragDropManager extends Component {
 		const tabSize = this.plugin.app.vault.getConfig("tabSize") as number;
 		const useTab = this.plugin.app.vault.getConfig("useTab") as boolean;
 
-		const getIndentLevel = (line: string): number => {
-			const spaceMatch = line.match(/^ */)?.[0] ?? '';
-			const tabMatch = line.match(/^\t*/)?.[0] ?? '';
-
-			if (tabMatch.length > 0) {
-				return tabMatch.length;
-			} else {
-				return Math.floor(spaceMatch.length / tabSize);
-			}
+		const getIndentLevelFromStr = (indentStr: string): number => {
+			const tabs = (indentStr.match(/^\t*/)?.[0] ?? '').length;
+			if (tabs > 0) return tabs;
+			const spaces = (indentStr.match(/^ */)?.[0] ?? '').length;
+			return Math.floor(spaces / tabSize);
 		};
+
+		const getIndentStr = (line: string): string => line.match(/^[\t ]*/)?.[0] ?? '';
 
 		const createIndent = (level: number): string => {
 			if (useTab) {
@@ -494,8 +515,9 @@ export class DragDropManager extends Component {
 			return /^(\d+\.|-|\*)\s/.test(trimmedLine);
 		};
 
-		const parentIndentLevel = getIndentLevel(parentLine);
-		const firstLineIndentLevel = getIndentLevel(lines[0]);
+		const parentIndentLevel = getIndentLevelFromStr(getIndentStr(parentLine));
+		const firstLineIndentStr = getIndentStr(lines[0] ?? '');
+		const firstLineIndentLevel = getIndentLevelFromStr(firstLineIndentStr);
 
 		const shouldIndent = parentLine.trim() !== "" &&
 			(parentIndentLevel > 0 || isMarkdownListItem(parentLine.trim()));
@@ -503,12 +525,13 @@ export class DragDropManager extends Component {
 		const targetIndentLevel = shouldIndent ? (parentIndentLevel + 1) : 0;
 
 		const adjustLine = (line: string, index: number): string => {
-			// 处理最后一个空行
+			// 处理最后一个空行：保持空行原样，不改变缩进
 			if (line.trim() === "" && (index === lines.length - 1)) {
 				return line;
 			}
 
-			const currentIndentLevel = getIndentLevel(line);
+			const currentIndentStr = getIndentStr(line);
+			const currentIndentLevel = getIndentLevelFromStr(currentIndentStr);
 			let newIndentLevel: number;
 
 			if (index === 0) {
@@ -518,10 +541,13 @@ export class DragDropManager extends Component {
 				newIndentLevel = Math.max(0, targetIndentLevel + relativeIndentLevel);
 			}
 
-			return createIndent(newIndentLevel) + line;
+			// 去除原有的前导缩进，再按新层级添加缩进，避免双重缩进
+			const content = line.slice(currentIndentStr.length);
+			return createIndent(newIndentLevel) + content;
 		};
 
-		return '\n' + lines.map(adjustLine).join('\n');
+		// 这里不额外添加前导换行，交由调用方根据插入位置决定是否加换行
+		return lines.map(adjustLine).join('\n');
 	}
 
 
@@ -617,6 +643,16 @@ export const DragNDropHandler = StateField.define<DecorationSet>({
 		return Decoration.none;
 	},
 	update(value, tr) {
+		// Map existing decorations through document changes first
+		value = value.map(tr.changes);
+
+		// Performance: if this transaction didn't change the document, reuse existing decorations.
+		// But ensure initial render still occurs when decorations are empty.
+		const isEmpty = value === Decoration.none;
+		if (!tr.docChanged && !isEmpty) {
+			return value;
+		}
+
 		const builder = new RangeSetBuilder<Decoration>();
 		const field = tr.state.field(editorInfoField);
 
