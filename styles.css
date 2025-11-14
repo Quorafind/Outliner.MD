@@ -83,6 +83,9 @@ body.outliner-paper-layout .outliner-editor .markdown-source-view.mod-cm6 .cm-li
   padding-bottom: 0 !important;
   padding-inline-start: var(--size-2-2);
 }
+.search-result span.cm-edit-button-container {
+  display: none;
+}
 .outliner-editor .cm-placeholder:before {
   content: attr(data-ph);
   color: var(--text-faint);
@@ -623,7 +626,7 @@ body:not(.outliner-plugin-dragging) .internal-embed .markdown-source-view.mod-cm
   background: var(--color-accent);
   position: absolute;
 }
-.as-child {
+.drag-target-line.as-child {
   background: var(--text-accent);
   opacity: 0.8;
 }

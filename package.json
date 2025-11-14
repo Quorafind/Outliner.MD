@@ -9,10 +9,12 @@
 		"build": "npx svelte-check && vite build --mode production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"build:release": "vite build --mode production-obsidian",
-		"release:obsidian": "cd Outliner.MD && pnpm run release"
+		"release:obsidian": "cd Outliner.MD && pnpm run release",
+		"release": "release-it",
+		"zip": "node scripts/zip.mjs"
 	},
 	"keywords": [],
-	"author": "",
+	"author": "Boninall",
 	"devDependencies": {
 		"@codemirror/language": "https://github.com/lishid/cm-language",
 		"@codemirror/state": "^6.5.2",
@@ -43,10 +45,22 @@
 		"svelty-picker": "^5.2.6",
 		"tslib": "2.4.0",
 		"typescript": "5.3.3",
-		"vite": "^5.2.10"
+		"vite": "^5.2.10",
+		"release-it": "^17.0.0",
+		"jszip": "^3.10.1",
+		"globby": "^14.0.1"
 	},
 	"dependencies": {
 		"@codemirror/commands": "^6.8.1",
 		"@codemirror/search": "^6.5.11"
-	}
+	},
+	"license": "FSL-1.1-Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Quorafind/Obsidian-Outliner-View.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Quorafind/Obsidian-Outliner-View/issues"
+	},
+	"homepage": "https://github.com/Quorafind/Obsidian-Outliner-View"
 }

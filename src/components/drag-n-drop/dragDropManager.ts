@@ -48,6 +48,9 @@ export class DragDropManager extends Component {
 		private static readonly INDENT_STEP_PX: number = 24;
 
 
+		private dropAfter: boolean = false;
+
+
 	constructor(plugin: OutlinerViewPlugin) {
 		super();
 		this.plugin = plugin;
@@ -61,8 +64,18 @@ export class DragDropManager extends Component {
 	}
 
 	private registerDragEvents() {
+		// Global drag events to ensure cleanup even when dropping outside the editor
 		this.plugin.registerDomEvent(window, 'dragover', this.onDragOver.bind(this));
 		this.plugin.registerDomEvent(window, 'dragend', this.onDragEnd.bind(this));
+		this.plugin.registerDomEvent(window, 'dragleave', (e: DragEvent) => this.onDragLeave(e));
+		this.plugin.registerDomEvent(window, 'drop', (e: DragEvent) => this.onDrop(e));
+		// Allow pressing Escape to cancel a stuck drag operation
+		this.plugin.registerDomEvent(window, 'keydown', (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && this.isDragging) {
+				e.preventDefault();
+				this.cleanupDrag();
+			}
+		});
 	}
 
 	private registerEditorEvents() {
@@ -128,28 +141,20 @@ export class DragDropManager extends Component {
 
 	private handleFirstLineDragOver(editorRect: DOMRect) {
 		const firstLineStart = this.currentEditorView!.state.doc.line(1).from;
-		const firstLineRect = this.currentEditorView!.coordsAtPos(firstLineStart);
+		const firstLineRect = this.currentEditorView!.coordsAtPos(firstLineStart) as Rect;
 		if (firstLineRect) {
-			this.moveTargetLine(
-				{top: editorRect.top, left: firstLineRect.left, height: 0},
-				this.currentEditorView!.contentDOM.clientWidth,
-				false
-			);
+			this.dropAfter = false;
+			this.moveTargetLine({ top: editorRect.top, left: firstLineRect.left, height: 0 }, this.currentEditorView!.contentDOM.clientWidth, false);
 		}
 	}
 
 	private handleLastLineDragOver(editorRect: DOMRect, lastLineDomInfo: { element: Element, rect: DOMRect }) {
 		const {rect} = lastLineDomInfo;
 		const editorContent = this.currentEditorView!.contentDOM;
-
-		const left = rect.left; // 使用内容区域的左边界
-		const top = rect.bottom; // 确保不超过内容区域
-
-		this.moveTargetLine(
-			{top, left, height: rect.height},
-			editorContent.clientWidth,
-			true
-		);
+		this.dropAfter = true;
+		const left = rect.left;
+		const top = rect.bottom;
+		this.moveTargetLine({ top, left, height: rect.height }, editorContent.clientWidth, true);
 	}
 
 	private handleMiddleLineDragOver(e: DragEvent) {
@@ -163,15 +168,20 @@ export class DragDropManager extends Component {
 		const lineText = line.text;
 		const spacesLength = (lineText.match(/^\s*/)?.[0] ?? '').length;
 		const contentStartPos = lineStart + spacesLength;
-		const contentStartRect = this.currentEditorView!.coordsAtPos(contentStartPos);
+		const contentStartRect = this.currentEditorView!.coordsAtPos(contentStartPos) as Rect;
 		if (!contentStartRect) return;
 		const contentLeft = contentStartRect.left;
 		this.dropAsChild = e.clientX - contentLeft > DragDropManager.INDENT_STEP_PX;
 
+		// 判定是插在当前行“之前”还是“之后”（避免插入到行中间导致行被截断）
+		const rectBottom = (contentStartRect as any).bottom ?? (contentStartRect.top + ((contentStartRect as any).height || 0));
+		const midY = (contentStartRect.top + rectBottom) / 2;
+		this.dropAfter = e.clientY >= midY;
+
 		if (pos > this.prevFrom && pos < this.prevTo) {
 			this.hideTargetLine();
 		} else {
-			this.moveTargetLine(contentStartRect, this.currentEditorView!.contentDOM.clientWidth, false);
+			this.moveTargetLine(contentStartRect, this.currentEditorView!.contentDOM.clientWidth, this.dropAfter);
 		}
 	}
 
@@ -416,26 +426,40 @@ export class DragDropManager extends Component {
 
 	handleNormalDrop(editor: Editor, insertOffset: number, targetLineNum: number, isSameEditor: boolean) {
 		if (!this.currentEditorView) return;
-		let adjustedText = this.adjustIndentation(this.initContent, editor.getLine(targetLineNum));
+		const adjustedText = this.adjustIndentation(this.initContent, editor.getLine(targetLineNum), this.dropAsChild);
 
-		// Determine if we need to add newlines (不再在 adjustedText 内添加/去除额外换行)
+		// Decide insert position and newlines based on child/sibling and before/after
+		const targetLineText = editor.getLine(targetLineNum);
+		const lineStartOffset = editor.posToOffset({ line: targetLineNum, ch: 0 });
+		const lineEndOffset = editor.posToOffset({ line: targetLineNum, ch: targetLineText.length });
+		const docEndOffset = editor.getValue().length;
+
 		let insertPrefix = '';
 		let insertSuffix = '';
 
-		// If not dropping at the start of a line, add a newline suffix (把拖拽块与当前行断开)
-		if (insertOffset > editor.posToOffset({
-			line: targetLineNum,
-			ch: 0
-		}) && insertOffset !== editor.getValue().length) {
+		if (this.dropAsChild) {
+			// Insert as child: place on the next line after target. Avoid double newlines.
+			if (lineEndOffset < docEndOffset) {
+				// There is an existing newline after this line; insert at start of next line
+				insertOffset = lineEndOffset + 1;
+				// no extra newline needed to avoid blank line
+			} else {
+				// Last line: append newline before content
+				insertOffset = docEndOffset;
+				insertPrefix = '\n';
+			}
+		} else if (this.dropAfter) {
+			// Insert as sibling after the line
+			if (lineEndOffset < docEndOffset) {
+				insertOffset = lineEndOffset + 1;
+			} else {
+				insertOffset = docEndOffset;
+				insertPrefix = '\n';
+			}
+		} else {
+			// Insert as sibling before the line
+			insertOffset = lineStartOffset;
 			insertSuffix = '\n';
-		}
-
-		// If not dropping at the end of a line, add a newline prefix（把插入块置于独立行）
-		if ((insertOffset < editor.posToOffset({
-			line: targetLineNum,
-			ch: editor.getLine(targetLineNum).length
-		})) || insertOffset === editor.getValue().length) {
-			insertPrefix = '\n';
 		}
 
 		// Combine the adjusted text with necessary newlines
@@ -470,11 +494,6 @@ export class DragDropManager extends Component {
 					to: insertOffset,
 					insert: finalInsertText,
 				}]
-				});
-			}
-		}
-					insert: finalInsertText,
-				}]
 			});
 		}
 	}
@@ -488,7 +507,7 @@ export class DragDropManager extends Component {
 		return text.match(/^\s*/g)?.[0];
 	}
 
-	adjustIndentation(foldText: string, parentLine: string): string {
+	adjustIndentation(foldText: string, parentLine: string, asChild: boolean = false): string {
 		const lines = foldText.split('\n');
 		const tabSize = this.plugin.app.vault.getConfig("tabSize") as number;
 		const useTab = this.plugin.app.vault.getConfig("useTab") as boolean;
@@ -522,10 +541,10 @@ export class DragDropManager extends Component {
 		const shouldIndent = parentLine.trim() !== "" &&
 			(parentIndentLevel > 0 || isMarkdownListItem(parentLine.trim()));
 
-		const targetIndentLevel = shouldIndent ? (parentIndentLevel + 1) : 0;
+		// 子节点时，目标层级是父行层级+1；否则保持与父行同级
+		const targetIndentLevel = shouldIndent ? (asChild ? parentIndentLevel + 1 : parentIndentLevel) : 0;
 
 		const adjustLine = (line: string, index: number): string => {
-			// 处理最后一个空行：保持空行原样，不改变缩进
 			if (line.trim() === "" && (index === lines.length - 1)) {
 				return line;
 			}
@@ -541,12 +560,10 @@ export class DragDropManager extends Component {
 				newIndentLevel = Math.max(0, targetIndentLevel + relativeIndentLevel);
 			}
 
-			// 去除原有的前导缩进，再按新层级添加缩进，避免双重缩进
 			const content = line.slice(currentIndentStr.length);
 			return createIndent(newIndentLevel) + content;
 		};
 
-		// 这里不额外添加前导换行，交由调用方根据插入位置决定是否加换行
 		return lines.map(adjustLine).join('\n');
 	}
 
