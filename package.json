@@ -57,10 +57,10 @@
 	"license": "FSL-1.1-Apache-2.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Quorafind/Obsidian-Outliner-View.git"
+		"url": "https://github.com/quorafind/outliner.md.git"
 	},
 	"bugs": {
-		"url": "https://github.com/Quorafind/Obsidian-Outliner-View/issues"
+		"url": "https://github.com/quorafind/outliner.md/issues"
 	},
-	"homepage": "https://github.com/Quorafind/Obsidian-Outliner-View"
+	"homepage": "https://github.com/quorafind/outliner.md"
 }

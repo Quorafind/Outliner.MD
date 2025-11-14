@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![GitHub Release](https://img.shields.io/github/v/release/Quorafind/Obsidian-Outliner-View) ![GitHub Downloads](https://img.shields.io/github/downloads/Quorafind/Obsidian-Outliner-View/total)
+![GitHub Release](https://img.shields.io/github/v/release/quorafind/outliner.md) ![GitHub Downloads](https://img.shields.io/github/downloads/quorafind/outliner.md/total)
 
 </div>
 
@@ -30,7 +30,7 @@ Use notes as notebooks and manage sections efficiently.
 
 ### From GitHub Releases
 
-1. Download the latest release from [GitHub Releases](https://github.com/Quorafind/Obsidian-Outliner-View/releases)
+1. Download the latest release from [GitHub Releases](https://github.com/quorafind/outliner.md/releases)
 2. Extract main.js, manifest.json, and styles.css to your vault's .obsidian/plugins/outliner-md/ folder
 3. Reload Obsidian
 4. Enable the plugin in Settings → Community Plugins
@@ -38,8 +38,8 @@ Use notes as notebooks and manage sections efficiently.
 ### From Source
 
 ```bash
-git clone https://github.com/Quorafind/Obsidian-Outliner-View.git
-cd Obsidian-Outliner-View
+git clone https://github.com/quorafind/outliner.md.git
+cd outliner.md
 pnpm install
 pnpm run build
 ```
